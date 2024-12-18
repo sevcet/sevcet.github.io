@@ -7,36 +7,27 @@
     <style>
         body {
             margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             background-color: #000;
         }
-
         iframe {
             width: 100%;
             height: 100%;
-            border: none;
         }
     </style>
 </head>
 <body>
-    <iframe id="youtube-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-
+    <iframe id="youtubePlayer" src="" frameborder="0" allowfullscreen></iframe>
     <script>
-        // Funkcija za preuzimanje video ID-a iz URL parametra
+        // Dinamički učitaj video ID
         const urlParams = new URLSearchParams(window.location.search);
-        const videoId = urlParams.get('videoId'); // Uzima videoId iz URL parametra
-
+        const videoId = urlParams.get('videoId');
         if (videoId) {
-            // Učitava YouTube embed URL u iframe sa dinamički postavljenim video ID-om
-            const iframe = document.getElementById('youtube-iframe');
-            iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&modestbranding=1&rel=0';
-        } else {
-            // Ako nije postavljen videoId, prikaži poruku
-            document.body.innerHTML = '<h1 style="color: white;">No video ID provided.</h1>';
+            const iframe = document.getElementById('youtubePlayer');
+            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0`;
         }
     </script>
 </body>
