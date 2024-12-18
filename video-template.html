@@ -18,16 +18,38 @@
             height: 100%;
         }
     </style>
+    <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
     <iframe id="youtubePlayer" src="" frameborder="0" allowfullscreen></iframe>
     <script>
-        // Dinamički učitaj video ID
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoId = urlParams.get('videoId');
-        if (videoId) {
-            const iframe = document.getElementById('youtubePlayer');
-            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0`;
+        var player;
+
+        // Funkcija koja se poziva kada je YouTube IFrame API spreman
+        function onYouTubeIframeAPIReady() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('videoId');
+            if (videoId) {
+                player = new YT.Player('youtubePlayer', {
+                    videoId: videoId,
+                    playerVars: {
+                        'autoplay': 1,
+                        'modestbranding': 1,
+                        'rel': 0
+                    },
+                    events: {
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+        }
+
+        // Funkcija koja reaguje na promene stanja igrača
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING) {
+                // Pozivanje Android metode kada video počne da se reprodukuje
+                Android.onVideoPlay();
+            }
         }
     </script>
 </body>
