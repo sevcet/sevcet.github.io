@@ -34,7 +34,8 @@
                     playerVars: {
                         'autoplay': 1, // Možete promeniti na 0 za isključivanje autoplay
                         'modestbranding': 1,
-                        'rel': 0
+                        'rel': 0,
+                        'enablejsapi': 1 // Omogućava JavaScript kontrolu
                     },
                     events: {
                         'onStateChange': onPlayerStateChange
@@ -50,13 +51,20 @@
             console.log("Player state changed:", event.data);
             if (event.data == YT.PlayerState.PLAYING) {
                 console.log("Video is playing");
-                // Pozivanje Android metode, ako postoji
-                // Android.onVideoPlay();
             }
         }
     </script>
 </head>
 <body>
     <iframe id="youtubePlayer" src="" frameborder="0" allowfullscreen></iframe>
+    <script>
+        // Dinamički učitaj video ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('videoId');
+        if (videoId) {
+            const iframe = document.getElementById('youtubePlayer');
+            iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&modestbranding=1&rel=0`;
+        }
+    </script>
 </body>
 </html>
