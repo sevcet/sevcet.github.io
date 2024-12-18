@@ -25,7 +25,6 @@
     <script>
         var player;
 
-        // Funkcija koja se poziva kada je YouTube IFrame API spreman
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
@@ -42,14 +41,12 @@
                     }
                 });
             } else {
-                console.error("Video ID is missing"); // Log za grešku
+                console.error("Video ID is missing");
             }
         }
 
-        // Funkcija koja reaguje na promene stanja igrača
         function onPlayerStateChange(event) {
             if (event.data == YT.PlayerState.PLAYING) {
-                // Pozivanje Android metode kada video počne da se reprodukuje
                 Android.onVideoPlay();
             }
         }
