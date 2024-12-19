@@ -22,42 +22,31 @@
     <script>
         var player;
 
-        // Funkcija koja se poziva kada je YouTube IFrame API spreman
         function onYouTubeIframeAPIReady() {
-            console.log("YouTube IFrame API is ready");
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
             if (videoId) {
-                console.log("Video ID:", videoId);
                 player = new YT.Player('youtubePlayer', {
                     videoId: videoId,
                     playerVars: {
-                        'autoplay': 1, // Možete promeniti na 0 za isključivanje autoplay
+                        'autoplay': 1,
                         'modestbranding': 1,
                         'rel': 0,
-                        'enablejsapi': 1 // Omogućava JavaScript kontrolu
+                        'enablejsapi': 1
                     },
                     events: {
                         'onStateChange': onPlayerStateChange
                     }
                 });
-            } else {
-                console.error("Video ID is missing");
             }
         }
 
-        // Funkcija koja reaguje na promene stanja igrača
         function onPlayerStateChange(event) {
-            console.log("Player state changed:", event.data);
-            if (event.data == YT.PlayerState.PLAYING) {
-                console.log("Video is playing");
-            } else if (event.data == YT.PlayerState.ENDED) {
-                // Kada video završi, pozovite Java funkciju
+            if (event.data == YT.PlayerState.ENDED) {
                 Android.onVideoEnd();
             }
         }
 
-        // Funkcije za kontrolu videa
         function playVideo() {
             player.playVideo();
         }
@@ -73,16 +62,25 @@
         function skipBackward() {
             player.seekTo(player.getCurrentTime() - 60, true);
         }
+
+        window.addEventListener('message', function(event) {
+            if (event.data === 'toggle') {
+                player.getPlayerState() === YT.PlayerState.PLAYING ? pauseVideo() : playVideo();
+            } else if (event.data === 'skipForward') {
+                skipForward();
+            } else if (event.data === 'skipBackward') {
+                skipBackward();
+            }
+        });
     </script>
 </head>
 <body>
-    <div id="youtubePlayer"></div> <!-- Promenjen sa iframe na div -->
+    <div id="youtubePlayer"></div>
     <script>
-        // Dinamički učitaj video ID
         const urlParams = new URLSearchParams(window.location.search);
         const videoId = urlParams.get('videoId');
         if (videoId) {
-            onYouTubeIframeAPIReady(); // Pozivamo funkciju da inicijalizuje player
+            onYouTubeIframeAPIReady(); // Inicijalizacija player-a
         }
     </script>
 </body>
