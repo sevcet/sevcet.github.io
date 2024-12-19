@@ -51,7 +51,27 @@
             console.log("Player state changed:", event.data);
             if (event.data == YT.PlayerState.PLAYING) {
                 console.log("Video is playing");
+            } else if (event.data == YT.PlayerState.ENDED) {
+                // Kada video završi, pozovite Java funkciju
+                Android.onVideoEnd();
             }
+        }
+
+        // Funkcije za kontrolu videa
+        function playVideo() {
+            player.playVideo();
+        }
+
+        function pauseVideo() {
+            player.pauseVideo();
+        }
+
+        function skipForward() {
+            player.seekTo(player.getCurrentTime() + 60, true);
+        }
+
+        function skipBackward() {
+            player.seekTo(player.getCurrentTime() - 60, true);
         }
     </script>
 </head>
