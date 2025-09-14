@@ -1,0 +1,59 @@
+{
+  "categories": [
+    {
+      "name": "Najgledaniji",
+      "items": [
+        {
+          "title": "Inception",
+          "year": "2010",
+          "genre": "Science Fiction",
+          "type": "film",
+          "imageUrl": "https://img.youtube.com/vi/YoHD9XEInc0/0.jpg",
+          "videoId": "YoHD9XEInc0"
+        },
+        {
+          "title": "Stranger Things",
+          "year": "2016",
+          "genre": "Drama",
+          "type": "serija",
+          "imageUrl": "https://img.youtube.com/vi/b9EkMc79ZSU/0.jpg",
+          "videoId": "b9EkMc79ZSU"
+        }
+      ]
+    },
+    {
+      "name": "Science Fiction",
+      "items": [
+        {
+          "title": "The Matrix",
+          "year": "1999",
+          "genre": "Science Fiction",
+          "type": "film",
+          "imageUrl": "https://img.youtube.com/vi/vKQi3bBA1y8/0.jpg",
+          "videoId": "vKQi3bBA1y8"
+        },
+        {
+          "title": "Interstellar",
+          "year": "2014",
+          "genre": "Science Fiction",
+          "type": "film",
+          "imageUrl": "https://img.youtube.com/vi/zSWdZVtXT7E/0.jpg",
+          "videoId": "zSWdZVtXT7E"
+        }
+      ]
+    },
+    {
+      "name": "Komedija",
+      "items": [
+        {
+          "title": "The Hangover",
+          "year": "2009",
+          "genre": "Comedy",
+          "type": "film",
+          "imageUrl": "https://img.youtube.com/vi/tcdUhdOlz9M/0.jpg",
+          "videoId": "tcdUhdOlz9M"
+        }
+      ]
+    }
+  ]
+}
