@@ -1,0 +1,47 @@
+<movies>
+    <category name="Najgledaniji">
+        <movie>
+            <title>Inception</title>
+            <year>2010</year>
+            <genre>Science Fiction</genre>
+            <type>film</type>
+            <description>Ko to tamo peva (Who's Singin' Over There) (1980) - Full Movie English Subbed [HD]</description>
+            <imageUrl>https://img.youtube.com/vi/ZwozSLas8DM/0.jpg</imageUrl>
+            <videoId>ZwozSLas8DM</videoId>
+        </movie>
+        <movie>
+            <title>Stranger Things</title>
+            <year>2016</year>
+            <genre>Drama</genre>
+            <type>serija</type>
+            <description>Grupa dece iz malog grada otkriva mračnu tajnu...</description>
+            <imageUrl>https://img.youtube.com/vi/9Dc-IWCxP2I/0.jpg</imageUrl>
+            <seasons>
+                <season number="1">
+                    <episode>
+                        <title>Prva epizoda</title>
+                        <imageUrl>https://img.youtube.com/vi/9Dc-IWCxP2I/0.jpg</imageUrl>
+                        <videoId>XcnHOQ-cHa0</videoId>
+                    </episode>
+                    <episode>
+                        <title>Druga epizoda</title>
+                        <imageUrl>https://img.youtube.com/vi/9Dc-IWCxP2I/0.jpg</imageUrl>
+                        <videoId>7LhL8q4r0Yc</videoId>
+                    </episode>
+                </season>
+            </seasons>
+        </movie>
+    </category>
+
+    <category name="Science Fiction">
+        <movie>
+            <title>The Matrix</title>
+            <year>1999</year>
+            <genre>Science Fiction</genre>
+            <type>film</type>
+            <description>Neo otkriva istinu o simuliranom svetu...</description>
+            <imageUrl>https://img.youtube.com/vi/9Dc-IWCxP2I/0.jpg</imageUrl>
+            <videoId>9Dc-IWCxP2I</videoId>
+        </movie>
+    </category>
+</movies>
