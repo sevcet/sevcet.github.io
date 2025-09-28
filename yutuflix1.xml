@@ -1,8 +1,7 @@
-// KATEGORIJA DOMACI FILMOVI
+<movies>
 
     <category name="Domaci filmovi">
-<movies>
-    <movie>
+        <movie>
         <title>Ko to tamo peva (Who's Singin' Over There) (1980) - Full Movie English Subbed [HD]</title>
         <year>1980</year>
         <genre>Domaci film</genre>
