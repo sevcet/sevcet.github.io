@@ -1,0 +1,319 @@
+<movies>
+    <category name="Domaci filmovi">
+        <movie>
+            <title>Anita 1 rodjendan</title>
+            <year>1999</year>
+            <genre>Domaci filmovi</genre>
+            <type>film</type>
+            <description>Anita 1 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/2h94quQ99Ko/0.jpg</imageUrl>
+            <videoId>2h94quQ99Ko</videoId>
+        </movie>
+        <movie>
+            <title>Anita 2 rodjendan</title>
+            <year>1999</year>
+            <genre>Domaci filmovi</genre>
+            <type>film</type>
+            <description>Anita 2 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/1kXG6Kl46Lc/0.jpg</imageUrl>
+            <videoId>1kXG6Kl46Lc</videoId>
+        </movie>
+        <movie>
+            <title>Anita 5 rodjendan</title>
+            <year>1999</year>
+            <genre>Domaci filmovi</genre>
+            <type>film</type>
+            <description>Anita 5 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/HZDsjgJ5Dy0/0.jpg</imageUrl>
+            <videoId>HZDsjgJ5Dy0</videoId>
+        </movie>
+
+    </category>
+ 
+
+
+// KATEGORIJA LEONARDO
+
+
+
+
+    <category name="Domace serije">
+        <movie>
+            <title>Leonardove transformacije Ben 10</title>
+            <year>2002</year>
+            <genre>Domace serije</genre>
+            <type>film</type>
+            <description>Leonardove transformacije Ben 10</description>
+            <imageUrl>https://img.youtube.com/vi/gjtev3kq6Bs/0.jpg</imageUrl>
+            <videoId>gjtev3kq6Bs</videoId>
+        </movie>
+        <movie>
+            <title>Leonardo</title>
+            <year>2002</year>
+            <genre>Domace serije</genre>
+            <type>film</type>
+            <description>Leonardo</description>
+            <imageUrl>https://img.youtube.com/vi/05BGZ13edxQ/0.jpg</imageUrl>
+            <videoId>05BGZ13edxQ</videoId>
+        </movie>
+        <movie>
+            <title>Leonardo 1 rodjendan</title>
+            <year>2002</year>
+            <genre>Domace serije</genre>
+            <type>film</type>
+            <description>Leonardo 1 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/zzzxYd5uF_c/0.jpg</imageUrl>
+            <videoId>zzzxYd5uF_c</videoId>
+        </movie>
+
+    </category>
+
+    <category name="Akcija">
+        <movie>
+            <title>leontina show</title>
+            <year>2005</year>
+            <genre>Akcija</genre>
+            <type>film</type>
+            <description> leontina show</description>
+            <imageUrl>https://img.youtube.com/vi/IeJ_69b56_E/0.jpg</imageUrl>
+            <videoId>IeJ_69b56_E</videoId>
+        </movie>
+        <movie>
+            <title>Leontina </title>
+            <year>2005</year>
+            <genre>Akcija</genre>
+            <type>film</type>
+            <description>Leontina  </description>
+            <imageUrl>https://img.youtube.com/vi/ByOnx41LhMs/0.jpg</imageUrl>
+            <videoId>ByOnx41LhMs</videoId>
+        </movie>
+        <movie>
+            <title>Leontina nova bicikla</title>
+            <year>2005</year>
+            <genre>Akcija</genre>
+            <type>film</type>
+            <description>Leontina nova bicikla </description>
+            <imageUrl>https://img.youtube.com/vi/Y_XAuQHJ8qk/0.jpg</imageUrl>
+            <videoId>Y_XAuQHJ8qk</videoId>
+        </movie>
+
+    </category>
+
+    <category name="Komedija">
+        <movie>
+            <title>Altana 37 Rodjendan</title>
+            <year>1975</year>
+            <genre>Komedija</genre>
+            <type>film</type>
+            <description>Altana 37 Rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/76sGocRBVcE/0.jpg</imageUrl>
+            <videoId>76sGocRBVcE</videoId>
+        </movie>
+        <movie>
+            <title>Altana 38 rodjendan</title>
+            <year>1975</year>
+            <genre>Komedija</genre>
+            <type>film</type>
+            <description>Altana 38 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/ciXm-5VUo4I/0.jpg</imageUrl>
+            <videoId>ciXm-5VUo4I</videoId>
+        </movie>
+        <movie>
+            <title>Altana 38 rodjendan</title>
+            <year>1975</year>
+            <genre>Komedija</genre>
+            <type>film</type>
+            <description>Altana 38 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/ciXm-5VUo4I/0.jpg</imageUrl>
+            <videoId>ciXm-5VUo4I</videoId>
+        </movie>
+
+    </category>
+
+    <category name="Horor">
+        <movie>
+            <title>sait 39 rodjendan</title>
+            <year>1973</year>
+            <genre>Horor</genre>
+            <type>film</type>
+            <description>sait 39 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/thA1AHFSl_4/0.jpg</imageUrl>
+            <videoId>thA1AHFSl_4</videoId>
+        </movie>
+        <movie>
+            <title>Sait Ispracaj u vojsku</title>
+            <year>1973</year>
+            <genre>Horor</genre>
+            <type>film</type>
+            <description>Sait Ispracaj u vojsku</description>
+            <imageUrl>https://img.youtube.com/vi/qgeu4_HleZY/0.jpg</imageUrl>
+            <videoId>qgeu4_HleZY</videoId>
+        </movie>
+        <movie>
+            <title>Sait Ispracaj u vojsku</title>
+            <year>1973</year>
+            <genre>Horor</genre>
+            <type>film</type>
+            <description>Sait Ispracaj u vojsku</description>
+            <imageUrl>https://img.youtube.com/vi/qgeu4_HleZY/0.jpg</imageUrl>
+            <videoId>qgeu4_HleZY</videoId>
+        </movie>
+    </category>
+
+    <category name="Sci-Fi">
+        <movie>
+            <title>Vaselica 2012</title>
+            <year>9999</year>
+            <genre>Sci-Fi</genre>
+            <type>film</type>
+            <description>Vaselica 2012</description>
+            <imageUrl>https://img.youtube.com/vi/TOR7cEDr130/0.jpg</imageUrl>
+            <videoId>TOR7cEDr130</videoId>
+        </movie>
+        <movie>
+            <title>Oostende 29.07.2012</title>
+            <year>9999</year>
+            <genre>Sci-Fi</genre>
+            <type>film</type>
+            <description>Oostende 29.07.2012</description>
+            <imageUrl>https://img.youtube.com/vi/3NiEbAPafVA/0.jpg</imageUrl>
+            <videoId>3NiEbAPafVA</videoId>
+        </movie>
+        <movie>
+            <title>Oostende 12.08.2012</title>
+            <year>9999</year>
+            <genre>Sci-Fi</genre>
+            <type>film</type>
+            <description>Oostende 12.08.2012</description>
+            <imageUrl>https://img.youtube.com/vi/RhdvYnrVZMw/0.jpg</imageUrl>
+            <videoId>RhdvYnrVZMw</videoId>
+        </movie>
+    </category>
+
+    <category name="Romansa">
+        <movie>
+            <title>Salimovic</title>
+            <year>0000</year>
+            <genre>Romansa</genre>
+            <type>film</type>
+            <description>Salimovic</description>
+            <imageUrl>https://img.youtube.com/vi/dWUXfvk4gfM/0.jpg</imageUrl>
+            <videoId>dWUXfvk4gfM</videoId>
+        </movie>
+        <movie>
+            <title>Aleksandra 8 rodjendan</title>
+            <year>0000</year>
+            <genre>Romansa</genre>
+            <type>film</type>
+            <description>Aleksandra 8 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/-zy0wd8ZSHQ/0.jpg</imageUrl>
+            <videoId>-zy0wd8ZSHQ</videoId>
+        </movie>
+        <movie>
+            <title>Ismet Svadba</title>
+            <year>0000</year>
+            <genre>Romansa</genre>
+            <type>film</type>
+            <description>Ismet Svadba</description>
+            <imageUrl>https://img.youtube.com/vi/ZUNcbal3TG8/0.jpg</imageUrl>
+            <videoId>ZUNcbal3TG8</videoId>
+        </movie>
+    </category>
+
+    <category name="Misterija">
+        <movie>
+            <title>Sevda Salimovic Vlasinka Kolo</title>
+            <year>1956</year>
+            <genre>Misterija</genre>
+            <type>film</type>
+            <description>Sevda Salimovic Vlasinka Kolo</description>
+            <imageUrl>https://img.youtube.com/vi/YgixDWWUJ14/0.jpg</imageUrl>
+            <videoId>YgixDWWUJ14</videoId>
+        </movie>
+        <movie>
+            <title>Sevda Salimovic Pirav mange kokoro</title>
+            <year>1956</year>
+            <genre>Misterija</genre>
+            <type>film</type>
+            <description>Sevda Salimovic Pirav mange kokoro</description>
+            <imageUrl>https://img.youtube.com/vi/z4sOYP2BBPk/0.jpg</imageUrl>
+            <videoId>z4sOYP2BBPk</videoId>
+        </movie>
+        <movie>
+            <title>Sevda Salimovic Bugarka Kolo</title>
+            <year>1956</year>
+            <genre>Misterija</genre>
+            <type>film</type>
+            <description>Sevda Salimovic Bugarka Kolo</description>
+            <imageUrl>https://img.youtube.com/vi/wCsK9HyOz0g/0.jpg</imageUrl>
+            <videoId>wCsK9HyOz0g</videoId>
+        </movie>  
+      
+    </category>
+
+
+    <category name="Dokumentarni">
+        <movie>
+            <title>leontina show</title>
+            <year>2005</year>
+            <genre>Dokumentarni</genre>
+            <type>film</type>
+            <description> leontina show</description>
+            <imageUrl>https://img.youtube.com/vi/IeJ_69b56_E/0.jpg</imageUrl>
+            <videoId>IeJ_69b56_E</videoId>
+        </movie>
+        <movie>
+            <title>Leontina </title>
+            <year>2005</year>
+            <genre>Dokumentarni</genre>
+            <type>film</type>
+            <description>Leontina  </description>
+            <imageUrl>https://img.youtube.com/vi/ByOnx41LhMs/0.jpg</imageUrl>
+            <videoId>ByOnx41LhMs</videoId>
+        </movie>
+        <movie>
+            <title>Leontina nova bicikla</title>
+            <year>2005</year>
+            <genre>Dokumentarni</genre>
+            <type>film</type>
+            <description>Leontina nova bicikla </description>
+            <imageUrl>https://img.youtube.com/vi/Y_XAuQHJ8qk/0.jpg</imageUrl>
+            <videoId>Y_XAuQHJ8qk</videoId>
+        </movie>
+
+    </category>
+
+    <category name="Animirani">
+        <movie>
+            <title>Altana 37 Rodjendan</title>
+            <year>1975</year>
+            <genre>Animirani</genre>
+            <type>film</type>
+            <description>Altana 37 Rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/76sGocRBVcE/0.jpg</imageUrl>
+            <videoId>76sGocRBVcE</videoId>
+        </movie>
+        <movie>
+            <title>Altana 38 rodjendan</title>
+            <year>1975</year>
+            <genre>Animirani</genre>
+            <type>film</type>
+            <description>Altana 38 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/ciXm-5VUo4I/0.jpg</imageUrl>
+            <videoId>ciXm-5VUo4I</videoId>
+        </movie>
+        <movie>
+            <title>Altana 38 rodjendan</title>
+            <year>1975</year>
+            <genre>Animirani</genre>
+            <type>film</type>
+            <description>Altana 38 rodjendan</description>
+            <imageUrl>https://img.youtube.com/vi/ciXm-5VUo4I/0.jpg</imageUrl>
+            <videoId>ciXm-5VUo4I</videoId>
+        </movie>
+
+    </category>
+
+
+
+</movies>
