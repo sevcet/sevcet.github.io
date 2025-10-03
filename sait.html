@@ -16,8 +16,8 @@
         .video-wrapper {
             position: fixed;
             top: 0;
-            left: -80px; /* POMERI VIDEO ULEVO DA SAKRIJE SIDEBAR */
-            width: calc(100% + 80px);
+            left: -60px; /* SAKRIJE SAMO SIDEBAR */
+            width: calc(100% + 60px);
             height: 100%;
             overflow: hidden;
         }
@@ -51,7 +51,7 @@
             id="youtubePlayer"
             src=""
             frameborder="0"
-            allow="autoplay; encrypted-media; fullscreen" 
+            allow="autoplay; encrypted-media" 
             allowfullscreen>
         </iframe>
     </div>
@@ -61,7 +61,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
             
-            const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0&fs=1`;
+            const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0&fs=0&iv_load_policy=3`;
             document.getElementById('youtubePlayer').src = embedUrl;
 
             document.getElementById('closeBtn').addEventListener('click', function() {
@@ -69,6 +69,27 @@
                     AndroidInterface.closePlayer();
                 }
             });
+
+            // Sakrij sidebar i fullscreen dugme
+            setTimeout(() => {
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    /* SAKRIJ SIDEBAR, TITLE I FULLSCREEN DUGME */
+                    .ytp-chrome-top { display: none !important; }
+                    .ytp-title-link { display: none !important; }
+                    .ytp-title-text { display: none !important; }
+                    .ytp-watermark { display: none !important; }
+                    .ytp-fullscreen-button { display: none !important; }
+                    
+                    /* OSTAVI PROGRESS BAR I OSTALE KONTROLE */
+                    .ytp-chrome-bottom { display: flex !important; }
+                    .ytp-progress-bar { display: block !important; }
+                    .ytp-time-display { display: block !important; }
+                    .ytp-play-button { display: block !important; }
+                    .ytp-volume-panel { display: block !important; }
+                `;
+                document.head.appendChild(style);
+            }, 2000);
         });
     </script>
 </body>
