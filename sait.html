@@ -30,6 +30,7 @@
             height: 48px;
             cursor: pointer;
             z-index: 9999;
+            transition: opacity 0.3s;
         }
     </style>
 </head>
@@ -60,15 +61,20 @@
                 },
                 events: {
                     'onReady': (event) => {
-                        event.target.playVideo(); // odmah pokreće video
+                        event.target.playVideo();
                     }
                 }
             });
         }
 
-        // Kada klikneš na X
+        // Kada klikneš na X - pozovi Android funkciju
         document.getElementById('closeBtn').addEventListener('click', () => {
-            window.history.back(); // vrati se na prethodni ekran u WebView
+            if (window.AndroidInterface) {
+                AndroidInterface.closePlayer(); // Poziva Android funkciju
+            } else {
+                // Fallback za testiranje u browser-u
+                console.log("Close button clicked");
+            }
         });
     </script>
 </body>
