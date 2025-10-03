@@ -7,15 +7,16 @@
     <style>
         body {
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            padding: 0;
             background-color: #000;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
         }
         #youtubePlayer {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
+            border: none;
         }
         #closeBtn {
             position: absolute;
@@ -32,21 +33,30 @@
             z-index: 9999;
             transition: opacity 0.3s;
         }
+        
+        /* Sakrij sve YouTube kontrole i toolbare */
+        .ytp-chrome-top,
+        .ytp-title-link,
+        .ytp-title-text,
+        .ytp-chrome-controls,
+        .ytp-pause-overlay,
+        .ytp-watermark,
+        .ytp-show-cards-title {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
     </style>
 </head>
 <body>
-    <!-- Dugme za zatvaranje -->
     <button id="closeBtn">✕</button>
-
-    <!-- YouTube Player -->
     <div id="youtubePlayer"></div>
 
-    <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         let player;
+        let hideControlsInterval;
 
-        // Kad se API učita
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
@@ -57,23 +67,77 @@
                     autoplay: 1,
                     rel: 0,
                     modestbranding: 1,
-                    fs: 1
+                    fs: 1,
+                    controls: 0,
+                    showinfo: 0,
+                    iv_load_policy: 3,
+                    disablekb: 1,
+                    playsinline: 1
                 },
                 events: {
                     'onReady': (event) => {
                         event.target.playVideo();
+                        startHidingControls();
+                    },
+                    'onStateChange': (event) => {
+                        if (event.data === YT.PlayerState.PLAYING) {
+                            startHidingControls();
+                        }
                     }
                 }
             });
         }
 
-        // Kada klikneš na X - pozovi Android funkciju
+        function startHidingControls() {
+            // Kontinuirano sakrivaj kontrole
+            if (hideControlsInterval) {
+                clearInterval(hideControlsInterval);
+            }
+            
+            hideControlsInterval = setInterval(() => {
+                // Sakrij sve YouTube elemente
+                const elementsToHide = [
+                    '.ytp-chrome-top',
+                    '.ytp-title-link',
+                    '.ytp-title-text', 
+                    '.ytp-chrome-controls',
+                    '.ytp-pause-overlay',
+                    '.ytp-watermark',
+                    '.ytp-show-cards-title',
+                    '.ytp-gradient-top',
+                    '.ytp-gradient-bottom'
+                ];
+                
+                elementsToHide.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        el.style.display = 'none';
+                        el.style.opacity = '0';
+                        el.style.visibility = 'hidden';
+                    });
+                });
+                
+                // Force fullscreen na iframe
+                const iframe = document.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.width = '100vw';
+                    iframe.style.height = '100vh';
+                    iframe.style.border = 'none';
+                }
+                
+            }, 100); // Proveri svakih 100ms
+        }
+
         document.getElementById('closeBtn').addEventListener('click', () => {
             if (window.AndroidInterface) {
-                AndroidInterface.closePlayer(); // Poziva Android funkciju
-            } else {
-                // Fallback za testiranje u browser-u
-                console.log("Close button clicked");
+                AndroidInterface.closePlayer();
+            }
+        });
+
+        // Cleanup interval kada se stranica zatvara
+        window.addEventListener('beforeunload', () => {
+            if (hideControlsInterval) {
+                clearInterval(hideControlsInterval);
             }
         });
     </script>
