@@ -32,9 +32,24 @@
             z-index: 10000;
             transition: opacity 0.3s;
         }
-        .hidden {
-            opacity: 0;
-            pointer-events: none;
+        
+        /* SAKRIJ SAMO TITLE BAR I YOUTUBE LOGO */
+        .ytp-chrome-top,
+        .ytp-title-link,
+        .ytp-title-text,
+        .ytp-watermark,
+        .ytp-show-cards-title {
+            display: none !important;
+        }
+        
+        /* PODIGNI PLAYER KONTROLE NA GORE */
+        .ytp-chrome-bottom {
+            bottom: 0px !important;
+        }
+        
+        /* OSTAVI PROGRESS BAR VIDLJIVIM */
+        .ytp-progress-bar {
+            bottom: 45px !important;
         }
     </style>
 </head>
@@ -45,6 +60,7 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         let player;
+        let hideInterval;
         
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -57,12 +73,12 @@
                 playerVars: {
                     'autoplay': 1,
                     'rel': 0,
-                    'modestbranding': 1,
-                    'controls': 0,
-                    'showinfo': 0,
-                    'fs': 0, // ONEMOGUĆI FULLSCREEN DUGME
-                    'iv_load_policy': 3,
-                    'disablekb': 1,
+                    'modestbranding': 1,  // SAKRIJE YOUTUBE LOGO
+                    'controls': 1,        // OSTAVI KONTROLE UKLJUČENE
+                    'showinfo': 0,        // SAKRIJE INFO
+                    'fs': 1,              // DOZVOLI FULLSCREEN
+                    'iv_load_policy': 3,  // SAKRIJE ANOTACIJE
+                    'disablekb': 0,       // DOZVOLI TASTATURU
                     'playsinline': 1
                 },
                 events: {
@@ -74,42 +90,68 @@
 
         function onPlayerReady(event) {
             event.target.playVideo();
-            // SAKRIJ YOUTUBE CONTROLS PUTEM CSS INJEKCIJE
-            hideYouTubeControls();
-        }
-
-        function hideYouTubeControls() {
-            const css = `
-                .ytp-chrome-top,
-                .ytp-chrome-bottom,
-                .ytp-pause-overlay,
-                .ytp-watermark,
-                .ytp-gradient-top,
-                .ytp-gradient-bottom {
-                    display: none !important;
-                    opacity: 0 !important;
-                    visibility: hidden !important;
-                }
-                iframe {
-                    width: 100% !important;
-                    height: 100% !important;
-                }
-            `;
-            const style = document.createElement('style');
-            style.textContent = css;
-            document.head.append(style);
+            continuouslyHideTitleBar();
         }
 
         function onPlayerStateChange(event) {
             if (event.data == YT.PlayerState.PLAYING) {
-                hideYouTubeControls();
+                continuouslyHideTitleBar();
             }
+        }
+
+        function continuouslyHideTitleBar() {
+            if (hideInterval) clearInterval(hideInterval);
+            
+            hideInterval = setInterval(() => {
+                // SAKRIJ TITLE BAR ELEMENTE
+                const titleElements = [
+                    '.ytp-chrome-top',
+                    '.ytp-title-link', 
+                    '.ytp-title-text',
+                    '.ytp-title-channel',
+                    '.ytp-watermark',
+                    '.ytp-show-cards-title'
+                ];
+                
+                titleElements.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        el.style.display = 'none';
+                        el.style.opacity = '0';
+                        el.style.visibility = 'hidden';
+                    });
+                });
+                
+                // OSTAVI PLAY/PAUSE/PROGRESS KONTROLE
+                const controlElements = [
+                    '.ytp-play-button',
+                    '.ytp-time-display',
+                    '.ytp-progress-bar',
+                    '.ytp-fullscreen-button',
+                    '.ytp-volume-panel'
+                ];
+                
+                controlElements.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        el.style.display = 'block';
+                        el.style.opacity = '1';
+                        el.style.visibility = 'visible';
+                    });
+                });
+                
+            }, 100);
         }
 
         document.getElementById('closeBtn').addEventListener('click', function() {
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             }
+        });
+
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            if (hideInterval) clearInterval(hideInterval);
         });
     </script>
 </body>
