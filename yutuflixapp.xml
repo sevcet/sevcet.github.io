@@ -1,32 +1,267 @@
 <movies>
     <category name="Domaci filmovi">
-        <movie>
-            <title>Anita 1 rodjendan</title>
-            <year>1999</year>
-            <genre>Domaci filmovi</genre>
-            <type>film</type>
-            <description>Anita 1 rodjendan</description>
-            <imageUrl>https://img.youtube.com/vi/2h94quQ99Ko/0.jpg</imageUrl>
-            <videoId>2h94quQ99Ko</videoId>
-        </movie>
-        <movie>
-            <title>Anita 2 rodjendan</title>
-            <year>1999</year>
-            <genre>Domaci filmovi</genre>
-            <type>film</type>
-            <description>Anita 2 rodjendan</description>
-            <imageUrl>https://img.youtube.com/vi/1kXG6Kl46Lc/0.jpg</imageUrl>
-            <videoId>1kXG6Kl46Lc</videoId>
-        </movie>
-        <movie>
-            <title>Anita 5 rodjendan</title>
-            <year>1999</year>
-            <genre>Domaci filmovi</genre>
-            <type>film</type>
-            <description>Anita 5 rodjendan</description>
-            <imageUrl>https://img.youtube.com/vi/HZDsjgJ5Dy0/0.jpg</imageUrl>
-            <videoId>HZDsjgJ5Dy0</videoId>
-        </movie>
+    <movie>
+        <title>Sesir profesora Koste Vujica</title>
+        <year>2012</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Priča je prvi put prikazana kao TV drama 1972. godine. Priča o profesoru Kosti Vujiću koji je sredinom 19. veka podučavao izuzetno talentovanu generaciju gimnazijalaca, od kojih će neki postati istaknuti članovi srpskog društva, a kasnije istorijski značajne ličnosti. Među njima su Mihailo „Mika Alas“ Petrović, Stevan Stojanović Mokranjac, Jovan Cvijić, Jaša Prodanović.</description>
+        <imageUrl>https://img.youtube.com/vi/Te9s3xcF1sE/0.jpg</imageUrl>
+        <videoId>Te9s3xcF1sE</videoId>
+    </movie>
+    <movie>
+        <title>Kad ljubav zakasni</title>
+        <year>2014</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Advokat Radmilo, najpoželjniji neženja, godinama je zaljubljen u Ljiljanu, odbijajući sve druge ponude za brak. On želi da se oženi Ljiljanom, ali ona planira da se uda za Momčila.</description>
+        <imageUrl>https://img.youtube.com/vi/k5XgXrxzspk/0.jpg</imageUrl>
+        <videoId>k5XgXrxzspk</videoId>
+    </movie>
+    <movie>
+        <title>Uzicka republika</title>
+        <year>1974</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Godine 1941, nekoliko meseci nakon što su nemački tenkovi primorali Jugoslovensku kraljevsku vojsku na kapitulaciju, organizovani otpor se pretvara u masovni ustanak protiv okupatorskih snaga. Partizani, predvođeni Komunističkom partijom, uspevaju da proteraju Nemce sa ogromne teritorije kasnije poznate kao Užička Republika. Međutim, snage lojalne kralju imaju neke druge ideje.</description>
+        <imageUrl>https://img.youtube.com/vi/c9g_UlLVtUM/0.jpg</imageUrl>
+        <videoId>c9g_UlLVtUM</videoId>
+    </movie>
+    <movie>
+        <title>Branio sam Mladu Bosnu</title>
+        <year>2014</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>28. jun 1914. Gavrilo Princip i drugovi, mladići koji snivaju o slobodi, izvršiće atentat na prestolonaslednika Austrougarske Monarhije koja je okupirala njihovu zemlju. Na suđenju koje sledi, u najvažnijem sudskom procesu XX veka, braniće ih mladi pravnik Rudolf Kistler. Kad upozna zanose i ideale svojih branjenika, naći će se u vrtlogu emotivne drame, spreman na najveći rizik. Ovo je njegova priča...</description>
+        <imageUrl>https://img.youtube.com/vi/yTCpz8cvBUk/0.jpg</imageUrl>
+        <videoId>yTCpz8cvBUk</videoId>
+    </movie>
+    <movie>
+        <title>APSTINENTI</title>
+        <year>1989</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Ljuba i Bora su dobri učenici sa nepostojećim seksualnim životom, za razliku od njihovog cimera Đovanija, koji nema takvih problema uprkos tome što je užasan učenik i umešan u sitni kriminal. Kada Đovanija regrutuju, a njegova sestra se useli kod druge dvojice, oni to vide kao kraj svog problema.</description>
+        <imageUrl>https://img.youtube.com/vi/hm_dKv-k0SY/0.jpg</imageUrl>
+        <videoId>hm_dKv-k0SY</videoId>
+    </movie>
+    <movie>
+        <title>Jesen samuraja</title>
+        <year>2016</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Vladica je izgubio jedino što mu je bilo važno - amatersko prvenstvo u karateu. Sada se vratio u svoj rodni grad tražeći posao, ljubav i iskupljenje.</description>
+        <imageUrl>https://img.youtube.com/vi/FHQwol6UyOk/0.jpg</imageUrl>
+        <videoId>FHQwol6UyOk</videoId>
+    </movie>
+    <movie>
+        <title>Crveni makovi</title>
+        <year>2011</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Dvadesetsedmogodišnji Vlada se seli u Beograd iz svog malog rodnog grada i poslednju noć provodi sa starim prijateljima. Noć donosi previše toga i budi unutrašnje borbe svih njih...</description>
+        <imageUrl>https://img.youtube.com/vi/618m4GUc1HI/0.jpg</imageUrl>
+        <videoId>618m4GUc1HI</videoId>
+    </movie>
+    <movie>
+        <title>Gospođa ministarka</title>
+        <year>1989</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Postajući žena ministra, Živka menja svoj nekadašnji način života i postaje dama. Međutim, njen moderan način života kratko traje, jer je njen suprug primoran da podnese ostavku nakon što je bio umešan u skandal. Na osnovu veoma popularnog srpskog romana komičara Branislava Nušića.</description>
+        <imageUrl>https://img.youtube.com/vi/BsyQTFTRlww/0.jpg</imageUrl>
+        <videoId>BsyQTFTRlww</videoId>
+    </movie>
+    <movie>
+        <title>Veliki transport</title>
+        <year>1983</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Ovaj ep o Drugom svetskom ratu bio je jedan od poslednjih filmova te vrste snimljenih u bivšoj Jugoslaviji. Priča istinitu priču o velikom transportu Partizana iz Vojvodine u Bosnu 1943. godine.</description>
+        <imageUrl>https://img.youtube.com/vi/7NeYx5lXVwY/0.jpg</imageUrl>
+        <videoId>7NeYx5lXVwY</videoId>
+    </movie>
+    <movie>
+        <title>Ringeraja</title>
+        <year>2002</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Ringeraja je film o dva brata, Ringeu i Radži. Jedan od njih je kriminalac, dok je drugi postdiplomac - dva različita sveta. Kriminalac pokušava da udovolji ocu svoje devojke, pa traži od brata da zameni uloge. Pretvaraće se da je student, a pravi student mora da se ponaša kao kriminalac.</description>
+        <imageUrl>https://img.youtube.com/vi/B8FdnpxLwew/0.jpg</imageUrl>
+        <videoId>B8FdnpxLwew</videoId>
+    </movie>
+    <movie>
+        <title>SVEČANA OBAVEZA</title>
+        <year>1986</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Profesor geografije i seljak se sprijatelje tokom služenja vojnog roka. Na dan polaganja svečane zakletve, iznenada se pojavljuje farmerov otac koji ga je odbacio kada je bio mali. Odbijajući da se sretne sa njim, šalje prijatelja da ga zameni.</description>
+        <imageUrl>https://img.youtube.com/vi/c0FGrI8WKU0/0.jpg</imageUrl>
+        <videoId>c0FGrI8WKU0</videoId>
+    </movie>
+    <movie>
+        <title>Bure baruta</title>
+        <year>1998</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Jedne noći, u nasilnom Beogradu sredinomdevedesetih, putevi 20 ljudi se ukrštaju.</description>
+        <imageUrl>https://img.youtube.com/vi/HwT9uhUH_7Q/0.jpg</imageUrl>
+        <videoId>HwT9uhUH_7Q</videoId>
+    </movie>
+    <movie>
+        <title>Turneja</title>
+        <year>2008</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>1993. godina, najmračnije vreme rata u Bosni i Hercegovini. Grupa glumaca iz Beograda, potpuno nesvesna za šta se pripremaju, kreće u potragu za brzom zaradom - na "turneju" po Srpskoj Krajini. Međutim, tamo su gurnuti u srce rata i počinju da lutaju od ratnog fronta do ratnog fronta, od jedne vojske do druge.</description>
+        <imageUrl>https://img.youtube.com/vi/uRX9VC0cGvQ/0.jpg</imageUrl>
+        <videoId>uRX9VC0cGvQ</videoId>
+    </movie>
+    <movie>
+        <title>Underground</title>
+        <year>1995</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Dva podzemna crnoberzijanca, Marko i Crni, prodaju oružje komunističkom pokretu otpora u ratnom Beogradu, živeći usput lep život.</description>
+        <imageUrl>https://img.youtube.com/vi/9Dc-IWCxP2I/0.jpg</imageUrl>
+        <videoId>9Dc-IWCxP2I</videoId>
+    </movie>
+    <movie>
+        <title>Parada</title>
+        <year>2011</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Homofobični srpski gangster primoran je da sklopi dogovor sa gej aktivistom organizatorom venčanja, da okupi tim koji će štititi predstojeću Paradu ponosa u Beogradu, a u zamenu njegova verenica može dobiti svoje venčanje iz snova.</description>
+        <imageUrl>https://img.youtube.com/vi/HMIfPTqxmWw/0.jpg</imageUrl>
+        <videoId>HMIfPTqxmWw</videoId>
+    </movie>
+    <movie>
+        <title>Braća po babine linije</title>
+        <year>2016</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Radašin and Milašin are brothers but they don't talk with each other. Both of them got letters inviting them on mysterious journey from their village to Belgrade, capital of Serbia. Each one has an amusing path that leads to one place, but their family won't let them fulfill their destiny alone in the end.</description>
+        <imageUrl>https://img.youtube.com/vi/tbmBFv6_4FU/0.jpg</imageUrl>
+        <videoId>tbmBFv6_4FU</videoId>
+    </movie>
+    <movie>
+        <title>Mi nismo andjeli 2</title>
+        <year>2005</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>U ovom nastavku izuzetno uspešne jugoslovenske komedije „Mi nismo anđeli“, bivši plejboj mora da se nosi sa adolescencijom svoje ćerke, kao i brojnim dečacima koji joj stalno kucaju na vrata. Zabrinuti otac misli da bi mogla da upadne u neku vrstu nevolje koju je izazivao kada je bio samo njenih godina.</description>
+        <imageUrl>https://img.youtube.com/vi/Cbi1AGCGLyk/0.jpg</imageUrl>
+        <videoId>Cbi1AGCGLyk</videoId>
+    </movie>
+    <movie>
+        <title>Gucha!</title>
+        <year>2006</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Julija, belkinja, zaljubljuje se u tamnoputog Romea, božanstvenog trubača iz romskog orkestra. Ali njen otac Sačmo ne prihvata Romea. Romeo treba da se bori za Juliju na legendarnom Festivalu trubača u Guči.</description>
+        <imageUrl>https://img.youtube.com/vi/mO7jXmzQfbM/0.jpg</imageUrl>
+        <videoId>mO7jXmzQfbM</videoId>
+    </movie>
+    <movie>
+        <title>Mirko i Slavko</title>
+        <year>1973</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>АКЦИОНА АДАПТАЦИЈА Популарног Југословенског стрипа о двојици младим партизанских курира у другом светски рату.</description>
+        <imageUrl>https://img.youtube.com/vi/DwA2ef1rpEc/0.jpg</imageUrl>
+        <videoId>DwA2ef1rpEc</videoId>
+    </movie>
+    <movie>
+        <title>Jesen stize Dunjo moja</title>
+        <year>2004</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Goose Feather (Serbian: Jesen Stiže, Dunjo Moja) was Serbia submission to the 77th Academy Awards for the Academy Award for Best Foreign Language Film, but was not accepted as a nominee. Vaguely based on a song By Djordje Balasevic called "Prica o Vasi Ladackom" (the story of Vasa Ladacki). The story is about a very poor boy that wanted abundance and wealth because he basically didn't own anything. He was in love with an equally poor girl that his father wouldn't accept. He moves to another village and starts drinking...</description>
+        <imageUrl>https://img.youtube.com/vi/C-P8M9STUyQ/0.jpg</imageUrl>
+        <videoId>C-P8M9STUyQ</videoId>
+    </movie>
+    <movie>
+        <title>KARAĐORĐEVA SMRT</title>
+        <year>1984</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Priča o smrti Karađorđa, izabranog vođe Prvog srpskog ustanka koji je imao za cilj oslobađanje Srbije od Osmanskog carstva.</description>
+        <imageUrl>https://img.youtube.com/vi/-m4VKfnqFJg/0.jpg</imageUrl>
+        <videoId>-m4VKfnqFJg</videoId>
+    </movie>
+    <movie>
+        <title>Led</title>
+        <year>2012</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Apoteoza lojalnosti i ljubavi. Priča o izgubljenoj sreći i snovima, strahovima i prolaznosti, nadmoći nad sudbinom i zakonima prirode, zahvalnosti i surovosti prirode, nemogućnosti čoveka da to promeni i utiče na tok sopstvenog života.</description>
+        <imageUrl>https://img.youtube.com/vi/VkQ3n8oVaZo/0.jpg</imageUrl>
+        <videoId>VkQ3n8oVaZo</videoId>
+    </movie>
+    <movie>
+        <title>Crni Gruja i kamen mudrosti</title>
+        <year>2007</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Na osnovu komične TV serije o srpskoj „aristokratiji“ tokom turskog „odgovora“ na Srpski ustanak tokom srpsko-turskog rata u 19. veku. Tokom ovog vremena bilo je od najveće važnosti da se preduzmu pravi koraci i mudrost je zaista potrebna za pravljenje tih pravih koraka. Uz pomoć gatare, Karađorđe (vođa Ustanka) saznaje da, prema legendi, negde u brdima postoji Kamen mudrosti koji vas čini, ako tri puta udarite glavom o njega, mudrijim. Zato angažuje svog nećaka Crnog Gruju, sa pomoćnicima Čedom Veljom i Boleom, da mu pronađe ovaj čudesni Kamen. Crni Gruja pronalazi Kamen i, ubeđen da zaista postaje sve mudriji, odlučuje da napravi neki posao.</description>
+        <imageUrl>https://img.youtube.com/vi/3bnwLu970uc/0.jpg</imageUrl>
+        <videoId>3bnwLu970uc</videoId>
+    </movie>
+    <movie>
+        <title>Ni na nebu ni na zemlji</title>
+        <year>1994</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Ova srpska drama prati podvige depresivnog arhitekte u Beogradu dok luta u potrazi za budućnošću u zemlji u kojoj budućnost više ne postoji. Zgodni Nikola je u srednjim tridesetim godinama. Nadimak Šampion zaradio je jer se trkao gliserima. Pristojno živi kao slobodni arhitekta i njegov stan je prostran i udoban. ...</description>
+        <imageUrl>https://img.youtube.com/vi/j4K5kj4J1bQ/0.jpg</imageUrl>
+        <videoId>j4K5kj4J1bQ</videoId>
+    </movie>
+    <movie>
+        <title>GLAVA ŠEĆERA</title>
+        <year>1991</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Opisuje društveni proces raslojavanja na srpskom selu krajem 19. veka, koji se javlja prodorom robnog novca na selo. U novim uslovima seljaci i poljoprivrednici nisu u stanju da se prilagode i trunu pod teretom dugova.</description>
+        <imageUrl>https://img.youtube.com/vi/m6mbOIda3yw/0.jpg</imageUrl>
+        <videoId>m6mbOIda3yw</videoId>
+    </movie>
+    <movie>
+        <title>Divlji vetar</title>
+        <year>1985</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Avgust 1943, Evropa. Ticala nemačke hobotnice počela su da se trzaju. Kako se nacisti povlače, njihova zabrinutost se fokusira na snabdevanje naftom iz rafinerija u Rumuniji. Bez protoka „crnog zlata“ nemačka propast je zapečaćena. Armade američkih bombardera iz baza u severnoj Africi počele su da napadaju Pioesti - a postoji još jedna pretnja od strane partizana preko granice Jugoslavije. Nasuprot prizoru spektakularnih događaja, odvija se dramatična priča o DIVLJEM VETRU.</description>
+        <imageUrl>https://img.youtube.com/vi/llTBI7dE2eM/0.jpg</imageUrl>
+        <videoId>llTBI7dE2eM</videoId>
+    </movie>
+    <movie>
+        <title>ZVERINJAK</title>
+        <year>2012</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>„Menažerija“ je drama koja se odvija početkom devedesetih godina prošlog veka, u jednom srpskom selu u blizini obale reke Drine. To je priča o moralnom i istorijskom slomu jedne zemlje, koja se nalazi u miljeu odvojenom od urbanog života, u području koje živi na specifičnim pravilima i odnosima među ljudima. Srna, ćerka Straina, najmoćnijeg čoveka u selu, obećana je za ženu Jovanu. Jovan je sin lokalnog šumara Tadije, koji zauzvrat dozvoljava lovokrađu i ilegalno sečenje seoskog drveta. Iako postoji privlačnost između Srne i Jovana, oni i dalje ne žele da se venčaju po želji svojih očeva. Odjednom se Petar, bivši šumar koji je bio sedam godina u zatvoru zbog ubistva Strainovog starijeg sina, vraća u selo. Njegov povratak menja živote svih likova u ovoj priči i ukazuje na njen neizvestan kraj.</description>
+        <imageUrl>https://img.youtube.com/vi/x5BoOmDkSMg/0.jpg</imageUrl>
+        <videoId>x5BoOmDkSMg</videoId>
+    </movie>
+    <movie>
+        <title>Zikina dinastija 3</title>
+        <year>1988</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Posle saobraćajne nesreće Zika i Milan završavaju u prenatrpanoj bolnici koju vode doktor Nedeljković i njegova seksualno opsednuta medicinska sestra. U pratnji ludog vođe orkestra i seljaka sa problemima sa prdenjem, pokušaće da pobegnu od tekućeg haosa.</description>
+        <imageUrl>https://img.youtube.com/vi/y7wzYTCnINk/0.jpg</imageUrl>
+        <videoId>y7wzYTCnINk</videoId>
+    </movie>
+    <movie>
+        <title>Pored mene</title>
+        <year>2015</year>
+        <genre>Domaci film</genre>
+        <type>film</type>
+        <description>Olja je profesorka istorije u srednjoj školi udata za slikara čija je najnovija izložba izazvala burne reakcije srpskih nacionalista. Jedne noći, grupa maskiranih huligana je napada. Snimaju napad i postavljaju klip na YouTube. Sutradan Olja saznaje da su neki od njenih učenika odgovorni. Oduzima im mobilne telefone i žurno odlučuje da...</description>
+        <imageUrl>https://img.youtube.com/vi/hpKAFB9QUZc/0.jpg</imageUrl>
+        <videoId>hpKAFB9QUZc</videoId>
+    </movie>
+
 
     </category>
  
