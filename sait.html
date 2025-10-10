@@ -21,25 +21,31 @@
         }
         #closeBtn {
             position: absolute;
-            bottom: 10%; /* 10% OD DNA EKRANA */
-            right: 15px;
+            top: 50%; /* CENTRIRANO VERTIKALNO */
+            transform: translateY(-50%); /* POMERI NAZAD ZA POLOVINU SVOJE VISINE */
+            right: 20px;
             background: rgba(0,0,0,0.8);
             color: #fff;
             border: none;
             font-size: 24px;
             border-radius: 50%;
-            width: 48px;
-            height: 48px;
+            width: 50px;
+            height: 50px;
             cursor: pointer;
             z-index: 10000;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, background 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            font-weight: bold;
         }
         #closeBtn:hover {
-            background: rgba(255,0,0,0.8);
+            background: rgba(255,0,0,0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        #closeBtn:active {
+            transform: translateY(-50%) scale(0.95);
         }
     </style>
 </head>
@@ -110,7 +116,6 @@
 
         // Klik na bilo koji deo ekrana prikazuje X dugme
         document.addEventListener('click', function(event) {
-            // Ne prikazuj X dugme ako je kliknuto na sam X dugme
             if (event.target.id !== 'closeBtn') {
                 showCloseButton();
             }
@@ -121,12 +126,11 @@
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
-                // Fallback ako AndroidInterface nije dostupan
                 window.history.back();
             }
         });
 
-        // Sakrij X dugme kada se miš pomera (kao YouTube)
+        // Sakrij X dugme kada se miš pomera
         document.addEventListener('mousemove', function() {
             showCloseButton();
         });
