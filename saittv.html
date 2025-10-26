@@ -20,226 +20,31 @@
             border: none;
         }
         
-        /* Progress bar na dnu */
-        #progressContainer {
-            position: absolute;
-            bottom: 60px;
-            left: 5%;
-            width: 90%;
-            background: rgba(255,255,255,0.2);
-            height: 6px;
-            border-radius: 3px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        #progressBar {
-            height: 100%;
-            background: #ff4444;
-            border-radius: 3px;
-            width: 0%;
-            transition: width 0.1s ease;
-        }
-        
-        /* Info panel */
+        /* Simple info panel */
         #infoPanel {
             position: absolute;
-            top: 30px;
-            left: 30px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 16px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            border-left: 4px solid #ff4444;
-        }
-        
-        /* Time display */
-        #timeDisplay {
-            position: absolute;
-            bottom: 75px;
-            left: 5%;
-            color: white;
-            font-size: 14px;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 4px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        /* Volume display */
-        #volumeDisplay {
-            position: absolute;
-            bottom: 75px;
-            right: 5%;
-            color: white;
-            font-size: 14px;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 4px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        /* Quick seek indicators */
-        .seek-indicator {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 20px;
+            left: 20px;
             background: rgba(0,0,0,0.8);
             color: white;
             padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 18px;
+            border-radius: 6px;
+            font-size: 14px;
             z-index: 10001;
             opacity: 0;
             transition: opacity 0.3s ease;
-        }
-        #seekBackward {
-            left: 30px;
-        }
-        #seekForward {
-            right: 30px;
-        }
-        
-        /* Subtitles menu */
-        #subtitlesMenu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            z-index: 10002;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            min-width: 300px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            pointer-events: none;
-        }
-        #subtitlesMenu.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-        .menu-title {
-            font-size: 20px;
-            margin-bottom: 15px;
-            text-align: center;
-            color: #ff4444;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }
-        .subtitle-option {
-            padding: 12px 15px;
-            margin: 5px 0;
-            background: rgba(255,255,255,0.1);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 2px solid transparent;
-        }
-        .subtitle-option:hover,
-        .subtitle-option:focus {
-            background: rgba(255,255,255,0.2);
-            border-color: #ff4444;
-            transform: scale(1.02);
-            outline: none;
-        }
-        .subtitle-option.selected {
-            background: rgba(255,68,68,0.3);
-            border-color: #ff4444;
-        }
-        
-        /* Pause overlay */
-        #pauseOverlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 10003;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        #pauseOverlay.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-        .pause-icon {
-            font-size: 80px;
-            color: white;
-            margin-bottom: 20px;
-        }
-        .pause-text {
-            color: white;
-            font-size: 24px;
-            text-align: center;
-        }
-        .pause-hint {
-            color: #ccc;
-            font-size: 16px;
-            margin-top: 10px;
-            text-align: center;
         }
     </style>
 </head>
 <body>
+    <!-- YouTube player sa uključenim kontrolama -->
     <div id="player"></div>
-    
-    <!-- Progress i kontrole -->
-    <div id="progressContainer">
-        <div id="progressBar"></div>
-    </div>
-    <div id="timeDisplay"></div>
-    <div id="volumeDisplay"></div>
-    
-    <!-- Seek indikatori -->
-    <div id="seekBackward" class="seek-indicator">⏪ -30s</div>
-    <div id="seekForward" class="seek-indicator">+30s ⏩</div>
-    
-    <!-- Subtitles menu -->
-    <div id="subtitlesMenu">
-        <div class="menu-title">🎯 Odabir titlova</div>
-        <div id="subtitleOptions"></div>
-    </div>
-    
-    <!-- Pause overlay -->
-    <div id="pauseOverlay">
-        <div class="pause-icon">⏸️</div>
-        <div class="pause-text">Pauzirano</div>
-        <div class="pause-hint">Pritisni ENTER za nastavak<br>GORE za titlove</div>
-    </div>
-    
     <div id="infoPanel"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         let player;
         let hideTimeout;
-        let isPlaying = false;
-        let isMuted = false;
-        let progressInterval;
-        let seekHoldInterval;
-        let currentSeekDirection = 0;
-        let seekSpeed = 30;
-        let availableCaptions = [];
-        let currentCaptionTrack = -1;
-        let isSubtitlesMenuOpen = false;
-        let currentMenuSelection = 0;
         
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -253,350 +58,44 @@
                     'autoplay': 1,
                     'rel': 0,
                     'modestbranding': 1,
-                    'controls': 0,
+                    'controls': 1, // UKLJUČI YouTube kontrole!
                     'showinfo': 0,
                     'fs': 1,
                     'iv_load_policy': 3,
-                    'disablekb': 1,
+                    'disablekb': 0, // DOZVOLI YouTube tastaturu
                     'playsinline': 1,
-                    'cc_load_policy': 0 // Isključi titlove na početku
+                    'cc_load_policy': 1, // Titlovi po defaultu
+                    'cc_lang_pref': 'sr'
                 },
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError,
-                    'onApiChange': onApiChange
+                    'onError': onPlayerError
                 }
             });
         }
 
         function onPlayerReady(event) {
-            event.target.playVideo();
-            isPlaying = true;
-            hideControls();
+            // Fokusiraj player da bi YouTube kontrole radile
+            const iframe = document.getElementById('player');
+            if (iframe) {
+                iframe.focus();
+            }
             
-            startProgressTracking();
-            checkAvailableCaptions();
+            showInfo("YouTube Player spreman");
             
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
             }
-            
-            showInfo("←→ Seek ±30s | ↑↓ Zvuk | ENTER Pauza");
         }
 
         function onPlayerStateChange(event) {
-            if (event.data === YT.PlayerState.PLAYING) {
-                isPlaying = true;
-                hidePauseOverlay();
-                startProgressTracking();
-            } else if (event.data === YT.PlayerState.PAUSED) {
-                isPlaying = false;
-                stopProgressTracking();
-            } else if (event.data === YT.PlayerState.ENDED) {
-                isPlaying = false;
-                stopProgressTracking();
-                showInfo("Video završen");
-            }
-            resetHideTimer();
+            // YouTube player sam upravlja svim kontrolama
         }
 
         function onPlayerError(event) {
             console.error('Player error:', event.data);
             showInfo("Greška pri reprodukciji");
-        }
-
-        function onApiChange(event) {
-            setTimeout(checkAvailableCaptions, 1000);
-        }
-
-        function checkAvailableCaptions() {
-            try {
-                if (player && player.getOptions && player.getOption) {
-                    const trackList = player.getOption('captions', 'tracklist');
-                    if (trackList && trackList.length > 0) {
-                        availableCaptions = trackList;
-                    }
-                }
-            } catch (e) {
-                console.log('Nema dostupnih titlova');
-            }
-        }
-
-        function showSubtitlesMenu() {
-            if (availableCaptions.length === 0) {
-                showInfo("Nema dostupnih titlova");
-                return;
-            }
-            
-            const menu = document.getElementById('subtitlesMenu');
-            const optionsContainer = document.getElementById('subtitleOptions');
-            
-            if (menu && optionsContainer) {
-                // Dodaj opciju "Bez titlova"
-                let optionsHTML = `<div class="subtitle-option ${currentCaptionTrack === -1 ? 'selected' : ''}" data-index="-1" onclick="selectSubtitle(-1)">
-                    ❌ Bez titlova
-                </div>`;
-                
-                // Dodaj dostupne titlove
-                availableCaptions.forEach((track, index) => {
-                    optionsHTML += `<div class="subtitle-option ${currentCaptionTrack === index ? 'selected' : ''}" data-index="${index}" onclick="selectSubtitle(${index})">
-                        ${getLanguageName(track.languageCode)}${track.name ? ` - ${track.name}` : ''}
-                    </div>`;
-                });
-                
-                optionsContainer.innerHTML = optionsHTML;
-                menu.classList.add('visible');
-                isSubtitlesMenuOpen = true;
-                currentMenuSelection = currentCaptionTrack + 1; // +1 zbog "Bez titlova" opcije
-                updateMenuSelection();
-            }
-        }
-
-        function hideSubtitlesMenu() {
-            const menu = document.getElementById('subtitlesMenu');
-            if (menu) {
-                menu.classList.remove('visible');
-                isSubtitlesMenuOpen = false;
-            }
-        }
-
-        function updateMenuSelection() {
-            const options = document.querySelectorAll('.subtitle-option');
-            options.forEach((option, index) => {
-                if (index === currentMenuSelection) {
-                    option.classList.add('selected');
-                    option.focus();
-                } else {
-                    option.classList.remove('selected');
-                }
-            });
-        }
-
-        function selectSubtitle(index) {
-            currentCaptionTrack = index;
-            
-            if (index === -1) {
-                // Isključi titlove
-                player.unloadModule('captions');
-                showInfo("Titlovi: Isključeni");
-            } else {
-                // Uključi odabrani titl
-                const track = availableCaptions[index];
-                player.loadModule('captions');
-                player.setOption('captions', 'track', {languageCode: track.languageCode});
-                showInfo("Titlovi: " + getLanguageName(track.languageCode));
-            }
-            
-            hideSubtitlesMenu();
-            showControlsTemporary();
-        }
-
-        function getLanguageName(langCode) {
-            const languages = {
-                'sr': '🇷🇸 Srpski',
-                'en': '🇺🇸 Engleski',
-                'hr': '🇭🇷 Hrvatski',
-                'bs': '🇧🇦 Bosanski',
-                'sl': '🇸🇮 Slovenački',
-                'mk': '🇲🇰 Makedonski',
-                'de': '🇩🇪 Nemački',
-                'fr': '🇫🇷 Francuski',
-                'es': '🇪🇸 Španski',
-                'it': '🇮🇹 Italijanski',
-                'ru': '🇷🇺 Ruski'
-            };
-            return languages[langCode] || langCode;
-        }
-
-        function togglePlayPause() {
-            if (isSubtitlesMenuOpen) {
-                // Ako je meni otvoren, ENTER bira opciju
-                const options = document.querySelectorAll('.subtitle-option');
-                if (options[currentMenuSelection]) {
-                    options[currentMenuSelection].click();
-                }
-                return;
-            }
-            
-            if (isPlaying) {
-                player.pauseVideo();
-                showPauseOverlay();
-            } else {
-                player.playVideo();
-                hidePauseOverlay();
-            }
-        }
-
-        function showPauseOverlay() {
-            const overlay = document.getElementById('pauseOverlay');
-            if (overlay) {
-                overlay.classList.add('visible');
-            }
-        }
-
-        function hidePauseOverlay() {
-            const overlay = document.getElementById('pauseOverlay');
-            if (overlay) {
-                overlay.classList.remove('visible');
-            }
-        }
-
-        // Seek funkcije
-        function startSeek(direction) {
-            if (isSubtitlesMenuOpen) return;
-            
-            currentSeekDirection = direction;
-            seekSpeed = 30;
-            
-            seek(direction * seekSpeed);
-            
-            seekHoldInterval = setInterval(() => {
-                seekSpeed = Math.min(seekSpeed * 1.2, 300);
-                seek(direction * seekSpeed);
-            }, 400);
-            
-            showSeekIndicator(direction);
-        }
-
-        function stopSeek() {
-            currentSeekDirection = 0;
-            if (seekHoldInterval) {
-                clearInterval(seekHoldInterval);
-                seekHoldInterval = null;
-            }
-            hideSeekIndicator();
-        }
-
-        function seek(seconds) {
-            const currentTime = player.getCurrentTime();
-            const duration = player.getDuration();
-            const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
-            player.seekTo(newTime, true);
-            showControlsTemporary();
-        }
-
-        function showSeekIndicator(direction) {
-            const indicator = direction < 0 ? document.getElementById('seekBackward') : document.getElementById('seekForward');
-            if (indicator) {
-                const seconds = Math.round(seekSpeed);
-                indicator.textContent = direction < 0 ? `⏪ -${seconds}s` : `+${seconds}s ⏩`;
-                indicator.style.opacity = '1';
-            }
-        }
-
-        function hideSeekIndicator() {
-            const indicators = document.querySelectorAll('.seek-indicator');
-            indicators.forEach(ind => {
-                ind.style.opacity = '0';
-            });
-        }
-
-        function changeVolume(change) {
-            if (isSubtitlesMenuOpen) {
-                // U meniju, gore/dole menja selekciju
-                const options = document.querySelectorAll('.subtitle-option');
-                if (change > 0) {
-                    currentMenuSelection = Math.max(0, currentMenuSelection - 1);
-                } else {
-                    currentMenuSelection = Math.min(options.length - 1, currentMenuSelection + 1);
-                }
-                updateMenuSelection();
-                return;
-            }
-            
-            const currentVolume = player.getVolume();
-            const newVolume = Math.max(0, Math.min(100, currentVolume + change));
-            player.setVolume(newVolume);
-            showVolumeDisplay(newVolume);
-            showControlsTemporary();
-        }
-
-        function startProgressTracking() {
-            stopProgressTracking();
-            progressInterval = setInterval(updateProgress, 1000);
-        }
-
-        function stopProgressTracking() {
-            if (progressInterval) {
-                clearInterval(progressInterval);
-                progressInterval = null;
-            }
-        }
-
-        function updateProgress() {
-            if (player && player.getCurrentTime && player.getDuration) {
-                const currentTime = player.getCurrentTime();
-                const duration = player.getDuration();
-                const progress = (currentTime / duration) * 100;
-                
-                const progressBar = document.getElementById('progressBar');
-                if (progressBar) {
-                    progressBar.style.width = progress + '%';
-                }
-                
-                const timeDisplay = document.getElementById('timeDisplay');
-                if (timeDisplay) {
-                    timeDisplay.textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
-                }
-            }
-        }
-
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return mins + ':' + (secs < 10 ? '0' : '') + secs;
-        }
-
-        function showVolumeDisplay(volume) {
-            const volumeDisplay = document.getElementById('volumeDisplay');
-            if (volumeDisplay) {
-                volumeDisplay.textContent = 'Zvuk: ' + volume + '%';
-                volumeDisplay.style.opacity = '1';
-                setTimeout(() => {
-                    volumeDisplay.style.opacity = '0';
-                }, 2000);
-            }
-        }
-
-        function showControls() {
-            if (isSubtitlesMenuOpen) return;
-            
-            const progress = document.getElementById('progressContainer');
-            const timeDisplay = document.getElementById('timeDisplay');
-            if (progress) progress.style.opacity = '1';
-            if (timeDisplay) timeDisplay.style.opacity = '1';
-            resetHideTimer();
-        }
-
-        function hideControls() {
-            const progress = document.getElementById('progressContainer');
-            const timeDisplay = document.getElementById('timeDisplay');
-            const volumeDisplay = document.getElementById('volumeDisplay');
-            if (progress) progress.style.opacity = '0';
-            if (timeDisplay) timeDisplay.style.opacity = '0';
-            if (volumeDisplay) volumeDisplay.style.opacity = '0';
-            clearTimeout(hideTimeout);
-        }
-
-        function showControlsTemporary() {
-            showControls();
-            resetHideTimer();
-        }
-
-        function resetHideTimer() {
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(hideControls, 3000);
-        }
-
-        function closePlayer() {
-            stopProgressTracking();
-            stopSeek();
-            if (window.AndroidInterface) {
-                AndroidInterface.closePlayer();
-            } else {
-                window.history.back();
-            }
         }
 
         function showInfo(message) {
@@ -610,69 +109,27 @@
             }
         }
 
-        // TV komande
-        let keyState = {};
-        
+        // Samo Back dugme za zatvaranje
         document.addEventListener('keydown', function(event) {
-            showControlsTemporary();
-            
-            if (keyState[event.key]) return;
-            keyState[event.key] = true;
-            
-            switch(event.key) {
-                case 'Enter':
-                case ' ':
-                    togglePlayPause();
-                    break;
-                    
-                case 'ArrowLeft':
-                    startSeek(-1);
-                    break;
-                    
-                case 'ArrowRight':
-                    startSeek(1);
-                    break;
-                    
-                case 'ArrowUp':
-                    changeVolume(1); // 1 za meni navigaciju
-                    break;
-                    
-                case 'ArrowDown':
-                    changeVolume(-1); // -1 za meni navigaciju
-                    break;
-                    
-                case 'Escape':
-                case 'Backspace':
-                    if (isSubtitlesMenuOpen) {
-                        hideSubtitlesMenu();
-                    } else {
-                        closePlayer();
-                    }
-                    break;
+            if (event.key === 'Escape' || event.key === 'Backspace') {
+                closePlayer();
             }
         });
 
-        document.addEventListener('keyup', function(event) {
-            keyState[event.key] = false;
-            
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                stopSeek();
+        function closePlayer() {
+            if (window.AndroidInterface) {
+                AndroidInterface.closePlayer();
+            } else {
+                window.history.back();
             }
-        });
+        }
 
-        // Auto-hide kontrole
-        document.addEventListener('mousemove', showControlsTemporary);
-        document.addEventListener('click', showControlsTemporary);
-
-        // Inicijalno sakrij kontrole
-        window.addEventListener('load', function() {
-            setTimeout(hideControls, 2000);
-        });
-
-        // Cleanup pri zatvaranju
-        window.addEventListener('beforeunload', function() {
-            stopProgressTracking();
-            stopSeek();
+        // Fokusiraj player odmah
+        document.addEventListener('DOMContentLoaded', function() {
+            const iframe = document.getElementById('player');
+            if (iframe) {
+                iframe.focus();
+            }
         });
     </script>
 </body>
