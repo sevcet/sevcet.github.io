@@ -18,105 +18,141 @@
             width: 100%;
             height: 100%;
             border: none;
+            outline: none;
         }
         
-        /* Simple info panel */
-        #infoPanel {
+        /* Focus helper */
+        #focusHelper {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            z-index: 10001;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 1px;
+            background: transparent;
+            border: none;
+            outline: none;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            z-index: -1;
         }
     </style>
 </head>
 <body>
-    <!-- YouTube player sa uključenim kontrolama -->
-    <div id="player"></div>
-    <div id="infoPanel"></div>
+    <!-- YouTube player -->
+    <iframe 
+        id="player"
+        src=""
+        frameborder="0"
+        allow="autoplay; encrypted-media; fullscreen"
+        allowfullscreen
+        tabindex="0">
+    </iframe>
+    
+    <!-- Focus helper -->
+    <button id="focusHelper"></button>
 
-    <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        let player;
-        let hideTimeout;
-        
-        function onYouTubeIframeAPIReady() {
+        // Konfiguracija YouTube playera
+        function initializePlayer() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
             
-            player = new YT.Player('player', {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: {
-                    'autoplay': 1,
-                    'rel': 0,
-                    'modestbranding': 1,
-                    'controls': 1, // UKLJUČI YouTube kontrole!
-                    'showinfo': 0,
-                    'fs': 1,
-                    'iv_load_policy': 3,
-                    'disablekb': 0, // DOZVOLI YouTube tastaturu
-                    'playsinline': 1,
-                    'cc_load_policy': 1, // Titlovi po defaultu
-                    'cc_lang_pref': 'sr'
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError
+            if (!videoId) {
+                console.error('No videoId provided');
+                return;
+            }
+
+            // YouTube TV embed URL sa svim kontrolama
+            const embedUrl = `https://www.youtube.com/embed/${videoId}?` + new URLSearchParams({
+                'autoplay': '1',
+                'rel': '0',
+                'modestbranding': '1',
+                'controls': '1',
+                'showinfo': '0',
+                'fs': '1',
+                'iv_load_policy': '3',
+                'disablekb': '0',
+                'playsinline': '1',
+                'cc_load_policy': '1',
+                'cc_lang_pref': 'sr',
+                'enablejsapi': '1',
+                'widget_referrer': window.location.href,
+                'origin': window.location.origin
+            });
+
+            const player = document.getElementById('player');
+            player.src = embedUrl;
+            
+            // Fokusiraj player odmah
+            setTimeout(() => {
+                player.focus();
+                console.log('Player focused');
+            }, 1000);
+
+            // Obavesti Android da je player spreman
+            if (window.AndroidInterface) {
+                setTimeout(() => {
+                    AndroidInterface.playerReady();
+                }, 2000);
+            }
+        }
+
+        // YouTube TV komande
+        function setupTVControls() {
+            const player = document.getElementById('player');
+            
+            // Fokus management
+            player.addEventListener('load', function() {
+                console.log('Player loaded, setting focus...');
+                setTimeout(() => {
+                    player.focus();
+                    player.contentWindow.focus();
+                }, 500);
+            });
+
+            // Globalne TV komande
+            document.addEventListener('keydown', function(event) {
+                console.log('Key pressed:', event.key);
+                
+                switch(event.key) {
+                    case 'Backspace':
+                    case 'Escape':
+                    case 'b':
+                    case 'B':
+                        // Back dugme - zatvori player
+                        event.preventDefault();
+                        event.stopPropagation();
+                        closePlayer();
+                        break;
+                        
+                    case 'MediaPlayPause':
+                    case ' ':
+                        // Play/Pause - prosledi YouTube-u
+                        event.preventDefault();
+                        break;
+                        
+                    case 'ArrowUp':
+                    case 'ArrowDown':
+                    case 'ArrowLeft':
+                    case 'ArrowRight':
+                    case 'Enter':
+                        // Navigacija - prosledi YouTube-u
+                        event.preventDefault();
+                        break;
                 }
+            });
+
+            // Spreči bubble-up eventova
+            player.addEventListener('keydown', function(event) {
+                event.stopPropagation();
+            });
+            
+            player.addEventListener('keyup', function(event) {
+                event.stopPropagation();
             });
         }
 
-        function onPlayerReady(event) {
-            // Fokusiraj player da bi YouTube kontrole radile
-            const iframe = document.getElementById('player');
-            if (iframe) {
-                iframe.focus();
-            }
-            
-            showInfo("YouTube Player spreman");
-            
-            if (window.AndroidInterface) {
-                AndroidInterface.playerReady();
-            }
-        }
-
-        function onPlayerStateChange(event) {
-            // YouTube player sam upravlja svim kontrolama
-        }
-
-        function onPlayerError(event) {
-            console.error('Player error:', event.data);
-            showInfo("Greška pri reprodukciji");
-        }
-
-        function showInfo(message) {
-            const infoPanel = document.getElementById('infoPanel');
-            if (infoPanel) {
-                infoPanel.textContent = message;
-                infoPanel.style.opacity = '1';
-                setTimeout(() => {
-                    infoPanel.style.opacity = '0';
-                }, 3000);
-            }
-        }
-
-        // Samo Back dugme za zatvaranje
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' || event.key === 'Backspace') {
-                closePlayer();
-            }
-        });
-
         function closePlayer() {
+            console.log('Closing player...');
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
@@ -124,13 +160,36 @@
             }
         }
 
-        // Fokusiraj player odmah
+        // Pokreni sve kada se stranica učita
         document.addEventListener('DOMContentLoaded', function() {
-            const iframe = document.getElementById('player');
-            if (iframe) {
-                iframe.focus();
-            }
+            console.log('DOM loaded, initializing player...');
+            initializePlayer();
+            setupTVControls();
+            
+            // Fokusiraj player na svaki pokušaj
+            setInterval(() => {
+                const player = document.getElementById('player');
+                if (document.activeElement !== player) {
+                    player.focus();
+                }
+            }, 1000);
         });
+
+        // Postavi fokus kada se vrati sa drugog prozora
+        window.addEventListener('focus', function() {
+            const player = document.getElementById('player');
+            setTimeout(() => {
+                player.focus();
+            }, 100);
+        });
+
+        // YouTube API callback
+        function onYouTubeIframeAPIReady() {
+            console.log('YouTube API Ready');
+        }
     </script>
+    
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
