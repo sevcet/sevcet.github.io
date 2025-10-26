@@ -92,6 +92,56 @@
         #seekForward {
             right: 30px;
         }
+        
+        /* CC Menu */
+        #ccMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 10002;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            min-width: 300px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+        #ccMenu.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .menu-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #ff4444;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .cc-option {
+            padding: 12px 15px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        .cc-option:hover,
+        .cc-option:focus {
+            background: rgba(255,255,255,0.2);
+            border-color: #ff4444;
+            transform: scale(1.02);
+            outline: none;
+        }
+        .cc-option.selected {
+            background: rgba(255,68,68,0.3);
+            border-color: #ff4444;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +157,12 @@
     <div id="seekBackward" class="seek-indicator">⏪ -30s</div>
     <div id="seekForward" class="seek-indicator">+30s ⏩</div>
     
+    <!-- CC Menu -->
+    <div id="ccMenu">
+        <div class="menu-title">🎯 Odabir titlova</div>
+        <div id="ccOptions"></div>
+    </div>
+    
     <div id="infoPanel"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -118,6 +174,10 @@
         let seekHoldInterval;
         let seekStartTime = 0;
         let currentSeekDirection = 0;
+        let availableCaptions = [];
+        let currentCaptionTrack = -1;
+        let isCCMenuOpen = false;
+        let currentCCSelection = 0;
         
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -142,7 +202,8 @@
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError
+                    'onError': onPlayerError,
+                    'onApiChange': onApiChange
                 }
             });
         }
@@ -154,11 +215,16 @@
             
             startProgressTracking();
             
+            // Pokupi dostupne titlove
+            setTimeout(() => {
+                getAvailableCaptions();
+            }, 3000);
+            
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
             }
             
-            showInfo("←→ Seek | ENTER YouTube meni | BACK Zatvori");
+            showInfo("←→ Seek | ENTER CC meni | BACK Zatvori");
         }
 
         function onPlayerStateChange(event) {
@@ -181,34 +247,225 @@
             showInfo("Greška pri reprodukciji");
         }
 
-        // Poboljšani seek sa vremenskim osjetom
+        function onApiChange(event) {
+            // API se promenio - možda su titlovi dostupni sada
+            setTimeout(getAvailableCaptions, 1000);
+        }
+
+        // Glavna funkcija za dobijanje titlova
+        function getAvailableCaptions() {
+            try {
+                console.log("Getting available captions...");
+                
+                // Pokušaj 1: Koristi getOption za tracklist
+                if (player.getOption && player.getOptions) {
+                    const trackList = player.getOption('captions', 'tracklist');
+                    if (trackList && trackList.length > 0) {
+                        console.log("Found captions via getOption:", trackList);
+                        availableCaptions = trackList;
+                        return;
+                    }
+                }
+                
+                // Pokušaj 2: Koristi getCaptionsList (stari API)
+                if (player.getCaptionsList) {
+                    const captionsList = player.getCaptionsList();
+                    if (captionsList && captionsList.length > 0) {
+                        console.log("Found captions via getCaptionsList:", captionsList);
+                        availableCaptions = captionsList;
+                        return;
+                    }
+                }
+                
+                // Pokušaj 3: Probaj da učitamo captions modul
+                player.loadModule('captions');
+                setTimeout(() => {
+                    if (player.getOption) {
+                        const trackList = player.getOption('captions', 'tracklist');
+                        if (trackList && trackList.length > 0) {
+                            console.log("Found captions after loading module:", trackList);
+                            availableCaptions = trackList;
+                        }
+                    }
+                }, 2000);
+                
+            } catch (e) {
+                console.error("Error getting captions:", e);
+            }
+            
+            // Ako nema titlova, probaj ponovo za 5 sekundi
+            if (availableCaptions.length === 0) {
+                setTimeout(getAvailableCaptions, 5000);
+            }
+        }
+
+        function showCCMenu() {
+            const menu = document.getElementById('ccMenu');
+            const optionsContainer = document.getElementById('ccOptions');
+            
+            if (menu && optionsContainer) {
+                let optionsHTML = '';
+                
+                if (availableCaptions.length === 0) {
+                    optionsHTML = `<div class="cc-option">🔄 Učitavam titlove...</div>`;
+                    // Probaj ponovo da dobiješ titlove
+                    getAvailableCaptions();
+                } else {
+                    // Opcija "Bez titlova"
+                    optionsHTML = `<div class="cc-option ${currentCaptionTrack === -1 ? 'selected' : ''}" data-index="-1">
+                        ❌ Bez titlova
+                    </div>`;
+                    
+                    // Dostupni titlovi
+                    availableCaptions.forEach((track, index) => {
+                        const languageName = getLanguageName(track.languageCode);
+                        const trackName = track.name ? ` - ${track.name}` : '';
+                        optionsHTML += `<div class="cc-option ${currentCaptionTrack === index ? 'selected' : ''}" data-index="${index}">
+                            ${languageName}${trackName}
+                        </div>`;
+                    });
+                }
+                
+                optionsContainer.innerHTML = optionsHTML;
+                menu.classList.add('visible');
+                isCCMenuOpen = true;
+                currentCCSelection = currentCaptionTrack + 1; // +1 zbog "Bez titlova"
+                updateCCSelection();
+            }
+        }
+
+        function hideCCMenu() {
+            const menu = document.getElementById('ccMenu');
+            if (menu) {
+                menu.classList.remove('visible');
+                isCCMenuOpen = false;
+            }
+        }
+
+        function updateCCSelection() {
+            const options = document.querySelectorAll('.cc-option');
+            options.forEach((option, index) => {
+                if (index === currentCCSelection) {
+                    option.classList.add('selected');
+                } else {
+                    option.classList.remove('selected');
+                }
+            });
+        }
+
+        function navigateCCMenu(direction) {
+            if (!isCCMenuOpen) {
+                showCCMenu();
+                return;
+            }
+            
+            const options = document.querySelectorAll('.cc-option');
+            if (options.length > 0) {
+                if (direction > 0) {
+                    currentCCSelection = Math.min(options.length - 1, currentCCSelection + 1);
+                } else {
+                    currentCCSelection = Math.max(0, currentCCSelection - 1);
+                }
+                updateCCSelection();
+            }
+        }
+
+        function selectCCOption() {
+            if (!isCCMenuOpen) return;
+            
+            const options = document.querySelectorAll('.cc-option');
+            if (options[currentCCSelection]) {
+                const index = parseInt(options[currentCCSelection].getAttribute('data-index'));
+                setCaptionTrack(index);
+            }
+        }
+
+        function setCaptionTrack(index) {
+            currentCaptionTrack = index;
+            
+            try {
+                if (index === -1) {
+                    // Isključi titlove
+                    player.unloadModule('captions');
+                    showInfo("Titlovi: Isključeni");
+                } else {
+                    // Uključi odabrani titl
+                    const track = availableCaptions[index];
+                    player.loadModule('captions');
+                    player.setOption('captions', 'track', {languageCode: track.languageCode});
+                    showInfo("Titlovi: " + getLanguageName(track.languageCode));
+                }
+            } catch (e) {
+                console.error("Error setting caption track:", e);
+                showInfo("Greška pri postavljanju titlova");
+            }
+            
+            hideCCMenu();
+        }
+
+        function getLanguageName(langCode) {
+            const languages = {
+                'sr': '🇷🇸 Srpski',
+                'en': '🇺🇸 Engleski',
+                'hr': '🇭🇷 Hrvatski',
+                'bs': '🇧🇦 Bosanski',
+                'sl': '🇸🇮 Slovenački',
+                'mk': '🇲🇰 Makedonski',
+                'de': '🇩🇪 Nemački',
+                'fr': '🇫🇷 Francuski',
+                'es': '🇪🇸 Španski',
+                'it': '🇮🇹 Italijanski',
+                'ru': '🇷🇺 Ruski',
+                'ar': '🇸🇦 Arapski',
+                'zh': '🇨🇳 Kineski',
+                'ja': '🇯🇵 Japanski',
+                'ko': '🇰🇷 Koreanski',
+                'pt': '🇵🇹 Portugalski',
+                'tr': '🇹🇷 Turski',
+                'nl': '🇳🇱 Holandski',
+                'pl': '🇵🇱 Poljski',
+                'hu': '🇭🇺 Mađarski',
+                'cs': '🇨🇿 Češki',
+                'sk': '🇸🇰 Slovački',
+                'ro': '🇷🇴 Rumunski',
+                'bg': '🇧🇬 Bugarski',
+                'el': '🇬🇷 Grčki',
+                'he': '🇮🇱 Hebrejski',
+                'hi': '🇮🇳 Hindi',
+                'th': '🇹🇭 Tajlandski',
+                'vi': '🇻🇳 Vijetnamski'
+            };
+            return languages[langCode] || langCode;
+        }
+
+        // Poboljšani seek
         function startSeek(direction) {
+            if (isCCMenuOpen) return;
+            
             currentSeekDirection = direction;
             seekStartTime = Date.now();
             
-            // Prvi seek - 30 sekundi
             seek(direction * 30);
             showSeekIndicator(direction, 30);
             
-            // Kontinualni seek sa vremenskim osjetom
             seekHoldInterval = setInterval(() => {
                 const holdTime = Date.now() - seekStartTime;
                 let seekAmount;
                 
-                if (holdTime < 2000) { // Prve 2 sekunde - 30s
+                if (holdTime < 2000) {
                     seekAmount = 30;
-                } else if (holdTime < 5000) { // 2-5 sekundi - 60s
+                } else if (holdTime < 5000) {
                     seekAmount = 60;
-                } else if (holdTime < 10000) { // 5-10 sekundi - 120s
+                } else if (holdTime < 10000) {
                     seekAmount = 120;
-                } else { // Preko 10 sekundi - 300s (5 minuta)
+                } else {
                     seekAmount = 300;
                 }
                 
                 seek(direction * seekAmount);
                 showSeekIndicator(direction, seekAmount);
                 
-            }, 500); // Svakih 500ms proveri
+            }, 500);
         }
 
         function stopSeek() {
@@ -243,29 +500,12 @@
             });
         }
 
-        // YouTube CC kontrolni meni
-        function openYouTubeCCMenu() {
-            // Simuliramo klik na YouTube CC dugme
-            try {
-                // Ovo je hack za YouTube CC meni
-                // YouTube player interno ima CC dugme koje možemo "kliknuti"
-                showInfo("YouTube CC meni - koristite YouTube kontrole");
-                
-                // Pauziraj video da bi YouTube meni bio vidljiv
-                player.pauseVideo();
-                
-                // Fokusiraj player za YouTube kontrole
-                const iframe = document.querySelector('iframe');
-                if (iframe) {
-                    iframe.focus();
-                }
-                
-            } catch (e) {
-                showInfo("YouTube meni nije dostupan");
-            }
-        }
-
         function togglePlayPause() {
+            if (isCCMenuOpen) {
+                selectCCOption();
+                return;
+            }
+            
             if (isPlaying) {
                 player.pauseVideo();
             } else {
@@ -310,6 +550,8 @@
         }
 
         function showControls() {
+            if (isCCMenuOpen) return;
+            
             const progress = document.getElementById('progressContainer');
             const timeDisplay = document.getElementById('timeDisplay');
             if (progress) progress.style.opacity = '1';
@@ -368,8 +610,11 @@
             switch(event.key) {
                 case 'Enter':
                 case ' ':
-                    // ENTER otvara YouTube CC meni
-                    openYouTubeCCMenu();
+                    if (isCCMenuOpen) {
+                        selectCCOption();
+                    } else {
+                        showCCMenu();
+                    }
                     break;
                     
                 case 'ArrowLeft':
@@ -380,14 +625,21 @@
                     startSeek(1);
                     break;
                     
-                case 'Escape':
-                case 'Backspace':
-                    closePlayer();
+                case 'ArrowUp':
+                    navigateCCMenu(-1);
                     break;
                     
-                case 'MediaPlayPause':
-                    // Play/Pause za media dugme
-                    togglePlayPause();
+                case 'ArrowDown':
+                    navigateCCMenu(1);
+                    break;
+                    
+                case 'Escape':
+                case 'Backspace':
+                    if (isCCMenuOpen) {
+                        hideCCMenu();
+                    } else {
+                        closePlayer();
+                    }
                     break;
             }
         });
