@@ -182,14 +182,14 @@
     <div id="timeDisplay"></div>
     
     <!-- Seek indikatori -->
-    <div id="seekBackward" class="seek-indicator">⏪ -30s</div>
-    <div id="seekForward" class="seek-indicator">+30s ⏩</div>
+    <div id="seekBackward" class="seek-indicator">⏪ -60s</div>
+    <div id="seekForward" class="seek-indicator">+60s ⏩</div>
     
     <!-- CC Menu sa scroll-om -->
     <div id="ccMenu">
         <div class="menu-title">🎯 Odabir titlova</div>
         <div id="ccOptions" class="cc-options-container"></div>
-        <div class="scroll-indicator">↑↓ za scroll • ENTER za izbor</div>
+        <div class="scroll-indicator">↑↓ za navigaciju • ENTER za izbor</div>
     </div>
     
     <div id="infoPanel"></div>
@@ -200,16 +200,23 @@
         let hideTimeout;
         let isPlaying = false;
         let progressInterval;
-        let seekHoldInterval;
-        let seekStartTime = 0;
-        let currentSeekDirection = 0;
-        let availableCaptions = [];
-        let currentCaptionTrack = -1;
         let isCCMenuOpen = false;
         let currentCCSelection = 0;
-        let visibleOptionsCount = 6; // Koliko opcija je vidljivo odjednom
-        let scrollOffset = 0;
         
+        // Fiksni jezici za titlove
+        const availableLanguages = [
+            { languageCode: 'sr', name: 'Srpski' },
+            { languageCode: 'en', name: 'Engleski' },
+            { languageCode: 'hr', name: 'Hrvatski' },
+            { languageCode: 'bs', name: 'Bosanski' },
+            { languageCode: 'sl', name: 'Slovenački' },
+            { languageCode: 'mk', name: 'Makedonski' },
+            { languageCode: 'de', name: 'Nemački' },
+            { languageCode: 'fr', name: 'Francuski' }
+        ];
+        
+        let currentCaptionTrack = -1;
+
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
@@ -233,8 +240,7 @@
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError,
-                    'onApiChange': onApiChange
+                    'onError': onPlayerError
                 }
             });
         }
@@ -246,15 +252,11 @@
             
             startProgressTracking();
             
-            setTimeout(() => {
-                getAvailableCaptions();
-            }, 3000);
-            
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
             }
             
-            showInfo("←→ Seek | ENTER CC meni | BACK Zatvori");
+            showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
         }
 
         function onPlayerStateChange(event) {
@@ -277,59 +279,12 @@
             showInfo("Greška pri reprodukciji");
         }
 
-        function onApiChange(event) {
-            setTimeout(getAvailableCaptions, 1000);
-        }
-
-        function getAvailableCaptions() {
-            try {
-                console.log("Getting available captions...");
-                
-                if (player.getOption && player.getOptions) {
-                    const trackList = player.getOption('captions', 'tracklist');
-                    if (trackList && trackList.length > 0) {
-                        console.log("Found captions via getOption:", trackList);
-                        availableCaptions = trackList;
-                        return;
-                    }
-                }
-                
-                if (player.getCaptionsList) {
-                    const captionsList = player.getCaptionsList();
-                    if (captionsList && captionsList.length > 0) {
-                        console.log("Found captions via getCaptionsList:", captionsList);
-                        availableCaptions = captionsList;
-                        return;
-                    }
-                }
-                
-                player.loadModule('captions');
-                setTimeout(() => {
-                    if (player.getOption) {
-                        const trackList = player.getOption('captions', 'tracklist');
-                        if (trackList && trackList.length > 0) {
-                            console.log("Found captions after loading module:", trackList);
-                            availableCaptions = trackList;
-                        }
-                    }
-                }, 2000);
-                
-            } catch (e) {
-                console.error("Error getting captions:", e);
-            }
-            
-            if (availableCaptions.length === 0) {
-                setTimeout(getAvailableCaptions, 5000);
-            }
-        }
-
         function showCCMenu() {
             const menu = document.getElementById('ccMenu');
             const optionsContainer = document.getElementById('ccOptions');
             
             if (menu && optionsContainer) {
-                scrollOffset = 0;
-                currentCCSelection = currentCaptionTrack + 1;
+                currentCCSelection = currentCaptionTrack + 1; // +1 jer 0 je "Bez titlova"
                 
                 renderCCMenu();
                 menu.classList.add('visible');
@@ -342,53 +297,25 @@
         function renderCCMenu() {
             const optionsContainer = document.getElementById('ccOptions');
             
-            if (availableCaptions.length === 0) {
-                optionsContainer.innerHTML = `<div class="cc-option">🔄 Učitavam titlove...</div>`;
-                getAvailableCaptions();
-                return;
-            }
-            
             let optionsHTML = '';
-            const totalOptions = availableCaptions.length + 1; // +1 za "Bez titlova"
             
-            // Prikazujemo samo vidljive opcije
-            const startIndex = scrollOffset;
-            const endIndex = Math.min(startIndex + visibleOptionsCount, totalOptions);
+            // "Bez titlova" opcija
+            const isNoCaptionSelected = currentCaptionTrack === -1 && currentCCSelection === 0;
+            optionsHTML += `<div class="cc-option ${isNoCaptionSelected ? 'selected' : ''}" data-index="-1">
+                ❌ Bez titlova
+            </div>`;
             
-            for (let i = startIndex; i < endIndex; i++) {
-                if (i === 0) {
-                    // "Bez titlova" opcija
-                    const isSelected = currentCaptionTrack === -1 && (i - scrollOffset) === currentCCSelection;
-                    optionsHTML += `<div class="cc-option ${isSelected ? 'selected' : ''}" data-index="-1" data-absolute-index="${i}">
-                        ❌ Bez titlova
-                    </div>`;
-                } else {
-                    // Titlovi
-                    const captionIndex = i - 1;
-                    const track = availableCaptions[captionIndex];
-                    const languageName = getLanguageName(track.languageCode);
-                    const trackName = track.name ? ` - ${track.name}` : '';
-                    const isSelected = currentCaptionTrack === captionIndex && (i - scrollOffset) === currentCCSelection;
-                    
-                    optionsHTML += `<div class="cc-option ${isSelected ? 'selected' : ''}" data-index="${captionIndex}" data-absolute-index="${i}">
-                        ${languageName}${trackName}
-                    </div>`;
-                }
-            }
+            // Titlovi po jezicima
+            availableLanguages.forEach((lang, index) => {
+                const isSelected = currentCaptionTrack === index && currentCCSelection === index + 1;
+                const languageName = getLanguageName(lang.languageCode);
+                
+                optionsHTML += `<div class="cc-option ${isSelected ? 'selected' : ''}" data-index="${index}">
+                    ${languageName}
+                </div>`;
+            });
             
             optionsContainer.innerHTML = optionsHTML;
-            
-            // Scroll indikator
-            const scrollIndicator = document.querySelector('.scroll-indicator');
-            if (scrollIndicator) {
-                if (totalOptions > visibleOptionsCount) {
-                    const currentPage = Math.floor(scrollOffset / visibleOptionsCount) + 1;
-                    const totalPages = Math.ceil(totalOptions / visibleOptionsCount);
-                    scrollIndicator.textContent = `Strana ${currentPage}/${totalPages} • ↑↓ za scroll • ENTER za izbor`;
-                } else {
-                    scrollIndicator.textContent = 'ENTER za izbor';
-                }
-            }
         }
 
         function hideCCMenu() {
@@ -401,12 +328,8 @@
 
         function updateCCSelection() {
             const options = document.querySelectorAll('.cc-option');
-            const absoluteSelection = scrollOffset + currentCCSelection;
-            const totalOptions = availableCaptions.length + 1;
-            
             options.forEach((option, index) => {
-                const absoluteIndex = scrollOffset + index;
-                if (absoluteIndex === absoluteSelection) {
+                if (index === currentCCSelection) {
                     option.classList.add('selected');
                     // Auto-scroll da selekcija bude vidljiva
                     option.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -417,35 +340,17 @@
         }
 
         function navigateCCMenu(direction) {
-            if (!isCCMenuOpen) {
-                showCCMenu();
-                return;
-            }
+            if (!isCCMenuOpen) return;
             
-            const totalOptions = availableCaptions.length + 1;
+            const totalOptions = availableLanguages.length + 1; // +1 za "Bez titlova"
             
-            if (direction > 0) {
-                // Dole - sledeća opcija
-                if (currentCCSelection < visibleOptionsCount - 1) {
-                    currentCCSelection = Math.min(visibleOptionsCount - 1, currentCCSelection + 1);
-                } else {
-                    // Scroll dole
-                    if (scrollOffset + visibleOptionsCount < totalOptions) {
-                        scrollOffset++;
-                        renderCCMenu();
-                    }
-                }
-            } else {
-                // Gore - prethodna opcija
-                if (currentCCSelection > 0) {
-                    currentCCSelection = Math.max(0, currentCCSelection - 1);
-                } else {
-                    // Scroll gore
-                    if (scrollOffset > 0) {
-                        scrollOffset--;
-                        renderCCMenu();
-                    }
-                }
+            currentCCSelection += direction;
+            
+            // Circular navigation
+            if (currentCCSelection < 0) {
+                currentCCSelection = totalOptions - 1;
+            } else if (currentCCSelection >= totalOptions) {
+                currentCCSelection = 0;
             }
             
             updateCCSelection();
@@ -455,8 +360,6 @@
             if (!isCCMenuOpen) return;
             
             const options = document.querySelectorAll('.cc-option');
-            const absoluteSelection = scrollOffset + currentCCSelection;
-            
             if (options[currentCCSelection]) {
                 const index = parseInt(options[currentCCSelection].getAttribute('data-index'));
                 setCaptionTrack(index);
@@ -468,13 +371,24 @@
             
             try {
                 if (index === -1) {
+                    // Isključi titlove
                     player.unloadModule('captions');
                     showInfo("Titlovi: Isključeni");
                 } else {
-                    const track = availableCaptions[index];
+                    // Uključi titlove za odabrani jezik
+                    const lang = availableLanguages[index];
                     player.loadModule('captions');
-                    player.setOption('captions', 'track', {languageCode: track.languageCode});
-                    showInfo("Titlovi: " + getLanguageName(track.languageCode));
+                    
+                    // Pokušaj postaviti titlove za odabrani jezik
+                    setTimeout(() => {
+                        try {
+                            player.setOption('captions', 'track', {languageCode: lang.languageCode});
+                        } catch (e) {
+                            console.log("Trying alternative caption method...");
+                        }
+                    }, 500);
+                    
+                    showInfo("Titlovi: " + getLanguageName(lang.languageCode));
                 }
             } catch (e) {
                 console.error("Error setting caption track:", e);
@@ -487,75 +401,32 @@
         function getLanguageName(langCode) {
             const languages = {
                 'sr': '🇷🇸 Srpski', 'en': '🇺🇸 Engleski', 'hr': '🇭🇷 Hrvatski', 'bs': '🇧🇦 Bosanski',
-                'sl': '🇸🇮 Slovenački', 'mk': '🇲🇰 Makedonski', 'de': '🇩🇪 Nemački', 'fr': '🇫🇷 Francuski',
-                'es': '🇪🇸 Španski', 'it': '🇮🇹 Italijanski', 'ru': '🇷🇺 Ruski', 'ar': '🇸🇦 Arapski',
-                'zh': '🇨🇳 Kineski', 'ja': '🇯🇵 Japanski', 'ko': '🇰🇷 Koreanski', 'pt': '🇵🇹 Portugalski',
-                'tr': '🇹🇷 Turski', 'nl': '🇳🇱 Holandski', 'pl': '🇵🇱 Poljski', 'hu': '🇭🇺 Mađarski',
-                'cs': '🇨🇿 Češki', 'sk': '🇸🇰 Slovački', 'ro': '🇷🇴 Rumunski', 'bg': '🇧🇬 Bugarski',
-                'el': '🇬🇷 Grčki', 'he': '🇮🇱 Hebrejski', 'hi': '🇮🇳 Hindi', 'th': '🇹🇭 Tajlandski',
-                'vi': '🇻🇳 Vijetnamski', 'sv': '🇸🇪 Švedski', 'da': '🇩🇰 Danski', 'no': '🇳🇴 Norveški',
-                'fi': '🇫🇮 Finski', 'et': '🇪🇪 Estonski', 'lv': '🇱🇻 Letonski', 'lt': '🇱🇹 Litvanski',
-                'uk': '🇺🇦 Ukrajinski', 'be': '🇧🇾 Bjeloruski', 'ka': '🇬🇪 Gruzijski', 'hy': '🇦🇲 Jermenski',
-                'az': '🇦🇿 Azerbejdžanski', 'kk': '🇰🇿 Kazaški', 'uz': '🇺🇿 Uzbečki', 'ky': '🇰🇬 Kirgiski'
+                'sl': '🇸🇮 Slovenački', 'mk': '🇲🇰 Makedonski', 'de': '🇩🇪 Nemački', 'fr': '🇫🇷 Francuski'
             };
             return languages[langCode] || langCode;
         }
 
-        // Seek funkcije
-        function startSeek(direction) {
+        // Seek funkcije - sada fiksno 60 sekundi
+        function seek(direction) {
             if (isCCMenuOpen) return;
             
-            currentSeekDirection = direction;
-            seekStartTime = Date.now();
-            
-            seek(direction * 30);
-            showSeekIndicator(direction, 30);
-            
-            seekHoldInterval = setInterval(() => {
-                const holdTime = Date.now() - seekStartTime;
-                let seekAmount;
-                
-                if (holdTime < 2000) seekAmount = 30;
-                else if (holdTime < 5000) seekAmount = 60;
-                else if (holdTime < 10000) seekAmount = 120;
-                else seekAmount = 300;
-                
-                seek(direction * seekAmount);
-                showSeekIndicator(direction, seekAmount);
-                
-            }, 500);
-        }
-
-        function stopSeek() {
-            currentSeekDirection = 0;
-            if (seekHoldInterval) {
-                clearInterval(seekHoldInterval);
-                seekHoldInterval = null;
-            }
-            hideSeekIndicator();
-        }
-
-        function seek(seconds) {
+            const seekAmount = 60; // Fiksno 60 sekundi
             const currentTime = player.getCurrentTime();
             const duration = player.getDuration();
-            const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+            const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
+            
             player.seekTo(newTime, true);
-            showControlsTemporary();
-        }
-
-        function showSeekIndicator(direction, seconds) {
+            
+            // Prikaži seek indikator
             const indicator = direction < 0 ? document.getElementById('seekBackward') : document.getElementById('seekForward');
             if (indicator) {
-                indicator.textContent = direction < 0 ? `⏪ -${seconds}s` : `+${seconds}s ⏩`;
                 indicator.style.opacity = '1';
+                setTimeout(() => {
+                    indicator.style.opacity = '0';
+                }, 1000);
             }
-        }
-
-        function hideSeekIndicator() {
-            const indicators = document.querySelectorAll('.seek-indicator');
-            indicators.forEach(ind => {
-                ind.style.opacity = '0';
-            });
+            
+            showControlsTemporary();
         }
 
         function togglePlayPause() {
@@ -637,7 +508,6 @@
 
         function closePlayer() {
             stopProgressTracking();
-            stopSeek();
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
@@ -657,56 +527,71 @@
         }
 
         // TV komande
-        let keyState = {};
-        
         document.addEventListener('keydown', function(event) {
             showControlsTemporary();
             
-            if (keyState[event.key]) return;
-            keyState[event.key] = true;
-            
             switch(event.key) {
-                case 'Enter':
-                case ' ':
+                case 'ArrowUp':
+                    if (!isCCMenuOpen) {
+                        // Aktiviraj CC meni
+                        showCCMenu();
+                    } else {
+                        // Navigiraj gore u CC meniju
+                        navigateCCMenu(-1);
+                    }
+                    event.preventDefault();
+                    break;
+                    
+                case 'ArrowDown':
                     if (isCCMenuOpen) {
+                        // Navigiraj dole u CC meniju
+                        navigateCCMenu(1);
+                    }
+                    event.preventDefault();
+                    break;
+                    
+                case 'Enter':
+                    if (isCCMenuOpen) {
+                        // Izaberi titlove u CC meniju
                         selectCCOption();
                     } else {
-                        showCCMenu();
+                        // Play/Pause
+                        togglePlayPause();
+                    }
+                    event.preventDefault();
+                    break;
+                    
+                case ' ':
+                    // Play/Pause (samo ako CC meni nije otvoren)
+                    if (!isCCMenuOpen) {
+                        togglePlayPause();
+                        event.preventDefault();
                     }
                     break;
                     
                 case 'ArrowLeft':
-                    startSeek(-1);
+                    // Seek nazad 60s
+                    seek(-1);
+                    event.preventDefault();
                     break;
                     
                 case 'ArrowRight':
-                    startSeek(1);
-                    break;
-                    
-                case 'ArrowUp':
-                    navigateCCMenu(-1);
-                    break;
-                    
-                case 'ArrowDown':
-                    navigateCCMenu(1);
+                    // Seek napred 60s
+                    seek(1);
+                    event.preventDefault();
                     break;
                     
                 case 'Escape':
                 case 'Backspace':
                     if (isCCMenuOpen) {
+                        // Zatvori CC meni
                         hideCCMenu();
                     } else {
+                        // Zatvori player
                         closePlayer();
                     }
+                    event.preventDefault();
                     break;
-            }
-        });
-
-        document.addEventListener('keyup', function(event) {
-            keyState[event.key] = false;
-            
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                stopSeek();
             }
         });
 
@@ -722,7 +607,6 @@
         // Cleanup pri zatvaranju
         window.addEventListener('beforeunload', function() {
             stopProgressTracking();
-            stopSeek();
         });
     </script>
 </body>
