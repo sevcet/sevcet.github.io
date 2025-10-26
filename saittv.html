@@ -19,35 +19,64 @@
             height: 100%;
             border: none;
         }
-        #closeBtn {
+        #controls {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            right: 20px;
-            background: rgba(255,0,0,0.8);
-            color: #fff;
-            border: none;
-            font-size: 24px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        #controls.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
             border-radius: 50%;
             width: 60px;
             height: 60px;
+            margin: 10px;
+            font-size: 24px;
             cursor: pointer;
-            z-index: 10000;
-            transition: opacity 0.3s, transform 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            font-weight: bold;
-            opacity: 0;
+            transition: all 0.2s ease;
         }
-        #closeBtn.visible {
-            opacity: 1;
-        }
-        #closeBtn:focus {
-            background: rgba(255,50,50,0.9);
-            transform: translateY(-50%) scale(1.1);
+        .control-btn:focus {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.1);
             outline: none;
+        }
+        .control-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #closeBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,0,0,0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10001;
         }
         #infoPanel {
             position: absolute;
@@ -65,26 +94,35 @@
     </style>
 </head>
 <body>
-    <button id="closeBtn" title="Zatvori (Back)">✕</button>
-    <div id="infoPanel"></div>
     <div id="player"></div>
+    
+    <div id="controls">
+        <div class="control-row">
+            <button class="control-btn" onclick="seek(-30)">⏪</button>
+            <button class="control-btn" onclick="seek(-10)">◀◀</button>
+            <button class="control-btn" id="playPauseBtn" onclick="togglePlayPause()">⏸️</button>
+            <button class="control-btn" onclick="seek(10)">▶▶</button>
+            <button class="control-btn" onclick="seek(30)">⏩</button>
+        </div>
+        <div class="control-row">
+            <button class="control-btn" onclick="changeVolume(-10)">🔉</button>
+            <button class="control-btn" onclick="changeVolume(10)">🔊</button>
+        </div>
+    </div>
+    
+    <button id="closeBtn" onclick="closePlayer()">✕</button>
+    <div id="infoPanel"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         let player;
         let hideTimeout;
+        let isPlaying = false;
         
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
             
-            console.log('YouTube API Ready, videoId:', videoId);
-            
-            if (!videoId) {
-                showError('Nema video ID-a');
-                return;
-            }
-
             player = new YT.Player('player', {
                 height: '100%',
                 width: '100%',
@@ -93,132 +131,146 @@
                     'autoplay': 1,
                     'rel': 0,
                     'modestbranding': 1,
-                    'controls': 1,
+                    'controls': 0, // Sakrij YouTube kontrole
                     'showinfo': 0,
                     'fs': 1,
                     'iv_load_policy': 3,
-                    'disablekb': 0,
-                    'playsinline': 1,
-                    'enablejsapi': 1
+                    'disablekb': 1, // Onemogući YouTube tastaturu
+                    'playsinline': 1
                 },
                 events: {
                     'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange,
-                    'onError': onPlayerError
+                    'onStateChange': onPlayerStateChange
                 }
             });
         }
 
         function onPlayerReady(event) {
-            console.log('Player ready');
             event.target.playVideo();
-            showInfo('Player spreman');
+            isPlaying = true;
+            updatePlayPauseButton();
+            hideControls();
             
-            // Obavesti Android da je player spreman
+            // Pošalji informacije Androidu
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
             }
-            
-            hideTimeout = setTimeout(hideCloseButton, 5000);
         }
 
         function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                isPlaying = true;
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                isPlaying = false;
+            }
+            updatePlayPauseButton();
             resetHideTimer();
         }
 
-        function onPlayerError(event) {
-            console.error('Player error:', event.data);
-            showError('Greška pri reprodukciji videa');
+        function togglePlayPause() {
+            if (isPlaying) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+            showControlsTemporary();
         }
 
-        function hideCloseButton() {
-            const closeBtn = document.getElementById('closeBtn');
-            if (closeBtn) {
-                closeBtn.classList.remove('visible');
+        function seek(seconds) {
+            const currentTime = player.getCurrentTime();
+            player.seekTo(currentTime + seconds, true);
+            showControlsTemporary();
+            showInfo(`Preskakanje ${seconds > 0 ? 'napred' : 'nazad'} ${Math.abs(seconds)}s`);
+        }
+
+        function changeVolume(change) {
+            const currentVolume = player.getVolume();
+            const newVolume = Math.max(0, Math.min(100, currentVolume + change));
+            player.setVolume(newVolume);
+            showControlsTemporary();
+            showInfo(`Zvuk: ${newVolume}%`);
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('playPauseBtn');
+            if (btn) {
+                btn.textContent = isPlaying ? '⏸️' : '▶️';
             }
         }
 
-        function showCloseButton() {
-            const closeBtn = document.getElementById('closeBtn');
-            if (closeBtn) {
-                closeBtn.classList.add('visible');
-                resetHideTimer();
-            }
+        function showControls() {
+            const controls = document.getElementById('controls');
+            controls.classList.add('visible');
+            resetHideTimer();
+        }
+
+        function hideControls() {
+            const controls = document.getElementById('controls');
+            controls.classList.remove('visible');
+            clearTimeout(hideTimeout);
+        }
+
+        function showControlsTemporary() {
+            showControls();
+            resetHideTimer();
         }
 
         function resetHideTimer() {
             clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(hideCloseButton, 5000);
+            hideTimeout = setTimeout(hideControls, 5000);
         }
 
-        function showInfo(message) {
-            const infoPanel = document.getElementById('infoPanel');
-            if (infoPanel) {
-                infoPanel.textContent = message;
-                infoPanel.style.opacity = '1';
-                setTimeout(() => {
-                    infoPanel.style.opacity = '0';
-                }, 3000);
-            }
-        }
-
-        function showError(message) {
-            console.error(message);
-            if (window.AndroidInterface) {
-                // Obavesti Android o grešci
-            }
-        }
-
-        // Event listeners za TV
-        document.addEventListener('click', function(event) {
-            if (event.target.id !== 'closeBtn') {
-                showCloseButton();
-            }
-        });
-
-        document.getElementById('closeBtn').addEventListener('click', function() {
+        function closePlayer() {
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
                 window.history.back();
             }
-        });
+        }
+
+        function showInfo(message) {
+            const infoPanel = document.getElementById('infoPanel');
+            infoPanel.textContent = message;
+            infoPanel.style.opacity = '1';
+            setTimeout(() => {
+                infoPanel.style.opacity = '0';
+            }, 2000);
+        }
 
         // Keyboard events za TV daljinski
         document.addEventListener('keydown', function(event) {
-            showCloseButton();
+            showControlsTemporary();
             
             switch(event.key) {
-                case 'Escape':
-                case 'Backspace':
-                    if (window.AndroidInterface) {
-                        AndroidInterface.closePlayer();
-                    }
-                    break;
                 case 'Enter':
                 case ' ':
-                    if (player) {
-                        if (player.getPlayerState() === YT.PlayerState.PLAYING) {
-                            player.pauseVideo();
-                        } else {
-                            player.playVideo();
-                        }
-                    }
+                    togglePlayPause();
+                    break;
+                case 'ArrowLeft':
+                    seek(-10);
+                    break;
+                case 'ArrowRight':
+                    seek(10);
+                    break;
+                case 'ArrowUp':
+                    changeVolume(10);
+                    break;
+                case 'ArrowDown':
+                    changeVolume(-10);
+                    break;
+                case 'Escape':
+                    closePlayer();
                     break;
             }
         });
 
-        // Auto-hide na početku
-        window.addEventListener('load', function() {
-            setTimeout(hideCloseButton, 5000);
-        });
+        // Auto-hide kontrole
+        document.addEventListener('mousemove', showControlsTemporary);
+        document.addEventListener('click', showControlsTemporary);
 
-        // Fokus za TV
-        document.addEventListener('DOMContentLoaded', function() {
-            const closeBtn = document.getElementById('closeBtn');
-            if (closeBtn) {
-                closeBtn.focus();
-            }
+        // Inicijalno sakrij kontrole
+        window.addEventListener('load', function() {
+            setTimeout(hideControls, 3000);
         });
     </script>
 </body>
