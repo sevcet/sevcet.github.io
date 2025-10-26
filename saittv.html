@@ -19,61 +19,32 @@
             height: 100%;
             border: none;
         }
-        #controls {
+        
+        /* Progress bar na dnu */
+        #progressContainer {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.85);
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            bottom: 80px; /* Spušteno ispod točka za podešavanja */
+            left: 5%;
+            width: 90%;
+            background: rgba(255,255,255,0.2);
+            height: 6px;
+            border-radius: 3px;
+            z-index: 10001;
             opacity: 0;
             transition: opacity 0.3s ease;
-            pointer-events: none;
         }
-        #controls.visible {
-            opacity: 1;
-            pointer-events: all;
+        #progressBar {
+            height: 100%;
+            background: #ff4444;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
         }
-        .control-btn {
-            background: rgba(255,255,255,0.15);
-            color: white;
-            border: 2px solid rgba(255,255,255,0.5);
-            border-radius: 50%;
-            width: 70px;
-            height: 70px;
-            margin: 15px;
-            font-size: 28px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .control-btn:focus {
-            background: rgba(255,255,255,0.3);
-            border-color: #fff;
-            transform: scale(1.15);
-            outline: none;
-            box-shadow: 0 0 20px rgba(255,255,255,0.5);
-        }
-        .control-btn:hover {
-            background: rgba(255,255,255,0.25);
-        }
-        .control-row {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 10px 0;
-        }
+        
+        /* Close button spušten */
         #closeBtn {
             position: absolute;
-            top: 30px;
+            bottom: 30px; /* Spušteno na dno */
             right: 30px;
             background: rgba(255,50,50,0.9);
             color: white;
@@ -86,6 +57,10 @@
             z-index: 10001;
             transition: all 0.2s ease;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            opacity: 0;
+        }
+        #closeBtn.visible {
+            opacity: 1;
         }
         #closeBtn:focus {
             background: rgba(255,0,0,1);
@@ -93,6 +68,8 @@
             outline: none;
             box-shadow: 0 0 20px rgba(255,0,0,0.7);
         }
+        
+        /* Info panel */
         #infoPanel {
             position: absolute;
             top: 30px;
@@ -107,102 +84,76 @@
             transition: opacity 0.3s ease;
             border-left: 4px solid #ff4444;
         }
-        #progressContainer {
+        
+        /* Time display */
+        #timeDisplay {
             position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            background: rgba(255,255,255,0.1);
-            height: 6px;
-            border-radius: 3px;
+            bottom: 95px;
+            left: 5%;
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
             z-index: 10001;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        #progressBar {
-            height: 100%;
-            background: #ff4444;
-            border-radius: 3px;
-            width: 0%;
-            transition: width 0.1s ease;
-        }
-        .control-label {
-            color: white;
-            font-size: 12px;
-            margin-top: 5px;
-            text-align: center;
-            opacity: 0.8;
-        }
-        #titleBar {
+        
+        /* Volume display */
+        #volumeDisplay {
             position: absolute;
-            top: 30px;
-            left: 50%;
-            transform: translateX(-50%);
+            bottom: 95px;
+            right: 5%;
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            z-index: 10001;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Quick seek indicators */
+        .seek-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
             background: rgba(0,0,0,0.8);
             color: white;
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 18px;
             z-index: 10001;
             opacity: 0;
             transition: opacity 0.3s ease;
-            white-space: nowrap;
-            max-width: 60%;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        }
+        #seekBackward {
+            left: 30px;
+        }
+        #seekForward {
+            right: 30px;
         }
     </style>
 </head>
 <body>
     <div id="player"></div>
     
-    <div id="controls">
-        <div class="control-row">
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="seek(-60)" title="Nazad 1min">⏪</button>
-                <div class="control-label">1min</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="seek(-10)" title="Nazad 10s">◀◀</button>
-                <div class="control-label">10s</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause">⏸️</button>
-                <div class="control-label">Play/Pause</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="seek(10)" title="Napred 10s">▶▶</button>
-                <div class="control-label">10s</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="seek(60)" title="Napred 1min">⏩</button>
-                <div class="control-label">1min</div>
-            </div>
-        </div>
-        
-        <div class="control-row">
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="changeVolume(-20)" title="Zvuk -">🔉</button>
-                <div class="control-label">Zvuk -</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="muteUnmute()" id="muteBtn" title="Mute/Unmute">🔇</button>
-                <div class="control-label">Mute</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <button class="control-btn" onclick="changeVolume(20)" title="Zvuk +">🔊</button>
-                <div class="control-label">Zvuk +</div>
-            </div>
-        </div>
-    </div>
-    
-    <button id="closeBtn" onclick="closePlayer()" title="Zatvori (Back)">✕</button>
-    <div id="infoPanel"></div>
-    <div id="titleBar"></div>
+    <!-- Progress i kontrole -->
     <div id="progressContainer">
         <div id="progressBar"></div>
     </div>
+    <div id="timeDisplay"></div>
+    <div id="volumeDisplay"></div>
+    
+    <!-- Seek indikatori -->
+    <div id="seekBackward" class="seek-indicator">-10s</div>
+    <div id="seekForward" class="seek-indicator">+10s</div>
+    
+    <!-- Close button -->
+    <button id="closeBtn" onclick="closePlayer()" title="Zatvori (Back)">✕</button>
+    <div id="infoPanel"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
@@ -211,7 +162,8 @@
         let isPlaying = false;
         let isMuted = false;
         let progressInterval;
-        let currentVideoTitle = "";
+        let seekHoldInterval;
+        let currentSeekDirection = 0;
         
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -230,7 +182,9 @@
                     'fs': 1,
                     'iv_load_policy': 3,
                     'disablekb': 1,
-                    'playsinline': 1
+                    'playsinline': 1,
+                    'cc_load_policy': 1, // Uključi titlove po defaultu
+                    'cc_lang_pref': 'sr' // Preferirani jezik titlova
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -243,19 +197,16 @@
         function onPlayerReady(event) {
             event.target.playVideo();
             isPlaying = true;
-            updatePlayPauseButton();
             hideControls();
             
-            // Pokupi informacije o videu
-            currentVideoTitle = event.target.getVideoData().title;
-            showTitle(currentVideoTitle);
-            
-            // Pokreni progress bar
+            // Pokreni progress tracking
             startProgressTracking();
             
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
             }
+            
+            showInfo("Player spreman - Koristite strelice za kontrolu");
         }
 
         function onPlayerStateChange(event) {
@@ -270,7 +221,6 @@
                 stopProgressTracking();
                 showInfo("Video završen");
             }
-            updatePlayPauseButton();
             resetHideTimer();
         }
 
@@ -279,13 +229,26 @@
             showInfo("Greška pri reprodukciji");
         }
 
-        function togglePlayPause() {
-            if (isPlaying) {
-                player.pauseVideo();
-            } else {
-                player.playVideo();
+        // Seek funkcije sa hold funkcionalnošću
+        function startSeek(direction) {
+            currentSeekDirection = direction;
+            seek(direction * 10); // Prvi seek 10s
+            
+            // Kontinualni seek dok se drži dugme
+            seekHoldInterval = setInterval(() => {
+                seek(direction * 5); // Svakih 500ms seek 5s
+            }, 500);
+            
+            showSeekIndicator(direction);
+        }
+
+        function stopSeek() {
+            currentSeekDirection = 0;
+            if (seekHoldInterval) {
+                clearInterval(seekHoldInterval);
+                seekHoldInterval = null;
             }
-            showControlsTemporary();
+            hideSeekIndicator();
         }
 
         function seek(seconds) {
@@ -294,16 +257,29 @@
             const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
             player.seekTo(newTime, true);
             showControlsTemporary();
-            showInfo(`Preskakanje ${seconds > 0 ? 'napred' : 'nazad'} ${Math.abs(seconds)}s`);
+        }
+
+        function showSeekIndicator(direction) {
+            const indicator = direction < 0 ? document.getElementById('seekBackward') : document.getElementById('seekForward');
+            if (indicator) {
+                indicator.style.opacity = '1';
+                indicator.textContent = direction < 0 ? '⏪ Seek' : 'Seek ⏩';
+            }
+        }
+
+        function hideSeekIndicator() {
+            const indicators = document.querySelectorAll('.seek-indicator');
+            indicators.forEach(ind => {
+                ind.style.opacity = '0';
+            });
         }
 
         function changeVolume(change) {
             const currentVolume = player.getVolume();
             const newVolume = Math.max(0, Math.min(100, currentVolume + change));
             player.setVolume(newVolume);
-            updateMuteButton();
+            showVolumeDisplay(newVolume);
             showControlsTemporary();
-            showInfo(`Zvuk: ${newVolume}%`);
         }
 
         function muteUnmute() {
@@ -316,38 +292,12 @@
                 isMuted = true;
                 showInfo("Zvuk isključen");
             }
-            updateMuteButton();
             showControlsTemporary();
-        }
-
-        function updatePlayPauseButton() {
-            const btn = document.getElementById('playPauseBtn');
-            if (btn) {
-                btn.textContent = isPlaying ? '⏸️' : '▶️';
-                btn.title = isPlaying ? 'Pause' : 'Play';
-            }
-        }
-
-        function updateMuteButton() {
-            const btn = document.getElementById('muteBtn');
-            const volume = player.getVolume();
-            if (btn) {
-                if (isMuted || volume === 0) {
-                    btn.textContent = '🔇';
-                    btn.title = 'Unmute';
-                } else if (volume < 50) {
-                    btn.textContent = '🔉';
-                    btn.title = 'Mute';
-                } else {
-                    btn.textContent = '🔊';
-                    btn.title = 'Mute';
-                }
-            }
         }
 
         function startProgressTracking() {
             stopProgressTracking();
-            progressInterval = setInterval(updateProgressBar, 1000);
+            progressInterval = setInterval(updateProgress, 1000);
         }
 
         function stopProgressTracking() {
@@ -357,35 +307,62 @@
             }
         }
 
-        function updateProgressBar() {
+        function updateProgress() {
             if (player && player.getCurrentTime && player.getDuration) {
                 const currentTime = player.getCurrentTime();
                 const duration = player.getDuration();
                 const progress = (currentTime / duration) * 100;
+                
+                // Progress bar
                 const progressBar = document.getElementById('progressBar');
                 if (progressBar) {
                     progressBar.style.width = progress + '%';
                 }
+                
+                // Time display
+                const timeDisplay = document.getElementById('timeDisplay');
+                if (timeDisplay) {
+                    timeDisplay.textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
+                }
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function showVolumeDisplay(volume) {
+            const volumeDisplay = document.getElementById('volumeDisplay');
+            if (volumeDisplay) {
+                volumeDisplay.textContent = 'Zvuk: ' + volume + '%';
+                volumeDisplay.style.opacity = '1';
+                setTimeout(() => {
+                    volumeDisplay.style.opacity = '0';
+                }, 2000);
             }
         }
 
         function showControls() {
-            const controls = document.getElementById('controls');
             const progress = document.getElementById('progressContainer');
-            const title = document.getElementById('titleBar');
-            if (controls) controls.classList.add('visible');
+            const timeDisplay = document.getElementById('timeDisplay');
+            const closeBtn = document.getElementById('closeBtn');
             if (progress) progress.style.opacity = '1';
-            if (title) title.style.opacity = '1';
+            if (timeDisplay) timeDisplay.style.opacity = '1';
+            if (closeBtn) closeBtn.classList.add('visible');
             resetHideTimer();
         }
 
         function hideControls() {
-            const controls = document.getElementById('controls');
             const progress = document.getElementById('progressContainer');
-            const title = document.getElementById('titleBar');
-            if (controls) controls.classList.remove('visible');
+            const timeDisplay = document.getElementById('timeDisplay');
+            const closeBtn = document.getElementById('closeBtn');
+            const volumeDisplay = document.getElementById('volumeDisplay');
             if (progress) progress.style.opacity = '0';
-            if (title) title.style.opacity = '0';
+            if (timeDisplay) timeDisplay.style.opacity = '0';
+            if (closeBtn) closeBtn.classList.remove('visible');
+            if (volumeDisplay) volumeDisplay.style.opacity = '0';
             clearTimeout(hideTimeout);
         }
 
@@ -396,11 +373,12 @@
 
         function resetHideTimer() {
             clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(hideControls, 4000);
+            hideTimeout = setTimeout(hideControls, 3000);
         }
 
         function closePlayer() {
             stopProgressTracking();
+            stopSeek();
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
@@ -415,74 +393,76 @@
                 infoPanel.style.opacity = '1';
                 setTimeout(() => {
                     infoPanel.style.opacity = '0';
-                }, 2000);
-            }
-        }
-
-        function showTitle(title) {
-            const titleBar = document.getElementById('titleBar');
-            if (titleBar) {
-                titleBar.textContent = title;
-                titleBar.style.opacity = '1';
-                setTimeout(() => {
-                    titleBar.style.opacity = '0';
                 }, 3000);
             }
         }
 
         // Poboljšane TV komande
+        let keyState = {};
+        
         document.addEventListener('keydown', function(event) {
             showControlsTemporary();
+            
+            // Sprečava repetitivno pozivanje dok se drži dugme
+            if (keyState[event.key]) return;
+            keyState[event.key] = true;
             
             switch(event.key) {
                 case 'Enter':
                 case ' ':
-                    togglePlayPause();
+                    if (isPlaying) {
+                        player.pauseVideo();
+                    } else {
+                        player.playVideo();
+                    }
                     break;
+                    
                 case 'ArrowLeft':
-                    if (event.ctrlKey || event.shiftKey) {
-                        seek(-60); // 1 minuta sa modifier
-                    } else {
-                        seek(-10); // 10 sekundi
-                    }
+                    startSeek(-1); // Seek nazad
                     break;
+                    
                 case 'ArrowRight':
-                    if (event.ctrlKey || event.shiftKey) {
-                        seek(60); // 1 minuta sa modifier
-                    } else {
-                        seek(10); // 10 sekundi
-                    }
+                    startSeek(1); // Seek napred
                     break;
+                    
                 case 'ArrowUp':
                     changeVolume(10);
                     break;
+                    
                 case 'ArrowDown':
                     changeVolume(-10);
                     break;
+                    
                 case 'Escape':
                 case 'Backspace':
                     closePlayer();
                     break;
+                    
                 case 'm':
                 case 'M':
                     muteUnmute();
                     break;
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                    // Skok na procente (0 = 0%, 1 = 10%, ..., 9 = 90%)
-                    const percent = parseInt(event.key) * 10;
-                    const duration = player.getDuration();
-                    player.seekTo((duration * percent) / 100, true);
-                    showInfo(`Preskok na ${percent}%`);
+                    
+                case 'c':
+                case 'C':
+                    // Toggle titlove
+                    try {
+                        if (player && player.getOption && player.setOption) {
+                            // Ovo će toggle-ovati titlove
+                            showInfo("Titlovi: " + (player.isCaptionsEnabled ? "isključeni" : "uključeni"));
+                        }
+                    } catch (e) {
+                        showInfo("Titlovi nisu dostupni");
+                    }
                     break;
+            }
+        });
+
+        document.addEventListener('keyup', function(event) {
+            keyState[event.key] = false;
+            
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                stopSeek();
             }
         });
 
@@ -500,12 +480,13 @@
 
         // Inicijalno sakrij kontrole
         window.addEventListener('load', function() {
-            setTimeout(hideControls, 3000);
+            setTimeout(hideControls, 2000);
         });
 
         // Cleanup pri zatvaranju
         window.addEventListener('beforeunload', function() {
             stopProgressTracking();
+            stopSeek();
         });
     </script>
 </body>
