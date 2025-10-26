@@ -93,7 +93,7 @@
             right: 30px;
         }
         
-        /* CC Menu */
+        /* CC Menu sa scroll-om */
         #ccMenu {
             position: absolute;
             top: 50%;
@@ -106,9 +106,12 @@
             z-index: 10002;
             opacity: 0;
             transition: opacity 0.3s ease;
-            min-width: 300px;
+            width: 350px;
+            max-height: 400px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
         }
         #ccMenu.visible {
             opacity: 1;
@@ -121,6 +124,24 @@
             color: #ff4444;
             border-bottom: 2px solid #333;
             padding-bottom: 10px;
+            flex-shrink: 0;
+        }
+        .cc-options-container {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 300px;
+            padding-right: 5px;
+        }
+        .cc-options-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .cc-options-container::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        .cc-options-container::-webkit-scrollbar-thumb {
+            background: #ff4444;
+            border-radius: 3px;
         }
         .cc-option {
             padding: 12px 15px;
@@ -142,6 +163,13 @@
             background: rgba(255,68,68,0.3);
             border-color: #ff4444;
         }
+        .scroll-indicator {
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -157,10 +185,11 @@
     <div id="seekBackward" class="seek-indicator">⏪ -30s</div>
     <div id="seekForward" class="seek-indicator">+30s ⏩</div>
     
-    <!-- CC Menu -->
+    <!-- CC Menu sa scroll-om -->
     <div id="ccMenu">
         <div class="menu-title">🎯 Odabir titlova</div>
-        <div id="ccOptions"></div>
+        <div id="ccOptions" class="cc-options-container"></div>
+        <div class="scroll-indicator">↑↓ za scroll • ENTER za izbor</div>
     </div>
     
     <div id="infoPanel"></div>
@@ -178,6 +207,8 @@
         let currentCaptionTrack = -1;
         let isCCMenuOpen = false;
         let currentCCSelection = 0;
+        let visibleOptionsCount = 6; // Koliko opcija je vidljivo odjednom
+        let scrollOffset = 0;
         
         function onYouTubeIframeAPIReady() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -215,7 +246,6 @@
             
             startProgressTracking();
             
-            // Pokupi dostupne titlove
             setTimeout(() => {
                 getAvailableCaptions();
             }, 3000);
@@ -248,16 +278,13 @@
         }
 
         function onApiChange(event) {
-            // API se promenio - možda su titlovi dostupni sada
             setTimeout(getAvailableCaptions, 1000);
         }
 
-        // Glavna funkcija za dobijanje titlova
         function getAvailableCaptions() {
             try {
                 console.log("Getting available captions...");
                 
-                // Pokušaj 1: Koristi getOption za tracklist
                 if (player.getOption && player.getOptions) {
                     const trackList = player.getOption('captions', 'tracklist');
                     if (trackList && trackList.length > 0) {
@@ -267,7 +294,6 @@
                     }
                 }
                 
-                // Pokušaj 2: Koristi getCaptionsList (stari API)
                 if (player.getCaptionsList) {
                     const captionsList = player.getCaptionsList();
                     if (captionsList && captionsList.length > 0) {
@@ -277,7 +303,6 @@
                     }
                 }
                 
-                // Pokušaj 3: Probaj da učitamo captions modul
                 player.loadModule('captions');
                 setTimeout(() => {
                     if (player.getOption) {
@@ -293,7 +318,6 @@
                 console.error("Error getting captions:", e);
             }
             
-            // Ako nema titlova, probaj ponovo za 5 sekundi
             if (availableCaptions.length === 0) {
                 setTimeout(getAvailableCaptions, 5000);
             }
@@ -304,33 +328,66 @@
             const optionsContainer = document.getElementById('ccOptions');
             
             if (menu && optionsContainer) {
-                let optionsHTML = '';
+                scrollOffset = 0;
+                currentCCSelection = currentCaptionTrack + 1;
                 
-                if (availableCaptions.length === 0) {
-                    optionsHTML = `<div class="cc-option">🔄 Učitavam titlove...</div>`;
-                    // Probaj ponovo da dobiješ titlove
-                    getAvailableCaptions();
-                } else {
-                    // Opcija "Bez titlova"
-                    optionsHTML = `<div class="cc-option ${currentCaptionTrack === -1 ? 'selected' : ''}" data-index="-1">
-                        ❌ Bez titlova
-                    </div>`;
-                    
-                    // Dostupni titlovi
-                    availableCaptions.forEach((track, index) => {
-                        const languageName = getLanguageName(track.languageCode);
-                        const trackName = track.name ? ` - ${track.name}` : '';
-                        optionsHTML += `<div class="cc-option ${currentCaptionTrack === index ? 'selected' : ''}" data-index="${index}">
-                            ${languageName}${trackName}
-                        </div>`;
-                    });
-                }
-                
-                optionsContainer.innerHTML = optionsHTML;
+                renderCCMenu();
                 menu.classList.add('visible');
                 isCCMenuOpen = true;
-                currentCCSelection = currentCaptionTrack + 1; // +1 zbog "Bez titlova"
+                
                 updateCCSelection();
+            }
+        }
+
+        function renderCCMenu() {
+            const optionsContainer = document.getElementById('ccOptions');
+            
+            if (availableCaptions.length === 0) {
+                optionsContainer.innerHTML = `<div class="cc-option">🔄 Učitavam titlove...</div>`;
+                getAvailableCaptions();
+                return;
+            }
+            
+            let optionsHTML = '';
+            const totalOptions = availableCaptions.length + 1; // +1 za "Bez titlova"
+            
+            // Prikazujemo samo vidljive opcije
+            const startIndex = scrollOffset;
+            const endIndex = Math.min(startIndex + visibleOptionsCount, totalOptions);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                if (i === 0) {
+                    // "Bez titlova" opcija
+                    const isSelected = currentCaptionTrack === -1 && (i - scrollOffset) === currentCCSelection;
+                    optionsHTML += `<div class="cc-option ${isSelected ? 'selected' : ''}" data-index="-1" data-absolute-index="${i}">
+                        ❌ Bez titlova
+                    </div>`;
+                } else {
+                    // Titlovi
+                    const captionIndex = i - 1;
+                    const track = availableCaptions[captionIndex];
+                    const languageName = getLanguageName(track.languageCode);
+                    const trackName = track.name ? ` - ${track.name}` : '';
+                    const isSelected = currentCaptionTrack === captionIndex && (i - scrollOffset) === currentCCSelection;
+                    
+                    optionsHTML += `<div class="cc-option ${isSelected ? 'selected' : ''}" data-index="${captionIndex}" data-absolute-index="${i}">
+                        ${languageName}${trackName}
+                    </div>`;
+                }
+            }
+            
+            optionsContainer.innerHTML = optionsHTML;
+            
+            // Scroll indikator
+            const scrollIndicator = document.querySelector('.scroll-indicator');
+            if (scrollIndicator) {
+                if (totalOptions > visibleOptionsCount) {
+                    const currentPage = Math.floor(scrollOffset / visibleOptionsCount) + 1;
+                    const totalPages = Math.ceil(totalOptions / visibleOptionsCount);
+                    scrollIndicator.textContent = `Strana ${currentPage}/${totalPages} • ↑↓ za scroll • ENTER za izbor`;
+                } else {
+                    scrollIndicator.textContent = 'ENTER za izbor';
+                }
             }
         }
 
@@ -344,9 +401,15 @@
 
         function updateCCSelection() {
             const options = document.querySelectorAll('.cc-option');
+            const absoluteSelection = scrollOffset + currentCCSelection;
+            const totalOptions = availableCaptions.length + 1;
+            
             options.forEach((option, index) => {
-                if (index === currentCCSelection) {
+                const absoluteIndex = scrollOffset + index;
+                if (absoluteIndex === absoluteSelection) {
                     option.classList.add('selected');
+                    // Auto-scroll da selekcija bude vidljiva
+                    option.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 } else {
                     option.classList.remove('selected');
                 }
@@ -359,21 +422,41 @@
                 return;
             }
             
-            const options = document.querySelectorAll('.cc-option');
-            if (options.length > 0) {
-                if (direction > 0) {
-                    currentCCSelection = Math.min(options.length - 1, currentCCSelection + 1);
+            const totalOptions = availableCaptions.length + 1;
+            
+            if (direction > 0) {
+                // Dole - sledeća opcija
+                if (currentCCSelection < visibleOptionsCount - 1) {
+                    currentCCSelection = Math.min(visibleOptionsCount - 1, currentCCSelection + 1);
                 } else {
-                    currentCCSelection = Math.max(0, currentCCSelection - 1);
+                    // Scroll dole
+                    if (scrollOffset + visibleOptionsCount < totalOptions) {
+                        scrollOffset++;
+                        renderCCMenu();
+                    }
                 }
-                updateCCSelection();
+            } else {
+                // Gore - prethodna opcija
+                if (currentCCSelection > 0) {
+                    currentCCSelection = Math.max(0, currentCCSelection - 1);
+                } else {
+                    // Scroll gore
+                    if (scrollOffset > 0) {
+                        scrollOffset--;
+                        renderCCMenu();
+                    }
+                }
             }
+            
+            updateCCSelection();
         }
 
         function selectCCOption() {
             if (!isCCMenuOpen) return;
             
             const options = document.querySelectorAll('.cc-option');
+            const absoluteSelection = scrollOffset + currentCCSelection;
+            
             if (options[currentCCSelection]) {
                 const index = parseInt(options[currentCCSelection].getAttribute('data-index'));
                 setCaptionTrack(index);
@@ -385,11 +468,9 @@
             
             try {
                 if (index === -1) {
-                    // Isključi titlove
                     player.unloadModule('captions');
                     showInfo("Titlovi: Isključeni");
                 } else {
-                    // Uključi odabrani titl
                     const track = availableCaptions[index];
                     player.loadModule('captions');
                     player.setOption('captions', 'track', {languageCode: track.languageCode});
@@ -405,40 +486,22 @@
 
         function getLanguageName(langCode) {
             const languages = {
-                'sr': '🇷🇸 Srpski',
-                'en': '🇺🇸 Engleski',
-                'hr': '🇭🇷 Hrvatski',
-                'bs': '🇧🇦 Bosanski',
-                'sl': '🇸🇮 Slovenački',
-                'mk': '🇲🇰 Makedonski',
-                'de': '🇩🇪 Nemački',
-                'fr': '🇫🇷 Francuski',
-                'es': '🇪🇸 Španski',
-                'it': '🇮🇹 Italijanski',
-                'ru': '🇷🇺 Ruski',
-                'ar': '🇸🇦 Arapski',
-                'zh': '🇨🇳 Kineski',
-                'ja': '🇯🇵 Japanski',
-                'ko': '🇰🇷 Koreanski',
-                'pt': '🇵🇹 Portugalski',
-                'tr': '🇹🇷 Turski',
-                'nl': '🇳🇱 Holandski',
-                'pl': '🇵🇱 Poljski',
-                'hu': '🇭🇺 Mađarski',
-                'cs': '🇨🇿 Češki',
-                'sk': '🇸🇰 Slovački',
-                'ro': '🇷🇴 Rumunski',
-                'bg': '🇧🇬 Bugarski',
-                'el': '🇬🇷 Grčki',
-                'he': '🇮🇱 Hebrejski',
-                'hi': '🇮🇳 Hindi',
-                'th': '🇹🇭 Tajlandski',
-                'vi': '🇻🇳 Vijetnamski'
+                'sr': '🇷🇸 Srpski', 'en': '🇺🇸 Engleski', 'hr': '🇭🇷 Hrvatski', 'bs': '🇧🇦 Bosanski',
+                'sl': '🇸🇮 Slovenački', 'mk': '🇲🇰 Makedonski', 'de': '🇩🇪 Nemački', 'fr': '🇫🇷 Francuski',
+                'es': '🇪🇸 Španski', 'it': '🇮🇹 Italijanski', 'ru': '🇷🇺 Ruski', 'ar': '🇸🇦 Arapski',
+                'zh': '🇨🇳 Kineski', 'ja': '🇯🇵 Japanski', 'ko': '🇰🇷 Koreanski', 'pt': '🇵🇹 Portugalski',
+                'tr': '🇹🇷 Turski', 'nl': '🇳🇱 Holandski', 'pl': '🇵🇱 Poljski', 'hu': '🇭🇺 Mađarski',
+                'cs': '🇨🇿 Češki', 'sk': '🇸🇰 Slovački', 'ro': '🇷🇴 Rumunski', 'bg': '🇧🇬 Bugarski',
+                'el': '🇬🇷 Grčki', 'he': '🇮🇱 Hebrejski', 'hi': '🇮🇳 Hindi', 'th': '🇹🇭 Tajlandski',
+                'vi': '🇻🇳 Vijetnamski', 'sv': '🇸🇪 Švedski', 'da': '🇩🇰 Danski', 'no': '🇳🇴 Norveški',
+                'fi': '🇫🇮 Finski', 'et': '🇪🇪 Estonski', 'lv': '🇱🇻 Letonski', 'lt': '🇱🇹 Litvanski',
+                'uk': '🇺🇦 Ukrajinski', 'be': '🇧🇾 Bjeloruski', 'ka': '🇬🇪 Gruzijski', 'hy': '🇦🇲 Jermenski',
+                'az': '🇦🇿 Azerbejdžanski', 'kk': '🇰🇿 Kazaški', 'uz': '🇺🇿 Uzbečki', 'ky': '🇰🇬 Kirgiski'
             };
             return languages[langCode] || langCode;
         }
 
-        // Poboljšani seek
+        // Seek funkcije
         function startSeek(direction) {
             if (isCCMenuOpen) return;
             
@@ -452,15 +515,10 @@
                 const holdTime = Date.now() - seekStartTime;
                 let seekAmount;
                 
-                if (holdTime < 2000) {
-                    seekAmount = 30;
-                } else if (holdTime < 5000) {
-                    seekAmount = 60;
-                } else if (holdTime < 10000) {
-                    seekAmount = 120;
-                } else {
-                    seekAmount = 300;
-                }
+                if (holdTime < 2000) seekAmount = 30;
+                else if (holdTime < 5000) seekAmount = 60;
+                else if (holdTime < 10000) seekAmount = 120;
+                else seekAmount = 300;
                 
                 seek(direction * seekAmount);
                 showSeekIndicator(direction, seekAmount);
