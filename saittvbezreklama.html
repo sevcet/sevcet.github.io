@@ -68,16 +68,27 @@
             padding: 20px;
         }
         
+        /* Player Container */
         #playerContainer {
             width: 100%;
             height: 100%;
             position: relative;
         }
 
+        /* YouTube IFrame API Player */
         #player {
             width: 100%;
             height: 100%;
             border: none;
+            display: none;
+        }
+        
+        /* Običan YouTube Embed (fallback) */
+        #fallbackPlayer {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
         }
         
         /* Progress bar na dnu */
@@ -186,12 +197,16 @@
             transition: all 0.2s ease;
             border: 2px solid transparent;
         }
-        .cc-option:hover,
-        .cc-option:focus {
-            background: rgba(255,255,255,0.2);
-            border-color: #ff4444;
-            transform: scale(1.02);
-            outline: none;
+        .cc-option.available {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            opacity: 1;
+        }
+        .cc-option.unavailable {
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .cc-option.selected {
             background: rgba(255,68,68,0.3);
@@ -215,6 +230,18 @@
             cursor: pointer;
             margin-top: 20px;
         }
+
+        .fallback-warning {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,68,68,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 10001;
+        }
     </style>
 </head>
 <body>
@@ -233,7 +260,22 @@
 
     <!-- Player Container -->
     <div id="playerContainer">
+        <!-- YouTube IFrame API Player -->
         <div id="player"></div>
+        
+        <!-- Običan YouTube Embed (fallback) -->
+        <iframe 
+            id="fallbackPlayer"
+            frameborder="0"
+            allowfullscreen
+            allow="autoplay; encrypted-media"
+            src="">
+        </iframe>
+    </div>
+
+    <!-- Fallback Warning -->
+    <div class="fallback-warning" style="display: none;">
+        ⚠ Osnovni režim
     </div>
     
     <!-- Progress i kontrole -->
@@ -249,19 +291,17 @@
     <div id="ccMenu">
         <div class="menu-title">🎯 Odabir titlova</div>
         <div id="ccOptions" class="cc-options-container">
-            <div class="cc-option selected" data-language="off">❌ Bez titlova</div>
-            <div class="cc-option" data-language="sr">🇷🇸 Srpski</div>
-            <div class="cc-option" data-language="en">🇺🇸 Engleski</div>
-            <div class="cc-option" data-language="hr">🇭🇷 Hrvatski</div>
-            <div class="cc-option" data-language="bs">🇧🇦 Bosanski</div>
+            <div class="cc-option available selected" data-code="off">❌ Bez titlova</div>
+            <div class="cc-option available" data-code="sr">🇷🇸 Srpski</div>
+            <div class="cc-option available" data-code="en">🇺🇸 Engleski</div>
+            <div class="cc-option available" data-code="hr">🇭🇷 Hrvatski</div>
+            <div class="cc-option available" data-code="bs">🇧🇦 Bosanski</div>
         </div>
         <div class="scroll-indicator">↑↓ za navigaciju • ENTER za izbor</div>
     </div>
     
     <div id="infoPanel"></div>
 
-    <!-- YouTube IFrame API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         let player;
         let hideTimeout;
@@ -269,6 +309,8 @@
         let isCCMenuOpen = false;
         let currentCCSelection = 0;
         let progressInterval;
+        let useFallback = false;
+        let playerLoadTimeout;
 
         // YouTube API Ready
         function onYouTubeIframeAPIReady() {
@@ -286,6 +328,14 @@
             }
 
             console.log("Inicijalizujem player sa videoId:", videoId);
+            
+            // Timeout za YouTube API
+            playerLoadTimeout = setTimeout(() => {
+                if (!player || !isPlaying) {
+                    console.log("YouTube API timeout - koristim fallback");
+                    useFallbackPlayer(videoId);
+                }
+            }, 8000); // 8 sekundi timeout
             
             try {
                 player = new YT.Player('player', {
@@ -313,14 +363,16 @@
                 });
                 
             } catch (error) {
-                console.error("Greška pri kreiranju playera:", error);
-                showError("Greška pri pokretanju playera");
+                console.error("Greška pri kreiranju IFrame API playera:", error);
+                useFallbackPlayer(videoId);
             }
         }
 
         function onPlayerReady(event) {
-            console.log("Player Ready!");
+            console.log("IFrame API Player Ready!");
+            clearTimeout(playerLoadTimeout);
             document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('player').style.display = 'block';
             
             isPlaying = true;
             hideControls();
@@ -355,6 +407,38 @@
             showError("YouTube greška: " + getErrorMessage(event.data));
         }
 
+        // FALLBACK PLAYER - običan YouTube embed
+        function useFallbackPlayer(videoId) {
+            console.log("Koristim fallback player");
+            useFallback = true;
+            clearTimeout(playerLoadTimeout);
+            
+            // Sakrij IFrame API player
+            document.getElementById('player').style.display = 'none';
+            
+            // Pokaži fallback player
+            const fallbackPlayer = document.getElementById('fallbackPlayer');
+            const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&controls=0&showinfo=0&fs=1&playsinline=1`;
+            
+            fallbackPlayer.src = embedUrl;
+            fallbackPlayer.style.display = 'block';
+            
+            // Pokaži warning
+            document.querySelector('.fallback-warning').style.display = 'block';
+            
+            // Sakrij loading
+            document.getElementById('loadingScreen').style.display = 'none';
+            
+            // Onemogući neke funkcije u fallback modu
+            document.getElementById('progressContainer').style.display = 'none';
+            
+            showInfo("Osnovni režim • BACK za izlaz");
+            
+            if (window.AndroidInterface) {
+                AndroidInterface.playerReady();
+            }
+        }
+
         function getErrorMessage(errorCode) {
             const errors = {
                 2: "Pogrešan video ID",
@@ -366,8 +450,10 @@
             return errors[errorCode] || "Nepoznata greška";
         }
 
-        // Progress tracking
+        // Progress tracking (samo za IFrame API)
         function startProgressTracking() {
+            if (useFallback) return;
+            
             stopProgressTracking();
             progressInterval = setInterval(updateProgress, 1000);
         }
@@ -380,18 +466,18 @@
         }
 
         function updateProgress() {
-            if (player && player.getCurrentTime && player.getDuration) {
-                const currentTime = player.getCurrentTime();
-                const duration = player.getDuration();
-                const progress = (currentTime / duration) * 100;
-                
-                document.getElementById('progressBar').style.width = progress + '%';
-            }
+            if (useFallback || !player || !player.getCurrentTime || !player.getDuration) return;
+            
+            const currentTime = player.getCurrentTime();
+            const duration = player.getDuration();
+            const progress = (currentTime / duration) * 100;
+            
+            document.getElementById('progressBar').style.width = progress + '%';
         }
 
-        // Seek funkcije - PRAVE seek funkcije sa YouTube API
+        // Seek funkcije (samo za IFrame API)
         function seek(direction) {
-            if (isCCMenuOpen || !player) return;
+            if (isCCMenuOpen || !player || useFallback) return;
             
             const seekAmount = 60;
             const currentTime = player.getCurrentTime();
@@ -414,10 +500,15 @@
             }
         }
 
-        // Play/Pause - PRAVE funkcije sa YouTube API
+        // Play/Pause (samo za IFrame API)
         function togglePlayPause() {
             if (isCCMenuOpen) {
                 selectCCOption();
+                return;
+            }
+            
+            if (useFallback) {
+                showInfo("Play/Pause nije dostupno u osnovnom režimu");
                 return;
             }
             
@@ -430,8 +521,13 @@
             }
         }
 
-        // CC Menu funkcije
+        // CC Menu (samo za IFrame API)
         function showCCMenu() {
+            if (useFallback) {
+                showInfo("Titlovi nisu dostupni u osnovnom režimu");
+                return;
+            }
+            
             const menu = document.getElementById('ccMenu');
             menu.classList.add('visible');
             isCCMenuOpen = true;
@@ -457,7 +553,7 @@
         }
 
         function navigateCCMenu(direction) {
-            if (!isCCMenuOpen) return;
+            if (!isCCMenuOpen || useFallback) return;
             
             const options = document.querySelectorAll('.cc-option');
             currentCCSelection += direction;
@@ -472,32 +568,32 @@
         }
 
         function selectCCOption() {
-            if (!isCCMenuOpen || !player) return;
+            if (!isCCMenuOpen || !player || useFallback) return;
             
             const options = document.querySelectorAll('.cc-option');
             const selectedOption = options[currentCCSelection];
-            const language = selectedOption.getAttribute('data-language');
+            const languageCode = selectedOption.getAttribute('data-code');
             
-            setCaptionTrack(language);
+            setCaptionTrack(languageCode);
         }
 
-        function setCaptionTrack(language) {
-            if (!player) return;
+        function setCaptionTrack(languageCode) {
+            if (!player || useFallback) return;
             
             try {
-                if (language === 'off') {
-                    // Isključi titlove
+                if (languageCode === 'off') {
                     player.setOption('captions', 'track', {});
                     player.unloadModule('captions');
                     showInfo("Titlovi: Isključeni");
                 } else {
-                    // Uključi titlove
                     player.loadModule('captions');
                     setTimeout(() => {
-                        player.setOption('captions', 'track', {languageCode: language});
+                        player.setOption('captions', 'track', {languageCode: languageCode});
                         player.setOption('captions', 'reload', true);
                     }, 100);
-                    showInfo(`Titlovi: ${getLanguageName(language)}`);
+                    
+                    const languageName = getLanguageName(languageCode);
+                    showInfo(`Titlovi: ${languageName}`);
                 }
             } catch (error) {
                 console.error("Greška pri postavljanju titlova:", error);
@@ -519,7 +615,7 @@
 
         // Kontrole
         function showControls() {
-            if (isCCMenuOpen) return;
+            if (isCCMenuOpen || useFallback) return;
             document.getElementById('progressContainer').style.opacity = '1';
             resetHideTimer();
         }
@@ -568,12 +664,22 @@
         function retryPlayer() {
             document.getElementById('errorScreen').style.display = 'none';
             document.getElementById('loadingScreen').style.display = 'flex';
+            
+            // Resetuj playere
+            document.getElementById('player').style.display = 'none';
+            document.getElementById('fallbackPlayer').style.display = 'none';
+            document.querySelector('.fallback-warning').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            useFallback = false;
             initializePlayer();
         }
 
         // TV komande
         document.addEventListener('keydown', function(event) {
-            showControlsTemporary();
+            if (!useFallback) {
+                showControlsTemporary();
+            }
             
             switch(event.key) {
                 case 'ArrowUp':
@@ -636,14 +742,25 @@
         // Event listeneri
         document.getElementById('retryButton').addEventListener('click', retryPlayer);
 
-        // Inicijalno sakrij kontrole
-        window.addEventListener('load', function() {
-            setTimeout(hideControls, 2000);
-        });
+        // Ako YouTube API nije učitan nakon 5 sekundi, koristi fallback
+        setTimeout(() => {
+            if (!window.YT) {
+                console.log("YouTube API se nije učitao, koristim fallback");
+                const urlParams = new URLSearchParams(window.location.search);
+                const videoId = urlParams.get('videoId');
+                if (videoId) {
+                    useFallbackPlayer(videoId);
+                }
+            }
+        }, 5000);
 
         window.addEventListener('beforeunload', function() {
             stopProgressTracking();
+            clearTimeout(playerLoadTimeout);
         });
     </script>
+
+    <!-- Load YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
