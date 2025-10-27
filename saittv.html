@@ -197,13 +197,7 @@
             background: rgba(255,68,68,0.3);
             border-color: #ff4444;
         }
-        /* DOSTUPNI titlovi - normalni izgled */
-        .cc-option.available {
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-            opacity: 1;
-        }
-        /* NEDOSTUPNI titlovi - TAMNIJI i onemogućeni */
+        /* NEDOSTUPNI titlovi - TAMNIJI */
         .cc-option.unavailable {
             background: rgba(255,255,255,0.05);
             color: #666;
@@ -262,7 +256,16 @@
     <div id="ccMenu">
         <div class="menu-title">🎯 Odabir titlova</div>
         <div id="ccOptions" class="cc-options-container">
-            <div class="loading-text">🔍 Proveravam dostupne titlove...</div>
+            <!-- SVI titlovi su dostupni po defaultu -->
+            <div class="cc-option selected" data-language="off">❌ Bez titlova</div>
+            <div class="cc-option" data-language="sr">🇷🇸 Srpski</div>
+            <div class="cc-option" data-language="en">🇺🇸 Engleski</div>
+            <div class="cc-option" data-language="hr">🇭🇷 Hrvatski</div>
+            <div class="cc-option" data-language="bs">🇧🇦 Bosanski</div>
+            <div class="cc-option unavailable" data-language="sl">🇸🇮 Slovenački (nije dostupno)</div>
+            <div class="cc-option unavailable" data-language="mk">🇲🇰 Makedonski (nije dostupno)</div>
+            <div class="cc-option unavailable" data-language="de">🇩🇪 Nemački (nije dostupno)</div>
+            <div class="cc-option unavailable" data-language="fr">🇫🇷 Francuski (nije dostupno)</div>
         </div>
         <div class="scroll-indicator">↑↓ za navigaciju • ENTER za izbor</div>
     </div>
@@ -278,21 +281,8 @@
         let isCCMenuOpen = false;
         let currentCCSelection = 0;
         let progressInterval;
-        let availableCaptions = [];
 
-        // Lista jezika koje želimo da podržimo
-        const desiredLanguages = [
-            { code: 'sr', name: 'Srpski', flag: '🇷🇸' },
-            { code: 'en', name: 'Engleski', flag: '🇺🇸' },
-            { code: 'hr', name: 'Hrvatski', flag: '🇭🇷' },
-            { code: 'bs', name: 'Bosanski', flag: '🇧🇦' },
-            { code: 'sl', name: 'Slovenački', flag: '🇸🇮' },
-            { code: 'mk', name: 'Makedonski', flag: '🇲🇰' },
-            { code: 'de', name: 'Nemački', flag: '🇩🇪' },
-            { code: 'fr', name: 'Francuski', flag: '🇫🇷' }
-        ];
-
-        // YouTube API Ready
+        // YouTube API Ready - JEDNOSTAVNA VERZIJA KAO TVOJA
         function onYouTubeIframeAPIReady() {
             console.log("YouTube API Ready!");
             initializePlayer();
@@ -326,13 +316,12 @@
                         'playsinline': 1,
                         'cc_load_policy': 0,
                         'enablejsapi': 1
-                        // REKLAME SU VRAĆENE - nema adblock parametara
                     },
                     events: {
                         'onReady': onPlayerReady,
                         'onStateChange': onPlayerStateChange,
-                        'onError': onPlayerError,
-                        'onApiChange': onApiChange
+                        'onError': onPlayerError
+                        // NEMA onApiChange - jednostavnije kao tvoj kod
                     }
                 });
                 
@@ -349,11 +338,6 @@
             isPlaying = true;
             hideControls();
             startProgressTracking();
-            
-            // Pokreni proveru titlova
-            setTimeout(() => {
-                checkAvailableCaptions();
-            }, 3000);
             
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
@@ -382,107 +366,6 @@
         function onPlayerError(event) {
             console.error('Player error:', event.data);
             showError("YouTube greška: " + getErrorMessage(event.data));
-        }
-
-        function onApiChange(event) {
-            // Ponovo proveri titlove kada se API promeni
-            setTimeout(checkAvailableCaptions, 1000);
-        }
-
-        // Proveri dostupne titlove
-        function checkAvailableCaptions() {
-            if (!player) return;
-            
-            console.log("Proveravam dostupne titlove...");
-            
-            try {
-                let trackList = [];
-                
-                // Metoda 1: getOption
-                if (player.getOption) {
-                    try {
-                        trackList = player.getOption('captions', 'tracklist') || [];
-                        console.log("Pronađeni titlovi:", trackList);
-                    } catch (e) {
-                        console.log("getOption nije dostupan");
-                    }
-                }
-                
-                // Metoda 2: getCaptionsList
-                if (trackList.length === 0 && player.getCaptionsList) {
-                    try {
-                        trackList = player.getCaptionsList() || [];
-                        console.log("Pronađeni titlovi:", trackList);
-                    } catch (e) {
-                        console.log("getCaptionsList nije dostupan");
-                    }
-                }
-                
-                processAvailableCaptions(trackList);
-                
-            } catch (error) {
-                console.error("Greška pri proveri titlova:", error);
-                // Koristi podrazumevane jezike ako provera ne uspe
-                setupDefaultCaptions();
-            }
-        }
-
-        function processAvailableCaptions(trackList) {
-            availableCaptions = [];
-            
-            // Uvek dodaj "Bez titlova" opciju
-            availableCaptions.push({
-                code: 'off',
-                name: 'Bez titlova',
-                flag: '❌',
-                available: true
-            });
-            
-            // Proveri koji željeni jezici postoje
-            desiredLanguages.forEach(lang => {
-                const isAvailable = trackList.some(track => {
-                    // Proveri tačno poklapanje (npr. 'sr') ili osnovni jezik (npr. 'sr' iz 'sr-RS')
-                    const trackBaseLang = track.languageCode.split('-')[0];
-                    return track.languageCode === lang.code || trackBaseLang === lang.code;
-                });
-                
-                availableCaptions.push({
-                    code: lang.code,
-                    name: lang.name,
-                    flag: lang.flag,
-                    available: isAvailable
-                });
-            });
-            
-            console.log("Dostupni titlovi:", availableCaptions);
-            renderCCMenu();
-        }
-
-        function setupDefaultCaptions() {
-            // Koristi podrazumevane jezike ako provera ne uspe
-            availableCaptions = [
-                { code: 'off', name: 'Bez titlova', flag: '❌', available: true },
-                { code: 'sr', name: 'Srpski', flag: '🇷🇸', available: true },
-                { code: 'en', name: 'Engleski', flag: '🇺🇸', available: true },
-                { code: 'hr', name: 'Hrvatski', flag: '🇭🇷', available: true }
-            ];
-            renderCCMenu();
-        }
-
-        function renderCCMenu() {
-            const optionsContainer = document.getElementById('ccOptions');
-            let html = '';
-            
-            availableCaptions.forEach((caption, index) => {
-                const isAvailable = caption.available;
-                const optionClass = `cc-option ${isAvailable ? 'available' : 'unavailable'} ${index === currentCCSelection ? 'selected' : ''}`;
-                
-                html += `<div class="${optionClass}" data-code="${caption.code}" data-available="${isAvailable}">
-                    ${caption.flag} ${caption.name} ${!isAvailable ? ' (nije dostupno)' : ''}
-                </div>`;
-            });
-            
-            optionsContainer.innerHTML = html;
         }
 
         function getErrorMessage(errorCode) {
@@ -560,7 +443,7 @@
             }
         }
 
-        // CC Menu funkcije
+        // CC Menu funkcije - JEDNOSTAVNA NAVIGACIJA
         function showCCMenu() {
             const menu = document.getElementById('ccMenu');
             menu.classList.add('visible');
@@ -580,7 +463,6 @@
             options.forEach((option, index) => {
                 if (index === currentCCSelection) {
                     option.classList.add('selected');
-                    option.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 } else {
                     option.classList.remove('selected');
                 }
@@ -602,11 +484,11 @@
                     currentCCSelection = 0;
                 }
                 
-                // Preskoči nedostupne opcije (osim ako je to jedina opcija)
+                // Preskoči nedostupne opcije
                 const option = options[currentCCSelection];
-                const isAvailable = option.getAttribute('data-available') === 'true';
+                const isUnavailable = option.classList.contains('unavailable');
                 
-                if (isAvailable) {
+                if (!isUnavailable) {
                     break;
                 }
             } while (true);
@@ -619,36 +501,32 @@
             
             const options = document.querySelectorAll('.cc-option');
             const selectedOption = options[currentCCSelection];
-            const languageCode = selectedOption.getAttribute('data-code');
-            const isAvailable = selectedOption.getAttribute('data-available') === 'true';
+            const language = selectedOption.getAttribute('data-language');
+            const isUnavailable = selectedOption.classList.contains('unavailable');
             
-            if (!isAvailable && languageCode !== 'off') {
+            if (isUnavailable && language !== 'off') {
                 showInfo("Titlovi nisu dostupni za ovaj jezik");
                 return;
             }
             
-            setCaptionTrack(languageCode);
+            setCaptionTrack(language);
         }
 
-        function setCaptionTrack(languageCode) {
+        function setCaptionTrack(language) {
             if (!player) return;
             
             try {
-                if (languageCode === 'off') {
-                    // Isključi titlove
+                if (language === 'off') {
                     player.setOption('captions', 'track', {});
                     player.unloadModule('captions');
                     showInfo("Titlovi: Isključeni");
                 } else {
-                    // Uključi titlove
                     player.loadModule('captions');
                     setTimeout(() => {
-                        player.setOption('captions', 'track', {languageCode: languageCode});
+                        player.setOption('captions', 'track', {languageCode: language});
                         player.setOption('captions', 'reload', true);
                     }, 100);
-                    
-                    const languageName = desiredLanguages.find(lang => lang.code === languageCode)?.name || languageCode;
-                    showInfo(`Titlovi: ${languageName}`);
+                    showInfo(`Titlovi: ${getLanguageName(language)}`);
                 }
             } catch (error) {
                 console.error("Greška pri postavljanju titlova:", error);
@@ -656,6 +534,20 @@
             }
             
             hideCCMenu();
+        }
+
+        function getLanguageName(code) {
+            const languages = {
+                'sr': 'Srpski',
+                'en': 'Engleski', 
+                'hr': 'Hrvatski',
+                'bs': 'Bosanski',
+                'sl': 'Slovenački',
+                'mk': 'Makedonski',
+                'de': 'Nemački',
+                'fr': 'Francuski'
+            };
+            return languages[code] || code;
         }
 
         // Kontrole
