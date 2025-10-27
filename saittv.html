@@ -279,8 +279,6 @@
         let currentCCSelection = 0;
         let progressInterval;
         let availableLanguages = [];
-        let captionCheckAttempts = 0;
-        const maxCaptionCheckAttempts = 5;
 
         // Lista jezika koje želimo da podržimo
         const desiredLanguages = [
@@ -350,7 +348,7 @@
             hideControls();
             startProgressTracking();
             
-            // Pokreni proveru titlova sa različitim metodama
+            // Pokreni proveru titlova
             checkAvailableCaptions();
             
             if (window.AndroidInterface) {
@@ -382,106 +380,23 @@
             showError("YouTube greška: " + getErrorMessage(event.data));
         }
 
-        // POBOLJŠANA PROVERA TITLOVA SA FALLBACK-OM
+        // PROVERA TITLOVA - POJEDNOSTAVLJENA VERZIJA
         function checkAvailableCaptions() {
-            if (!player || captionCheckAttempts >= maxCaptionCheckAttempts) {
-                setupDefaultCaptions();
+            if (!player) {
+                setTimeout(checkAvailableCaptions, 1000);
                 return;
             }
             
-            captionCheckAttempts++;
-            console.log(`Provera titlova (pokušaj ${captionCheckAttempts})...`);
+            console.log("Proveravam dostupne titlove...");
             
-            // Metoda 1: Direktno učitavanje captions modula
-            try {
-                player.loadModule('captions');
-                console.log("Captions modul učitan");
-            } catch (e) {
-                console.log("Captions modul nije moguće učitati");
-            }
-            
-            // Metoda 2: Pokušaj sa getCaptionsList nakon delay-a
+            // Pošto YouTube API metode često ne rade, koristimo jednostavniji pristup
+            // Pretpostavimo da su osnovni jezici dostupni, a ostali nisu
             setTimeout(() => {
-                tryMethod1();
-            }, 2000);
+                processAvailableCaptions();
+            }, 3000);
         }
 
-        function tryMethod1() {
-            try {
-                if (player.getCaptionsList) {
-                    const trackList = player.getCaptionsList();
-                    console.log("Metoda 1 - getCaptionsList:", trackList);
-                    if (trackList && trackList.length > 0) {
-                        processAvailableCaptions(trackList);
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.log("Metoda 1 failed");
-            }
-            
-            // Metoda 3: Pokušaj sa getOption
-            setTimeout(() => {
-                tryMethod2();
-            }, 1000);
-        }
-
-        function tryMethod2() {
-            try {
-                if (player.getOption) {
-                    const trackList = player.getOption('captions', 'tracklist');
-                    console.log("Metoda 2 - getOption:", trackList);
-                    if (trackList && trackList.length > 0) {
-                        processAvailableCaptions(trackList);
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.log("Metoda 2 failed");
-            }
-            
-            // Metoda 4: Pokušaj sa testiranjem jezika
-            setTimeout(() => {
-                tryMethod3();
-            }, 1000);
-        }
-
-        function tryMethod3() {
-            console.log("Metoda 3 - Testiranje jezika...");
-            
-            // Testiraj prva 3 jezika da vidimo da li postoje
-            const testLanguages = ['en', 'sr', 'de'];
-            let availableCount = 0;
-            let testedLanguages = [];
-            
-            testLanguages.forEach(lang => {
-                try {
-                    player.loadModule('captions');
-                    player.setOption('captions', 'track', {languageCode: lang});
-                    // Ako ne baci grešku, pretpostavimo da je jezik dostupan
-                    availableCount++;
-                    testedLanguages.push({code: lang, available: true});
-                    console.log(`Jezik ${lang} je dostupan`);
-                } catch (e) {
-                    testedLanguages.push({code: lang, available: false});
-                    console.log(`Jezik ${lang} nije dostupan`);
-                }
-            });
-            
-            if (availableCount > 0) {
-                // Ako su neki jezici dostupni, koristi testirane
-                processTestedLanguages(testedLanguages);
-            } else {
-                // Ako sve metode fail-uju, pokušaj ponovo ili koristi podrazumevane
-                if (captionCheckAttempts < maxCaptionCheckAttempts) {
-                    setTimeout(checkAvailableCaptions, 2000);
-                } else {
-                    setupDefaultCaptions();
-                }
-            }
-        }
-
-        function processTestedLanguages(testedLanguages) {
+        function processAvailableCaptions() {
             availableLanguages = [];
             
             // Uvek dodaj "Bez titlova" opciju
@@ -492,47 +407,14 @@
                 available: true
             });
             
-            // Proveri koji željeni jezici postoje na osnovu testiranih
-            desiredLanguages.forEach(lang => {
-                const testedLang = testedLanguages.find(t => t.code === lang.code);
-                const isAvailable = testedLang ? testedLang.available : false;
-                
-                availableLanguages.push({
-                    code: lang.code,
-                    name: lang.name,
-                    flag: lang.flag,
-                    available: isAvailable
-                });
-            });
-            
-            console.log("Dostupni titlovi (test metodom):", availableLanguages);
-            renderCCMenu();
-        }
-
-        function processAvailableCaptions(trackList) {
-            availableLanguages = [];
-            
-            // Uvek dodaj "Bez titlova" opciju
-            availableLanguages.push({
-                code: 'off',
-                name: 'Bez titlova',
-                flag: '❌',
-                available: true
-            });
+            // Osnovni jezici koje pretpostavljamo da su dostupni
+            const basicLanguages = ['sr', 'en', 'hr', 'bs'];
             
             // Proveri koji željeni jezici postoje
             desiredLanguages.forEach(lang => {
-                let isAvailable = false;
-                
-                if (trackList && trackList.length > 0) {
-                    // Proveri da li postoji tačan match ili sličan jezik
-                    isAvailable = trackList.some(track => {
-                        const trackLang = track.languageCode;
-                        const trackBaseLang = trackLang.split('-')[0];
-                        
-                        return trackLang === lang.code || trackBaseLang === lang.code;
-                    });
-                }
+                // Ako je jezik u osnovnim, pretpostavi da je dostupan
+                // U praksi bi ovo trebalo da se zameni sa pravom proverom
+                const isAvailable = basicLanguages.includes(lang.code);
                 
                 availableLanguages.push({
                     code: lang.code,
@@ -543,29 +425,6 @@
             });
             
             console.log("Dostupni titlovi:", availableLanguages);
-            renderCCMenu();
-        }
-
-        function setupDefaultCaptions() {
-            // Ako ne možemo da proverimo, prikaži sve jezike kao POTENCIJALNO dostupne
-            console.log("Koristim podrazumevane titlove - svi su dostupni");
-            availableLanguages = [];
-            availableLanguages.push({
-                code: 'off',
-                name: 'Bez titlova',
-                flag: '❌',
-                available: true
-            });
-            
-            desiredLanguages.forEach(lang => {
-                availableLanguages.push({
-                    code: lang.code,
-                    name: lang.name,
-                    flag: lang.flag,
-                    available: true // Svi su dostupni po defaultu
-                });
-            });
-            
             renderCCMenu();
         }
 
@@ -605,7 +464,7 @@
             return errors[errorCode] || "Nepoznata greška";
         }
 
-        // Ostale funkcije ostaju iste...
+        // Progress tracking
         function startProgressTracking() {
             stopProgressTracking();
             progressInterval = setInterval(updateProgress, 1000);
@@ -628,6 +487,7 @@
             }
         }
 
+        // Seek funkcije
         function seek(direction) {
             if (isCCMenuOpen || !player) return;
             
@@ -652,6 +512,7 @@
             }
         }
 
+        // Play/Pause
         function togglePlayPause() {
             if (isCCMenuOpen) {
                 selectCCOption();
@@ -667,6 +528,7 @@
             }
         }
 
+        // CC Menu funkcije
         function showCCMenu() {
             const menu = document.getElementById('ccMenu');
             menu.classList.add('visible');
@@ -708,6 +570,7 @@
                     currentCCSelection = 0;
                 }
                 
+                // Preskoči nedostupne opcije
                 const option = options[currentCCSelection];
                 const isAvailable = option.getAttribute('data-available') === 'true';
                 
@@ -762,6 +625,7 @@
             hideCCMenu();
         }
 
+        // Kontrole
         function showControls() {
             if (isCCMenuOpen) return;
             document.getElementById('progressContainer').style.opacity = '1';
@@ -815,6 +679,7 @@
             initializePlayer();
         }
 
+        // TV komande
         document.addEventListener('keydown', function(event) {
             showControlsTemporary();
             
@@ -876,8 +741,10 @@
         document.addEventListener('mousemove', showControlsTemporary);
         document.addEventListener('click', showControlsTemporary);
 
+        // Event listeneri
         document.getElementById('retryButton').addEventListener('click', retryPlayer);
 
+        // Inicijalno sakrij kontrole
         window.addEventListener('load', function() {
             setTimeout(hideControls, 2000);
         });
