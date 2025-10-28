@@ -50,6 +50,68 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* CUSTOM THUMBNAIL - NOVO */
+        #customThumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-color: #000;
+            z-index: 9998;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url('https://sevcet.github.io/tv_thumbnail.jpg');
+        }
+        
+        .thumbnail-content {
+            text-align: center;
+            color: white;
+            background: rgba(0,0,0,0.8);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,68,68,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .play-button {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 68, 68, 0.95);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            margin: 0 auto 25px;
+            cursor: pointer;
+            border: 4px solid white;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .play-button:hover {
+            transform: scale(1.1);
+            background: rgba(255, 68, 68, 1);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .thumbnail-text {
+            font-size: 22px;
+            margin-top: 15px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
         
         #errorScreen {
             position: absolute;
@@ -224,6 +286,14 @@
         <div id="loadingText">Učitavam YouTube player...</div>
     </div>
     
+    <!-- CUSTOM THUMBNAIL - NOVO -->
+    <div id="customThumbnail">
+        <div class="thumbnail-content">
+            <div class="play-button" onclick="playFromThumbnail()">▶</div>
+            <div class="thumbnail-text">YU TU FLIX BALKAN<br>Pritisni ENTER za reprodukciju</div>
+        </div>
+    </div>
+    
     <!-- Error Screen -->
     <div id="errorScreen">
         <div id="errorText">Greška pri učitavanju YouTube playera</div>
@@ -269,6 +339,7 @@
         let isCCMenuOpen = false;
         let currentCCSelection = 0;
         let progressInterval;
+        let customThumbnail;
 
         // YouTube API Ready
         function onYouTubeIframeAPIReady() {
@@ -279,6 +350,8 @@
         function initializePlayer() {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('videoId');
+            
+            customThumbnail = document.getElementById('customThumbnail');
             
             if (!videoId) {
                 showError("Nema Video ID-a u URL-u");
@@ -293,7 +366,7 @@
                     width: '100%',
                     videoId: videoId,
                     playerVars: {
-                        'autoplay': 1,
+                        'autoplay': 0, // PROMENJENO: ne autoplay da bi se video thumbnail
                         'rel': 0,
                         'modestbranding': 1,
                         'controls': 0,
@@ -322,9 +395,10 @@
             console.log("Player Ready!");
             document.getElementById('loadingScreen').style.display = 'none';
             
-            isPlaying = true;
+            // Sakrij loading, ali OSTAVI thumbnail vidljiv
+            // Player je spreman, ali video nije počeo
+            
             hideControls();
-            startProgressTracking();
             
             if (window.AndroidInterface) {
                 AndroidInterface.playerReady();
@@ -337,15 +411,26 @@
             console.log("Player State:", event.data);
             
             if (event.data === YT.PlayerState.PLAYING) {
+                // Video je počeo - sakrij thumbnail
+                if (customThumbnail) {
+                    customThumbnail.style.display = 'none';
+                }
                 isPlaying = true;
                 startProgressTracking();
             } else if (event.data === YT.PlayerState.PAUSED) {
                 isPlaying = false;
                 stopProgressTracking();
             } else if (event.data === YT.PlayerState.ENDED) {
+                // Video je završen - prikaži thumbnail ponovo
+                if (customThumbnail) {
+                    customThumbnail.style.display = 'flex';
+                }
                 isPlaying = false;
                 stopProgressTracking();
                 showInfo("Video završen");
+            } else if (event.data === YT.PlayerState.CUED) {
+                // Video je učitan ali nije počeo - ostavi thumbnail
+                console.log("Video učitan, thumbnail ostaje");
             }
             resetHideTimer();
         }
@@ -389,7 +474,17 @@
             }
         }
 
-        // Seek funkcije - PRAVE seek funkcije sa YouTube API
+        // NOVA FUNKCIJA: Pokreni video iz thumbnaila
+        function playFromThumbnail() {
+            if (player) {
+                player.playVideo();
+                if (customThumbnail) {
+                    customThumbnail.style.display = 'none';
+                }
+            }
+        }
+
+        // Seek funkcije
         function seek(direction) {
             if (isCCMenuOpen || !player) return;
             
@@ -414,7 +509,7 @@
             }
         }
 
-        // Play/Pause - PRAVE funkcije sa YouTube API
+        // Play/Pause
         function togglePlayPause() {
             if (isCCMenuOpen) {
                 selectCCOption();
@@ -486,12 +581,10 @@
             
             try {
                 if (language === 'off') {
-                    // Isključi titlove
                     player.setOption('captions', 'track', {});
                     player.unloadModule('captions');
                     showInfo("Titlovi: Isključeni");
                 } else {
-                    // Uključi titlove
                     player.loadModule('captions');
                     setTimeout(() => {
                         player.setOption('captions', 'track', {languageCode: language});
@@ -563,11 +656,18 @@
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('errorScreen').style.display = 'flex';
             document.getElementById('errorText').textContent = message;
+            // Sakrij thumbnail ako ima grešku
+            if (customThumbnail) {
+                customThumbnail.style.display = 'none';
+            }
         }
 
         function retryPlayer() {
             document.getElementById('errorScreen').style.display = 'none';
             document.getElementById('loadingScreen').style.display = 'flex';
+            if (customThumbnail) {
+                customThumbnail.style.display = 'flex';
+            }
             initializePlayer();
         }
 
@@ -595,6 +695,9 @@
                 case 'Enter':
                     if (isCCMenuOpen) {
                         selectCCOption();
+                    } else if (customThumbnail && customThumbnail.style.display !== 'none') {
+                        // Ako je thumbnail vidljiv, pokreni video
+                        playFromThumbnail();
                     } else {
                         togglePlayPause();
                     }
