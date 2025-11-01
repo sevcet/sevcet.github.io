@@ -312,8 +312,9 @@
         let currentCCSelection = 0;
         let progressInterval;
         let customThumbnail;
-        let thumbnailCheckInterval;
-        let lastActiveState = null;
+        let stateCheckInterval;
+        let hasAdStarted = false;
+        let hasVideoStarted = false;
 
         // YouTube API Ready
         function onYouTubeIframeAPIReady() {
@@ -369,7 +370,7 @@
             console.log("Player Ready!");
             document.getElementById('loadingScreen').style.display = 'none';
             
-            // Player je spreman - pokaži thumbnail dok ne krene video
+            // Player je spreman - pokaži thumbnail DOK NE KRENE BILO KAKAV SADRŽAJ
             showCustomThumbnail();
             
             hideControls();
@@ -380,19 +381,21 @@
             
             showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
             
-            // Pokreni proveru stanja
-            startStateChecking();
+            // Pokreni proveru stanja za detekciju reklama
+            startAdDetection();
         }
 
         function onPlayerStateChange(event) {
             console.log("Player State:", event.data);
-            lastActiveState = event.data;
             
             if (event.data === YT.PlayerState.PLAYING) {
-                // Video je počeo - sakrij thumbnail
+                // BILO KAKAV SADRŽAJ JE POČEO - sakrij thumbnail
                 hideCustomThumbnail();
                 isPlaying = true;
                 startProgressTracking();
+                
+                // Proveri da li je ovo video ili reklama
+                checkIfAdOrVideo();
             } 
             else if (event.data === YT.PlayerState.PAUSED) {
                 isPlaying = false;
@@ -403,6 +406,8 @@
                 isPlaying = false;
                 stopProgressTracking();
                 showCustomThumbnail();
+                hasVideoStarted = false;
+                hasAdStarted = false;
                 showInfo("Video završen");
             }
             else if (event.data === YT.PlayerState.BUFFERING) {
@@ -412,13 +417,76 @@
             else if (event.data === YT.PlayerState.CUED) {
                 console.log("Video učitan");
             }
+            else if (event.data === YT.PlayerState.UNSTARTED) {
+                // Nije počeo ništa - pokaži thumbnail
+                showCustomThumbnail();
+            }
+            
             resetHideTimer();
+        }
+
+        function checkIfAdOrVideo() {
+            if (!player) return;
+            
+            // Proveri trenutno vreme - reklame obično počinju od 0
+            const currentTime = player.getCurrentTime();
+            const duration = player.getDuration();
+            
+            console.log("Trenutno vreme:", currentTime, "Trajanje:", duration);
+            
+            if (currentTime === 0 && !hasVideoStarted) {
+                // Verovatno reklama - ne prikazuj thumbnail
+                console.log("Detektovana reklama - thumbnail ostaje sakriven");
+                hasAdStarted = true;
+            } else {
+                // Verovatno video
+                console.log("Detektovan video - thumbnail ostaje sakriven");
+                hasVideoStarted = true;
+            }
         }
 
         function checkBuffering() {
             if (player && player.getPlayerState() === YT.PlayerState.BUFFERING) {
                 // Ako i dalje bufferuje nakon 2 sekunde, pokaži thumbnail
                 showCustomThumbnail();
+            }
+        }
+
+        // Detekcija reklama pomoću provere vremena
+        function startAdDetection() {
+            stateCheckInterval = setInterval(function() {
+                if (player && player.getPlayerState && player.getCurrentTime) {
+                    const state = player.getPlayerState();
+                    const currentTime = player.getCurrentTime();
+                    
+                    // Ako je video pauziran na početku (nakon reklama) - pokaži thumbnail
+                    if (state === YT.PlayerState.PAUSED && currentTime < 2 && hasAdStarted) {
+                        console.log("Pauza nakon reklama - pokaži thumbnail");
+                        showCustomThumbnail();
+                    }
+                    
+                    // Ako je video u BUFFERING stanju na početku (nakon reklama)
+                    if (state === YT.PlayerState.BUFFERING && currentTime < 2 && hasAdStarted) {
+                        console.log("Bufferovanje nakon reklama - pokaži thumbnail");
+                        showCustomThumbnail();
+                    }
+                    
+                    // Ako je UNSTARTED - uvek pokaži thumbnail
+                    if (state === YT.PlayerState.UNSTARTED) {
+                        showCustomThumbnail();
+                    }
+                    
+                    // Ako je ENDED - uvek pokaži thumbnail
+                    if (state === YT.PlayerState.ENDED) {
+                        showCustomThumbnail();
+                    }
+                }
+            }, 500);
+        }
+
+        function stopAdDetection() {
+            if (stateCheckInterval) {
+                clearInterval(stateCheckInterval);
             }
         }
 
@@ -438,41 +506,17 @@
             return errors[errorCode] || "Nepoznata greška";
         }
 
-        // Provera stanja za thumbnail
-        function startStateChecking() {
-            thumbnailCheckInterval = setInterval(function() {
-                if (player && player.getPlayerState) {
-                    const state = player.getPlayerState();
-                    
-                    // Pokaži thumbnail samo kada nema aktivnog sadržaja
-                    if (state === YT.PlayerState.UNSTARTED || 
-                        state === YT.PlayerState.ENDED ||
-                        state === YT.PlayerState.PAUSED) {
-                        showCustomThumbnail();
-                    } else {
-                        hideCustomThumbnail();
-                    }
-                }
-            }, 500);
-        }
-
-        function stopStateChecking() {
-            if (thumbnailCheckInterval) {
-                clearInterval(thumbnailCheckInterval);
-            }
-        }
-
         function showCustomThumbnail() {
             if (customThumbnail && customThumbnail.style.display === 'none') {
                 customThumbnail.style.display = 'flex';
-                console.log("Thumbnail prikazan - nema aktivnog sadržaja");
+                console.log("Thumbnail prikazan");
             }
         }
 
         function hideCustomThumbnail() {
             if (customThumbnail && customThumbnail.style.display !== 'none') {
                 customThumbnail.style.display = 'none';
-                console.log("Thumbnail sakriven - aktivni sadržaj");
+                console.log("Thumbnail sakriven");
             }
         }
 
@@ -649,7 +693,7 @@
 
         function closePlayer() {
             stopProgressTracking();
-            stopStateChecking();
+            stopAdDetection();
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
@@ -675,7 +719,7 @@
             if (customThumbnail) {
                 customThumbnail.style.display = 'none';
             }
-            stopStateChecking();
+            stopAdDetection();
         }
 
         function retryPlayer() {
@@ -684,7 +728,7 @@
             if (customThumbnail) {
                 customThumbnail.style.display = 'none';
             }
-            stopStateChecking();
+            stopAdDetection();
             initializePlayer();
         }
 
@@ -760,7 +804,7 @@
 
         window.addEventListener('beforeunload', function() {
             stopProgressTracking();
-            stopStateChecking();
+            stopAdDetection();
         });
     </script>
 </body>
