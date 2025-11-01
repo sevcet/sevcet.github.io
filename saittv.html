@@ -51,7 +51,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* CUSTOM THUMBNAIL */
+        /* CUSTOM THUMBNAIL - SAMO KADA NEMA SADRŽAJA */
         #customThumbnail {
             position: absolute;
             top: 0;
@@ -79,33 +79,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         
-        .play-button {
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 68, 68, 0.95);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 40px;
-            margin: 0 auto 25px;
-            cursor: pointer;
-            border: 4px solid white;
-            transition: all 0.3s ease;
-            animation: pulse 2s infinite;
-        }
-        
-        .play-button:hover {
-            transform: scale(1.1);
-            background: rgba(255, 68, 68, 1);
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
         .thumbnail-text {
             font-size: 22px;
             margin-top: 15px;
@@ -286,11 +259,10 @@
         <div id="loadingText">Učitavam YouTube player...</div>
     </div>
     
-    <!-- CUSTOM THUMBNAIL -->
+    <!-- CUSTOM THUMBNAIL - SAMO KADA NEMA AKTIVNOG SADRŽAJA -->
     <div id="customThumbnail">
         <div class="thumbnail-content">
-            <div class="play-button" onclick="playFromThumbnail()">▶</div>
-            <div class="thumbnail-text">YU TU FLIX BALKAN<br>Pritisni ENTER za reprodukciju</div>
+            <div class="thumbnail-text">YU TU FLIX BALKAN<br>Učitavam video...</div>
         </div>
     </div>
     
@@ -340,8 +312,8 @@
         let currentCCSelection = 0;
         let progressInterval;
         let customThumbnail;
-        let wasAdPlaying = false;
         let thumbnailCheckInterval;
+        let lastActiveState = null;
 
         // YouTube API Ready
         function onYouTubeIframeAPIReady() {
@@ -397,9 +369,8 @@
             console.log("Player Ready!");
             document.getElementById('loadingScreen').style.display = 'none';
             
-            // Player je spreman, počinju reklame
-            // Naš thumbnail je sakriven tokom reklama
-            customThumbnail.style.display = 'none';
+            // Player je spreman - pokaži thumbnail dok ne krene video
+            showCustomThumbnail();
             
             hideControls();
             
@@ -409,42 +380,46 @@
             
             showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
             
-            // Pokreni proveru za thumbnail
-            startThumbnailChecking();
+            // Pokreni proveru stanja
+            startStateChecking();
         }
 
         function onPlayerStateChange(event) {
             console.log("Player State:", event.data);
+            lastActiveState = event.data;
             
             if (event.data === YT.PlayerState.PLAYING) {
-                // Video je počeo
-                if (wasAdPlaying) {
-                    // Ovo je video nakon reklama - sakrij naš thumbnail
-                    if (customThumbnail) {
-                        customThumbnail.style.display = 'none';
-                    }
-                    wasAdPlaying = false;
-                }
+                // Video je počeo - sakrij thumbnail
+                hideCustomThumbnail();
                 isPlaying = true;
                 startProgressTracking();
             } 
             else if (event.data === YT.PlayerState.PAUSED) {
                 isPlaying = false;
                 stopProgressTracking();
-                
-                // Proveri da li je pauza nakon reklama
-                checkForPostAdPause();
             } 
             else if (event.data === YT.PlayerState.ENDED) {
-                // Video je završen
+                // Video je završen - pokaži thumbnail
                 isPlaying = false;
                 stopProgressTracking();
+                showCustomThumbnail();
                 showInfo("Video završen");
+            }
+            else if (event.data === YT.PlayerState.BUFFERING) {
+                // Bufferovanje - pokaži thumbnail ako dugo traje
+                setTimeout(checkBuffering, 2000);
             }
             else if (event.data === YT.PlayerState.CUED) {
                 console.log("Video učitan");
             }
             resetHideTimer();
+        }
+
+        function checkBuffering() {
+            if (player && player.getPlayerState() === YT.PlayerState.BUFFERING) {
+                // Ako i dalje bufferuje nakon 2 sekunde, pokaži thumbnail
+                showCustomThumbnail();
+            }
         }
 
         function onPlayerError(event) {
@@ -463,56 +438,41 @@
             return errors[errorCode] || "Nepoznata greška";
         }
 
-        // Provera za automatsko prikazivanje thumbnaila
-        function startThumbnailChecking() {
+        // Provera stanja za thumbnail
+        function startStateChecking() {
             thumbnailCheckInterval = setInterval(function() {
-                if (player && player.getPlayerState && player.getCurrentTime) {
+                if (player && player.getPlayerState) {
                     const state = player.getPlayerState();
-                    const currentTime = player.getCurrentTime();
                     
-                    // Ako je video pauziran na početku (verovatno nakon reklama)
-                    if (state === YT.PlayerState.PAUSED && currentTime < 3) {
-                        console.log("Video pauziran na početku - pokaži naš thumbnail");
+                    // Pokaži thumbnail samo kada nema aktivnog sadržaja
+                    if (state === YT.PlayerState.UNSTARTED || 
+                        state === YT.PlayerState.ENDED ||
+                        state === YT.PlayerState.PAUSED) {
                         showCustomThumbnail();
-                        wasAdPlaying = true;
-                    }
-                    
-                    // Ako je video u BUFFERING stanju na početku (nakon reklama)
-                    if (state === YT.PlayerState.BUFFERING && currentTime < 2) {
-                        console.log("Video se učitava nakon reklama - pokaži naš thumbnail");
-                        showCustomThumbnail();
-                        wasAdPlaying = true;
+                    } else {
+                        hideCustomThumbnail();
                     }
                 }
             }, 500);
         }
 
-        function stopThumbnailChecking() {
+        function stopStateChecking() {
             if (thumbnailCheckInterval) {
                 clearInterval(thumbnailCheckInterval);
-            }
-        }
-
-        function checkForPostAdPause() {
-            if (player && player.getCurrentTime) {
-                const currentTime = player.getCurrentTime();
-                // Ako je video pauziran na samom početku, verovatno je nakon reklama
-                if (currentTime < 3) {
-                    setTimeout(function() {
-                        if (player.getPlayerState() === YT.PlayerState.PAUSED) {
-                            console.log("Potvrđena pauza nakon reklama - pokaži thumbnail");
-                            showCustomThumbnail();
-                            wasAdPlaying = true;
-                        }
-                    }, 1000);
-                }
             }
         }
 
         function showCustomThumbnail() {
             if (customThumbnail && customThumbnail.style.display === 'none') {
                 customThumbnail.style.display = 'flex';
-                console.log("Naš thumbnail automatski prikazan nakon reklama");
+                console.log("Thumbnail prikazan - nema aktivnog sadržaja");
+            }
+        }
+
+        function hideCustomThumbnail() {
+            if (customThumbnail && customThumbnail.style.display !== 'none') {
+                customThumbnail.style.display = 'none';
+                console.log("Thumbnail sakriven - aktivni sadržaj");
             }
         }
 
@@ -536,17 +496,6 @@
                 const progress = (currentTime / duration) * 100;
                 
                 document.getElementById('progressBar').style.width = progress + '%';
-            }
-        }
-
-        // Pokreni video iz thumbnaila
-        function playFromThumbnail() {
-            if (player) {
-                player.playVideo();
-                if (customThumbnail) {
-                    customThumbnail.style.display = 'none';
-                }
-                wasAdPlaying = false;
             }
         }
 
@@ -700,7 +649,7 @@
 
         function closePlayer() {
             stopProgressTracking();
-            stopThumbnailChecking();
+            stopStateChecking();
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
             } else {
@@ -726,7 +675,7 @@
             if (customThumbnail) {
                 customThumbnail.style.display = 'none';
             }
-            stopThumbnailChecking();
+            stopStateChecking();
         }
 
         function retryPlayer() {
@@ -735,7 +684,7 @@
             if (customThumbnail) {
                 customThumbnail.style.display = 'none';
             }
-            stopThumbnailChecking();
+            stopStateChecking();
             initializePlayer();
         }
 
@@ -763,8 +712,6 @@
                 case 'Enter':
                     if (isCCMenuOpen) {
                         selectCCOption();
-                    } else if (customThumbnail && customThumbnail.style.display !== 'none') {
-                        playFromThumbnail();
                     } else {
                         togglePlayPause();
                     }
@@ -813,7 +760,7 @@
 
         window.addEventListener('beforeunload', function() {
             stopProgressTracking();
-            stopThumbnailChecking();
+            stopStateChecking();
         });
     </script>
 </body>
