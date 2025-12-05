@@ -6,323 +6,236 @@
     <title>YouFlix TV Player</title>
 
     <style>
-        /********************************************
-         *  GLOBAL RESET & BASE STYLE
-         ********************************************/
-        html, body {
+        body, html {
             margin: 0;
             padding: 0;
+            background: #000;
+            overflow: hidden;
             width: 100%;
             height: 100%;
-            overflow: hidden;
-            background: #000;
             font-family: Arial, sans-serif;
         }
 
-        /********************************************
-         * LOADING SCREEN
-         ********************************************/
+        /* Loading Screen */
         #loadingScreen {
-            position: fixed;
-            top: 0; 
+            position: absolute;
+            top: 0;
             left: 0;
-            width: 100%; 
+            width: 100%;
             height: 100%;
             background: #000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 5000;
-            color: #fff;
+            z-index: 99999;
+            color: white;
         }
 
         .spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #333;
-            border-top: 6px solid #ff4444;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #444;
+            border-top: 5px solid #ff4444;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        /********************************************
-         * CUSTOM THUMBNAIL (pre playback)
-         ********************************************/
-        #customThumbnail {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; 
-            height: 100%;
-            background-size: cover;
-            background-position: center;
-            display: none;
-            z-index: 2000;
+        #loadingText {
+            margin-top: 20px;
+            font-size: 18px;
         }
 
-        /********************************************
-         * NO SUBTITLES OVERLAY (3 sec)
-         ********************************************/
-        #noSubsOverlay {
-            position: absolute;
-            top: 50%; 
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.85);
-            padding: 25px 45px;
-            border-radius: 12px;
-            border: 2px solid #ff4444;
-            color: #fff;
-            font-size: 24px;
-            display: none;
-            z-index: 6000;
-            text-align: center;
-        }
-
-        /********************************************
-         * PLAYER CONTAINER
-         ********************************************/
+        /* Player Container */
         #playerContainer {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; 
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
+            z-index: 1;
         }
 
         #player {
-            width: 100%; 
+            width: 100%;
             height: 100%;
         }
 
-        /********************************************
-         * PROGRESS BAR
-         ********************************************/
-        #progressContainer {
-            position: absolute;
-            bottom: 80px;
-            left: 5%;
-            width: 90%;
-            height: 6px;
-            background: rgba(255,255,255,0.25);
-            border-radius: 3px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 4500;
-        }
-
-        #progressBar {
-            width: 0%;
-            height: 100%;
-            background: #ff4444;
-            border-radius: 3px;
-        }
-
-        /********************************************
-         * INFO PANEL (fade in/out)
-         ********************************************/
-        #infoPanel {
-            position: absolute;
-            top: 25px;
-            left: 25px;
-            padding: 12px 18px;
-            background: rgba(0,0,0,0.7);
-            border-left: 4px solid #ff4444;
-            border-radius: 8px;
-            color: white;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-            z-index: 4800;
-            font-size: 16px;
-        }
-
-        /********************************************
-         * FULL DEV DEBUG PANEL (hidden until activated)
-         ********************************************/
+        /* Debug Panel */
         #debugPanel {
             position: absolute;
-            top: 0; 
-            right: 0;
-            width: 380px;
-            height: 100%;
-            background: rgba(0,0,0,0.78);
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
             color: #0f0;
-            padding: 15px;
-            font-size: 13px;
-            line-height: 1.35em;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 60%;
+            max-height: 30%;
             overflow-y: auto;
-            display: none; /* activated with code sequence */
-            z-index: 9999;
-            border-left: 2px solid #ff4444;
+            display: none; /* default hidden */
+            z-index: 100000;
         }
 
-        #debugPanel h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-weight: bold;
+        /* Message Toast */
+        #toastBox {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20,20,20,0.9);
+            color: white;
+            padding: 14px 26px;
+            border-radius: 10px;
             font-size: 18px;
-            color: #ff4444;
-        }
-
-        .debug-section {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255,0,0,0.25);
-        }
-
-        .debug-label {
-            color: #ff7777;
-            font-weight: bold;
+            z-index: 100000;
+            opacity: 0;
+            transition: opacity 0.4s ease;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- LOADING -->
-    <div id="loadingScreen">
-        <div class="spinner"></div>
-        <div style="margin-top:18px; font-size:18px;">Učitavam YouTube player...</div>
-    </div>
+<div id="loadingScreen">
+    <div class="spinner"></div>
+    <div id="loadingText">Učitavam YouFlix player...</div>
+</div>
 
-    <!-- Thumbnail dok player ne počne -->
-    <div id="customThumbnail"></div>
+<div id="toastBox"></div>
 
-    <!-- Overlay za nedostupne titlove -->
-    <div id="noSubsOverlay">Titlovi nisu dostupni za ovaj video</div>
+<div id="playerContainer">
+    <div id="player"></div>
+</div>
 
-    <!-- Player -->
-    <div id="playerContainer">
-        <div id="player"></div>
-    </div>
+<div id="debugPanel"></div>
 
-    <!-- Progress bar -->
-    <div id="progressContainer"><div id="progressBar"></div></div>
-
-    <!-- Info poruke -->
-    <div id="infoPanel"></div>
-
-    <!-- Full Dev Debug Panel -->
-    <div id="debugPanel">
-        <h2>YouFlix Debug Panel</h2>
-
-        <div class="debug-section">
-            <div class="debug-label">FPS:</div>
-            <div id="dbg_fps">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Player State:</div>
-            <div id="dbg_state">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Caption Track:</div>
-            <div id="dbg_caption">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Auto-Translate:</div>
-            <div id="dbg_autotrans">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Network RTT:</div>
-            <div id="dbg_rtt">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Buffered %:</div>
-            <div id="dbg_buffer">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Playback:</div>
-            <div id="dbg_playback">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Resolution / Bitrate:</div>
-            <div id="dbg_quality">--</div>
-        </div>
-
-        <div class="debug-section">
-            <div class="debug-label">Key Events:</div>
-            <div id="dbg_keys">--</div>
-        </div>
-    </div>
-<!-- YOUTUBE API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/****************************************************
- * GLOBAL VARS
- ****************************************************/
-let player = null;
-let progressTimer = null;
-let fpsTimer = null;
-let debugMode = false;
-let lastFrameTime = performance.now();
-let frameCount = 0;
+/* ============================================================
+   ANDROID → HTML parametri
+============================================================ */
+const urlParams = new URLSearchParams(window.location.search);
 
-let debugPanel = null;
+const VIDEO_ID = urlParams.get("videoId") || null;
+const SYSTEM_LANG = urlParams.get("sys") || "en";  // jezik sistema (npr: sr)
+const USER_LANG = urlParams.get("lang") || SYSTEM_LANG; // korisnički izbor kada dodamo meni
+const DEBUG_ENABLED = urlParams.get("debug") === "1";
 
-let noSubsOverlay = null;
-let customThumbnail = null;
+logDebug("Video ID: " + VIDEO_ID);
+logDebug("System Language: " + SYSTEM_LANG);
+logDebug("User Lang: " + USER_LANG);
 
-/****************************************************
- * INIT WHEN API IS READY
- ****************************************************/
-function onYouTubeIframeAPIReady() {
-    initializePlayer();
+
+/* ============================================================
+   LISTA 43 JEZIKA KOJE TVOJA APLIKACIJA PODRŽAVA
+============================================================ */
+const SUPPORTED_LANGUAGES = [
+    "sr","bs","hr","me", // ex-yu fallback
+    "mk","sl","sq","bg","ro","hu",
+    "en","de","fr","es","it","pt",
+    "nl","pl","cs","sk","da","sv","fi","no","is",
+    "et","lv","lt","uk","ru","tr","el",
+    "ar","fa","hi","bn",
+    "zh","ja","ko","vi","id","ms","th"
+];
+
+logDebug("Supported languages: " + SUPPORTED_LANGUAGES.length);
+
+
+/* ============================================================
+   SRODNI JEZICI — primarno za srpski cluster
+============================================================ */
+const RELATED_LANG = {
+    "sr": ["bs","hr","me"],
+    "bs": ["sr","hr","me"],
+    "hr": ["sr","bs","me"],
+    "me": ["sr","bs","hr"],
+
+    "sk": ["cs"],
+    "cs": ["sk"]
+};
+
+
+/* ============================================================
+   FUNKCIJA: AUTOMATSKI IZBOR TITLOVA
+   1) Sistem
+   2) Srodni jezici
+   3) Engleski auto-translate
+   4) Ako nema → null
+============================================================ */
+function selectSubtitleTrack(availableSubs, sysLang) {
+    if (!availableSubs || availableSubs.length === 0) {
+        logDebug("No available subtitles array!");
+        return null;
+    }
+
+    logDebug("Available YouTube subtitles: " + availableSubs.join(", "));
+
+    // 1. Sistem
+    if (availableSubs.includes(sysLang)) {
+        logDebug("Using SYSTEM subtitle: " + sysLang);
+        return sysLang;
+    }
+
+    // 2. Srodni jezici
+    if (RELATED_LANG[sysLang]) {
+        for (let rel of RELATED_LANG[sysLang]) {
+            if (availableSubs.includes(rel)) {
+                logDebug("Using RELATED subtitle: " + rel);
+                return rel;
+            }
+        }
+    }
+
+    // 3. Ako engleski postoji → auto-translate
+    if (availableSubs.includes("en")) {
+        logDebug("EN exists → using English for auto-translate");
+        return "auto-en";
+    }
+
+    // 4. Ako NIŠTA nema
+    logDebug("NO suitable subtitles found.");
+    return null;
 }
 
-/****************************************************
- * INITIALIZE PLAYER
- ****************************************************/
-function initializePlayer() {
 
-    const url = new URLSearchParams(window.location.search);
-    const videoId = url.get("videoId");
-    const lang = url.get("lang");
-    const sys = url.get("sys");
+/* ============================================================
+   YouTube API READY
+============================================================ */
+let player = null;
+let chosenSubtitle = null;
+let hasStarted = false;
 
-    window._LANG = lang;
-    window._SYS = sys;
-
-    customThumbnail = document.getElementById("customThumbnail");
-    noSubsOverlay = document.getElementById("noSubsOverlay");
-
-    if (!videoId) {
-        alert("Nedostaje videoId parametar.");
+function onYouTubeIframeAPIReady() {
+    if (!VIDEO_ID) {
+        showToast("Video ID nije prosleđen.");
         return;
     }
 
-    // Preload UI
-    document.getElementById("loadingScreen").style.display = "flex";
+    logDebug("Creating YT.Player...");
 
-    /******************************************************
-     * YT Player
-     ******************************************************/
     player = new YT.Player("player", {
         height: "100%",
         width: "100%",
-        videoId: videoId,
+        videoId: VIDEO_ID,
         playerVars: {
             autoplay: 1,
-            controls: 0,
-            rel: 0,
-            showinfo: 0,
-            iv_load_policy: 3,
-            disablekb: 0, /* omogućava bržu reakciju daljinskog */
-            cc_load_policy: 1,
-            modestbranding: 1,
             playsinline: 1,
-            enablejsapi: 1
+            controls: 1,
+            rel: 0,
+            fs: 1,
+            iv_load_policy: 3,
+            enablejsapi: 1,
+            cc_load_policy: 1,
+            hl: SYSTEM_LANG
         },
         events: {
             onReady: onPlayerReady,
@@ -332,381 +245,185 @@ function initializePlayer() {
     });
 }
 
-/****************************************************
- * PLAYER READY
- ****************************************************/
+
+/* ============================================================
+   when READY → tražimo dostupne titlove
+============================================================ */
 function onPlayerReady() {
-    document.getElementById("loadingScreen").style.display = "none";
+    logDebug("YT Player Ready");
 
-    showCustomThumbnail();
-
-    initializeDebugPanel();
-    startFPSMonitoring();
-
-    // Caption detection nakon malog kašnjenja (async)
-    setTimeout(detectAvailableCaptions, 700);
-}
-
-/****************************************************
- * PLAYER STATE CHANGES
- ****************************************************/
-function onPlayerStateChange(e) {
-
-    updateDebugState(e.data);
-
-    if (e.data === YT.PlayerState.PLAYING) {
-        hideCustomThumbnail();
-        startProgressTracking();
-    }
-
-    if (e.data === YT.PlayerState.PAUSED ||
-        e.data === YT.PlayerState.ENDED ||
-        e.data === YT.PlayerState.BUFFERING) {
-        stopProgressTracking();
-    }
-}
-
-/****************************************************
- * PLAYER ERROR
- ****************************************************/
-function onPlayerError(e) {
-    showInfo("Greška pri učitavanju videa (YT kod: " + e.data + ")");
-    console.error("YT ERROR:", e.data);
-}
-
-/****************************************************
- * CUSTOM THUMBNAIL
- ****************************************************/
-function showCustomThumbnail() {
-    if (customThumbnail) {
-        customThumbnail.style.display = "block";
-    }
-}
-function hideCustomThumbnail() {
-    if (customThumbnail) {
-        customThumbnail.style.display = "none";
-    }
-}
-
-/****************************************************
- * PROGRESS TRACKING
- ****************************************************/
-function startProgressTracking() {
-    stopProgressTracking();
-    progressTimer = setInterval(updateProgress, 1000);
-}
-
-function stopProgressTracking() {
-    if (progressTimer) clearInterval(progressTimer);
-}
-
-function updateProgress() {
-    if (!player) return;
-    let cur = player.getCurrentTime();
-    let dur = player.getDuration();
-    if (dur <= 0) return;
-    let pct = (cur / dur) * 100;
-    document.getElementById("progressBar").style.width = pct + "%";
-    updateDebugPlayback(cur, dur);
-}
-
-/****************************************************
- * SHOW INFO PANEL
- ****************************************************/
-function showInfo(msg) {
-    let panel = document.getElementById("infoPanel");
-    panel.textContent = msg;
-    panel.style.opacity = 1;
-
-    setTimeout(() => {
-        panel.style.opacity = 0;
-    }, 2500);
-}
-
-/****************************************************
- * CAPTION DETECTION + AUTO TRANSLATE SYSTEM
- ****************************************************/
-async function detectAvailableCaptions() {
     try {
-        player.loadModule("captions");
-    } catch (e) {}
+        let tracks = player.getOption("captions", "tracklist") || [];
+        let availableSubs = tracks.map(t => t.languageCode);
 
-    let tracks = [];
-    try {
-        tracks = player.getOption("captions", "tracklist") || [];
-    } catch (e) {}
+        chosenSubtitle = selectSubtitleTrack(availableSubs, USER_LANG);
 
-    updateDebugCaption(JSON.stringify(tracks, null, 2));
-
-    const lang = window._LANG;
-    const sys = window._SYS;
-
-    const related = {
-        "sr": ["sr","hr","bs","me"],
-        "hr": ["hr","bs","sr"],
-        "bs": ["bs","hr","sr"],
-        "me": ["me","sr","hr","bs"],
-        "sk": ["sk","cs"],
-        "cs": ["cs","sk"]
-    };
-
-    const sourcePriority = ["en","de","fr","es","pt","ko","ja"];
-
-    /********************************************
-     * 1) Primary + Related
-     ********************************************/
-    let priorityList = [];
-
-    if (lang) priorityList.push(lang);
-
-    if (related[lang]) priorityList.push(...related[lang]);
-
-    if (lang !== sys) {
-        priorityList.push(sys);
-        if (related[sys]) priorityList.push(...related[sys]);
-    }
-
-    // ORIGINAL TRACK?
-    for (let code of priorityList) {
-        let found = tracks.find(t => t.languageCode === code);
-        if (found) {
-            applyCaptionTrack(code);
-            updateDebugAutoTrans("Original: " + code);
-            return;
-        }
-    }
-
-    /********************************************
-     * 2) AUTO TRANSLATE CHECK
-     ********************************************/
-    let source = null;
-    for (let s of sourcePriority) {
-        let found = tracks.find(t => t.languageCode === s);
-        if (found) {
-            source = s;
-            break;
-        }
-    }
-
-    if (source) {
-        applyAutoTranslate(source, lang);
-        updateDebugAutoTrans(source + " → " + lang);
-        return;
-    }
-
-    /********************************************
-     * 3) NO SUBTITLES
-     ********************************************/
-    noSubtitlesAvailable();
-}
-
-/****************************************************
- * APPLY ORIGINAL CAPTION TRACK
- ****************************************************/
-function applyCaptionTrack(code) {
-    try {
-        player.setOption("captions", "track", { languageCode: code });
-        showInfo("Titl: " + code.toUpperCase());
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-/****************************************************
- * AUTO TRANSLATE CAPTION ENGINE
- ****************************************************/
-function applyAutoTranslate(sourceLang, targetLang) {
-    try {
-        player.setOption("captions","track", {
-            languageCode: sourceLang,
-            name: "Auto-translate"
-        });
-
-        setTimeout(() => {
-            player.setOption("captions", "track", {
-                languageCode: targetLang,
-                name: "Auto-translate"
-            });
-        }, 300);
-
-        showInfo("Prevod: " + sourceLang.toUpperCase() + " → " + targetLang.toUpperCase());
-
-    } catch (e) {
-        console.error("Auto translate error:", e);
-    }
-}
-
-/****************************************************
- * NO SUBTITLES FALLBACK
- ****************************************************/
-function noSubtitlesAvailable() {
-
-    // Signal Android app:
-    try { 
-        window.location.href = "yt://no_subtitles"; 
-    } catch (e) {}
-
-    // Show overlay for 3 seconds:
-    noSubsOverlay.style.display = "block";
-    setTimeout(() => {
-        noSubsOverlay.style.display = "none";
-    }, 3000);
-
-    showInfo("Nema dostupnih titlova");
-}
-
-/****************************************************
- * DEBUG PANEL INITIALIZATION (FULL DEV MODE)
- ****************************************************/
-function initializeDebugPanel() {
-    debugPanel = document.getElementById("debugPanel");
-}
-
-/****************************************************
- * FPS MONITOR
- ****************************************************/
-function startFPSMonitoring() {
-    function fpsLoop() {
-        frameCount++;
-        const now = performance.now();
-        const delta = now - lastFrameTime;
-
-        if (delta >= 1000) {
-            const fps = Math.round((frameCount * 1000) / delta);
-            document.getElementById("dbg_fps").textContent = fps;
-            frameCount = 0;
-            lastFrameTime = now;
-        }
-
-        fpsTimer = requestAnimationFrame(fpsLoop);
-    }
-
-    fpsLoop();
-}
-
-/****************************************************
- * DEBUG PANEL UPDATERS
- ****************************************************/
-function updateDebugState(s) {
-    let states = {
-        "-1": "UNSTARTED",
-        "0": "ENDED",
-        "1": "PLAYING",
-        "2": "PAUSED",
-        "3": "BUFFERING",
-        "5": "CUED"
-    };
-
-    document.getElementById("dbg_state").textContent = states[s] || s;
-}
-
-function updateDebugCaption(text) {
-    document.getElementById("dbg_caption").textContent = text;
-}
-
-function updateDebugAutoTrans(text) {
-    document.getElementById("dbg_autotrans").textContent = text;
-}
-
-function updateDebugPlayback(cur, dur) {
-    let pct = ((cur/dur)*100).toFixed(1);
-    document.getElementById("dbg_playback").textContent =
-        `Time: ${cur.toFixed(1)} / ${dur.toFixed(1)}  (${pct}%)`;
-}
-/****************************************************
- * SEEK SYSTEM (TV REMOTE)
- ****************************************************/
-function seek(seconds) {
-    try {
-        let cur = player.getCurrentTime();
-        player.seekTo(cur + seconds, true);
-        showInfo((seconds > 0 ? "+" : "") + seconds + "s");
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-/****************************************************
- * PLAY / PAUSE TOGGLE
- ****************************************************/
-function togglePlay() {
-    try {
-        let state = player.getPlayerState();
-        if (state === YT.PlayerState.PLAYING) {
-            player.pauseVideo();
+        if (chosenSubtitle === null) {
+            showToast("Titlovi nisu dostupni");
+        } else if (chosenSubtitle.startsWith("auto-en")) {
+            // auto-translate iz engleskog
+            setTimeout(() => {
+                player.setOption("captions", "track", { languageCode: "en" });
+                player.setOption("captions", "translate", USER_LANG);
+            }, 500);
         } else {
-            player.playVideo();
+            // standardni titl
+            setTimeout(() => {
+                player.setOption("captions", "track", { languageCode: chosenSubtitle });
+            }, 500);
         }
-    } catch (e) {
-        console.error(e);
+
+    } catch (err) {
+        logDebug("Caption setup error: " + err);
+    }
+
+    hideLoading();
+}
+/* ============================================================
+   STATE MACHINE — stabilno upravljanje reklamama i videom
+============================================================ */
+let isAdPlaying = false;
+let adStartTime = 0;
+let adTimeout = null;
+
+/*  YouTube states:
+    -1 UNSTARTED
+     0 ENDED
+     1 PLAYING
+     2 PAUSED
+     3 BUFFERING
+     5 VIDEO CUED
+   +108 AD START
+   +109 AD END
+*/
+
+function onPlayerStateChange(event) {
+    const state = event.data;
+    logDebug("YT State: " + state);
+
+    switch (state) {
+
+        /* -----------------------------------------
+           108 — Reklama počinje
+        ----------------------------------------- */
+        case 108:
+            isAdPlaying = true;
+            adStartTime = Date.now();
+            logDebug("AD START detected (108)");
+            break;
+
+        /* -----------------------------------------
+           109 — Reklama završena
+        ----------------------------------------- */
+        case 109:
+            isAdPlaying = false;
+            logDebug("AD ENDED (109)");
+            break;
+
+        /* -----------------------------------------
+           1 — VIDEO PLAYING
+        ----------------------------------------- */
+        case YT.PlayerState.PLAYING:
+
+            if (!hasStarted && !isAdPlaying) {
+                hasStarted = true;
+                hideLoading();
+                showToast("Reprodukcija pokrenuta");
+            }
+
+            break;
+
+        /* -----------------------------------------
+           3 — BUFFERING (posebna kontrola reklama)
+        ----------------------------------------- */
+        case YT.PlayerState.BUFFERING:
+            // Ako buffer traje predugo → YouTube reklama failed → FORCE PLAY video
+            if (isAdPlaying) {
+                const elapsed = Date.now() - adStartTime;
+
+                if (elapsed > 6000) {  // max 6 sekundi reklama
+                    logDebug("Ad buffering timeout → forcing video start");
+                    isAdPlaying = false;
+                    safeForcePlay();
+                }
+            }
+            break;
+
+        /* -----------------------------------------
+           0 — ENDED
+        ----------------------------------------- */
+        case YT.PlayerState.ENDED:
+            showToast("Video završio");
+            break;
     }
 }
 
-/****************************************************
- * CLOSE PLAYER (BACK)
- ****************************************************/
-function closePlayer() {
+
+/* ============================================================
+   FORCE PLAY — otklanja petlju reklama
+============================================================ */
+function safeForcePlay() {
     try {
-        window.history.back();
+        player.pauseVideo();
+        setTimeout(() => player.playVideo(), 300);
+        logDebug("ForcePlay executed");
     } catch (e) {
-        console.error(e);
+        logDebug("ForcePlay error: " + e);
     }
 }
 
-/****************************************************
- * REMOTE CONTROL EVENTS
- ****************************************************/
-let debugSequence = [];
-let debugCode = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "Enter"];
 
-document.addEventListener("keydown", function (e) {
+/* ============================================================
+   ERROR HANDLER
+============================================================ */
+function onPlayerError(err) {
+    logDebug("PLAYER ERROR: " + JSON.stringify(err));
+    showToast("Greška pri pokretanju videa");
+}
 
-    // --- Debug panel sequence record ---
-    debugSequence.push(e.key);
-    if (debugSequence.length > 5) debugSequence.shift();
 
-    // Activate debug: UP UP DOWN DOWN ENTER
-    if (JSON.stringify(debugSequence) === JSON.stringify(debugCode)) {
-        debugMode = !debugMode;
-        document.getElementById("debugPanel").style.display =
-            debugMode ? "block" : "none";
-        showInfo(debugMode ? "Debug Mode: ON" : "Debug Mode: OFF");
-    }
+/* ============================================================
+   UI — LOADING
+============================================================ */
+function hideLoading() {
+    const el = document.getElementById("loadingScreen");
+    if (el) el.style.display = "none";
+}
 
-    // Write keys into debug log
-    document.getElementById("dbg_keys").textContent = e.key;
 
-    switch (e.key) {
+/* ============================================================
+   TOAST MESSAGE
+============================================================ */
+let toastTimeout = null;
 
-        case "ArrowLeft":
-            seek(-60);
-            break;
+function showToast(text) {
+    const box = document.getElementById("toastBox");
+    if (!box) return;
 
-        case "ArrowRight":
-            seek(60);
-            break;
+    box.innerText = text;
+    box.style.opacity = 1;
 
-        case "Enter":
-        case " ":
-            togglePlay();
-            break;
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        box.style.opacity = 0;
+    }, 3000);
+}
 
-        case "Escape":
-        case "Backspace":
-            closePlayer();
-            break;
 
-        default:
-            break;
-    }
-});
-
-/****************************************************
- * CLEANUP (on unload)
- ****************************************************/
-window.addEventListener("beforeunload", function () {
-    try { stopProgressTracking(); } catch (e) {}
-    try { cancelAnimationFrame(fpsTimer); } catch (e) {}
+/* ============================================================
+   DEBUG PANEL
+============================================================ */
+function logDebug(msg) {
+    if (!DEBUG_ENABLED) return;
+    const panel = document.getElementById("debugPanel");
+    panel.style.display = "block";
+    panel.innerHTML += msg + "<br>";
+}
+/* ============================================================
+   AUTO-START PLAYER LOGIC
+============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+    logDebug("DOM loaded, waiting for YouTube API...");
 });
 
 </script>
