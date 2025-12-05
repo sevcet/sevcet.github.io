@@ -3,809 +3,713 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TV YouTube Player</title>
+    <title>YouFlix TV Player</title>
+
     <style>
-        body, html {
+        /********************************************
+         *  GLOBAL RESET & BASE STYLE
+         ********************************************/
+        html, body {
             margin: 0;
             padding: 0;
-            background: #000;
-            overflow: hidden;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            background: #000;
             font-family: Arial, sans-serif;
         }
-        
-        /* Loading screen */
+
+        /********************************************
+         * LOADING SCREEN
+         ********************************************/
         #loadingScreen {
-            position: absolute;
-            top: 0;
+            position: fixed;
+            top: 0; 
             left: 0;
-            width: 100%;
+            width: 100%; 
             height: 100%;
             background: #000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 10000;
-            color: white;
+            z-index: 5000;
+            color: #fff;
         }
-        
-        #loadingText {
-            margin-top: 20px;
-            font-size: 18px;
-            text-align: center;
-        }
-        
+
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #333;
-            border-top: 5px solid #ff4444;
+            width: 60px;
+            height: 60px;
+            border: 6px solid #333;
+            border-top: 6px solid #ff4444;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
         }
 
-        /* CUSTOM THUMBNAIL - SAMO KADA NEMA SADRŽAJA */
+        /********************************************
+         * CUSTOM THUMBNAIL (pre playback)
+         ********************************************/
         #customThumbnail {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+            top: 0; left: 0;
+            width: 100%; 
             height: 100%;
             background-size: cover;
             background-position: center;
-            background-color: #000;
-            z-index: 9998;
             display: none;
-            justify-content: center;
-            align-items: center;
-            background-image: url('https://sevcet.github.io/tv_thumbnail.jpg');
+            z-index: 2000;
         }
-        
-        .thumbnail-content {
-            text-align: center;
-            color: white;
-            background: rgba(0,0,0,0.8);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(15px);
-            border: 2px solid rgba(255,68,68,0.5);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        
-        .thumbnail-text {
-            font-size: 22px;
-            margin-top: 15px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        #errorScreen {
+
+        /********************************************
+         * NO SUBTITLES OVERLAY (3 sec)
+         ********************************************/
+        #noSubsOverlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
+            top: 50%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            padding: 25px 45px;
+            border-radius: 12px;
+            border: 2px solid #ff4444;
+            color: #fff;
+            font-size: 24px;
             display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            color: white;
+            z-index: 6000;
             text-align: center;
-            padding: 20px;
         }
-        
+
+        /********************************************
+         * PLAYER CONTAINER
+         ********************************************/
         #playerContainer {
-            width: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; 
             height: 100%;
-            position: relative;
         }
 
         #player {
-            width: 100%;
+            width: 100%; 
             height: 100%;
-            border: none;
-        }
-        
-        /* Progress bar na dnu */
-        #progressContainer {
-            position: absolute;
-            bottom: 60px;
-            left: 5%;
-            width: 90%;
-            background: rgba(255,255,255,0.2);
-            height: 6px;
-            border-radius: 3px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        #progressBar {
-            height: 100%;
-            background: #ff4444;
-            border-radius: 3px;
-            width: 0%;
-            transition: width 0.1s ease;
-        }
-        
-        /* Info panel */
-        #infoPanel {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 16px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            border-left: 4px solid #ff4444;
-        }
-        
-        /* Quick seek indicators */
-        .seek-indicator {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 18px;
-            z-index: 10001;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        #seekBackward {
-            left: 30px;
-        }
-        #seekForward {
-            right: 30px;
-        }
-        
-        /* CC Menu */
-        #ccMenu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            z-index: 10002;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            width: 400px;
-            max-height: 500px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-        }
-        #ccMenu.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-        .menu-title {
-            font-size: 20px;
-            margin-bottom: 15px;
-            text-align: center;
-            color: #ff4444;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-            flex-shrink: 0;
-        }
-        .cc-options-container {
-            flex: 1;
-            overflow-y: auto;
-            max-height: 400px;
-            padding-right: 5px;
-        }
-        .cc-option {
-            padding: 12px 15px;
-            margin: 5px 0;
-            background: rgba(255,255,255,0.1);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 2px solid transparent;
-        }
-        .cc-option:hover,
-        .cc-option:focus {
-            background: rgba(255,255,255,0.2);
-            border-color: #ff4444;
-            transform: scale(1.02);
-            outline: none;
-        }
-        .cc-option.selected {
-            background: rgba(255,68,68,0.3);
-            border-color: #ff4444;
-        }
-        .scroll-indicator {
-            text-align: center;
-            color: #888;
-            font-size: 12px;
-            margin-top: 10px;
-            flex-shrink: 0;
         }
 
-        #retryButton {
+        /********************************************
+         * PROGRESS BAR
+         ********************************************/
+        #progressContainer {
+            position: absolute;
+            bottom: 80px;
+            left: 5%;
+            width: 90%;
+            height: 6px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 3px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 4500;
+        }
+
+        #progressBar {
+            width: 0%;
+            height: 100%;
             background: #ff4444;
-            color: white;
-            border: none;
-            padding: 12px 24px;
+            border-radius: 3px;
+        }
+
+        /********************************************
+         * INFO PANEL (fade in/out)
+         ********************************************/
+        #infoPanel {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            padding: 12px 18px;
+            background: rgba(0,0,0,0.7);
+            border-left: 4px solid #ff4444;
             border-radius: 8px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            z-index: 4800;
             font-size: 16px;
-            cursor: pointer;
-            margin-top: 20px;
+        }
+
+        /********************************************
+         * FULL DEV DEBUG PANEL (hidden until activated)
+         ********************************************/
+        #debugPanel {
+            position: absolute;
+            top: 0; 
+            right: 0;
+            width: 380px;
+            height: 100%;
+            background: rgba(0,0,0,0.78);
+            color: #0f0;
+            padding: 15px;
+            font-size: 13px;
+            line-height: 1.35em;
+            overflow-y: auto;
+            display: none; /* activated with code sequence */
+            z-index: 9999;
+            border-left: 2px solid #ff4444;
+        }
+
+        #debugPanel h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #ff4444;
+        }
+
+        .debug-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,0,0,0.25);
+        }
+
+        .debug-label {
+            color: #ff7777;
+            font-weight: bold;
         }
     </style>
 </head>
+
 <body>
-    <!-- Loading Screen -->
+
+    <!-- LOADING -->
     <div id="loadingScreen">
         <div class="spinner"></div>
-        <div id="loadingText">Učitavam YouTube player...</div>
-    </div>
-    
-    <!-- CUSTOM THUMBNAIL - SAMO KADA NEMA AKTIVNOG SADRŽAJA -->
-    <div id="customThumbnail">
-        <div class="thumbnail-content">
-            <div class="thumbnail-text">YU TU FLIX BALKAN<br>Učitavam video...</div>
-        </div>
-    </div>
-    
-    <!-- Error Screen -->
-    <div id="errorScreen">
-        <div id="errorText">Greška pri učitavanju YouTube playera</div>
-        <div>Proverite internet konekciju</div>
-        <button id="retryButton">POKUŠAJ PONOVO</button>
+        <div style="margin-top:18px; font-size:18px;">Učitavam YouTube player...</div>
     </div>
 
-    <!-- Player Container -->
+    <!-- Thumbnail dok player ne počne -->
+    <div id="customThumbnail"></div>
+
+    <!-- Overlay za nedostupne titlove -->
+    <div id="noSubsOverlay">Titlovi nisu dostupni za ovaj video</div>
+
+    <!-- Player -->
     <div id="playerContainer">
         <div id="player"></div>
     </div>
-    
-    <!-- Progress i kontrole -->
-    <div id="progressContainer">
-        <div id="progressBar"></div>
-    </div>
-    
-    <!-- Seek indikatori -->
-    <div id="seekBackward" class="seek-indicator">⏪ -60s</div>
-    <div id="seekForward" class="seek-indicator">+60s ⏩</div>
-    
-    <!-- CC Menu -->
-    <div id="ccMenu">
-        <div class="menu-title">🎯 Odabir titlova</div>
-        <div id="ccOptions" class="cc-options-container">
-            <div class="cc-option selected" data-language="off">❌ Bez titlova</div>
-            <div class="cc-option" data-language="sr">🇷🇸 Srpski</div>
-            <div class="cc-option" data-language="en">🇺🇸 Engleski</div>
-            <div class="cc-option" data-language="hr">🇭🇷 Hrvatski</div>
-            <div class="cc-option" data-language="bs">🇧🇦 Bosanski</div>
-        </div>
-        <div class="scroll-indicator">↑↓ za navigaciju • ENTER za izbor</div>
-    </div>
-    
+
+    <!-- Progress bar -->
+    <div id="progressContainer"><div id="progressBar"></div></div>
+
+    <!-- Info poruke -->
     <div id="infoPanel"></div>
 
-    <!-- YouTube IFrame API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script>
-        let player;
-        let hideTimeout;
-        let isPlaying = false;
-        let isCCMenuOpen = false;
-        let currentCCSelection = 0;
-        let progressInterval;
-        let customThumbnail;
-        let stateCheckInterval;
-        let hasAdStarted = false;
-        let hasVideoStarted = false;
+    <!-- Full Dev Debug Panel -->
+    <div id="debugPanel">
+        <h2>YouFlix Debug Panel</h2>
 
-        // YouTube API Ready
-        function onYouTubeIframeAPIReady() {
-            console.log("YouTube API Ready!");
-            initializePlayer();
+        <div class="debug-section">
+            <div class="debug-label">FPS:</div>
+            <div id="dbg_fps">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Player State:</div>
+            <div id="dbg_state">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Caption Track:</div>
+            <div id="dbg_caption">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Auto-Translate:</div>
+            <div id="dbg_autotrans">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Network RTT:</div>
+            <div id="dbg_rtt">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Buffered %:</div>
+            <div id="dbg_buffer">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Playback:</div>
+            <div id="dbg_playback">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Resolution / Bitrate:</div>
+            <div id="dbg_quality">--</div>
+        </div>
+
+        <div class="debug-section">
+            <div class="debug-label">Key Events:</div>
+            <div id="dbg_keys">--</div>
+        </div>
+    </div>
+<!-- YOUTUBE API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+/****************************************************
+ * GLOBAL VARS
+ ****************************************************/
+let player = null;
+let progressTimer = null;
+let fpsTimer = null;
+let debugMode = false;
+let lastFrameTime = performance.now();
+let frameCount = 0;
+
+let debugPanel = null;
+
+let noSubsOverlay = null;
+let customThumbnail = null;
+
+/****************************************************
+ * INIT WHEN API IS READY
+ ****************************************************/
+function onYouTubeIframeAPIReady() {
+    initializePlayer();
+}
+
+/****************************************************
+ * INITIALIZE PLAYER
+ ****************************************************/
+function initializePlayer() {
+
+    const url = new URLSearchParams(window.location.search);
+    const videoId = url.get("videoId");
+    const lang = url.get("lang");
+    const sys = url.get("sys");
+
+    window._LANG = lang;
+    window._SYS = sys;
+
+    customThumbnail = document.getElementById("customThumbnail");
+    noSubsOverlay = document.getElementById("noSubsOverlay");
+
+    if (!videoId) {
+        alert("Nedostaje videoId parametar.");
+        return;
+    }
+
+    // Preload UI
+    document.getElementById("loadingScreen").style.display = "flex";
+
+    /******************************************************
+     * YT Player
+     ******************************************************/
+    player = new YT.Player("player", {
+        height: "100%",
+        width: "100%",
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,
+            controls: 0,
+            rel: 0,
+            showinfo: 0,
+            iv_load_policy: 3,
+            disablekb: 0, /* omogućava bržu reakciju daljinskog */
+            cc_load_policy: 1,
+            modestbranding: 1,
+            playsinline: 1,
+            enablejsapi: 1
+        },
+        events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
         }
+    });
+}
 
-        function initializePlayer() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const videoId = urlParams.get('videoId');
-            
-            customThumbnail = document.getElementById('customThumbnail');
-            
-            if (!videoId) {
-                showError("Nema Video ID-a u URL-u");
-                return;
-            }
+/****************************************************
+ * PLAYER READY
+ ****************************************************/
+function onPlayerReady() {
+    document.getElementById("loadingScreen").style.display = "none";
 
-            console.log("Inicijalizujem player sa videoId:", videoId);
-            
-            try {
-                player = new YT.Player('player', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: videoId,
-                    playerVars: {
-                        'autoplay': 1,
-                        'rel': 0,
-                        'modestbranding': 1,
-                        'controls': 0,
-                        'showinfo': 0,
-                        'fs': 1,
-                        'iv_load_policy': 3,
-                        'disablekb': 1,
-                        'playsinline': 1,
-                        'cc_load_policy': 0,
-                        'enablejsapi': 1
-                    },
-                    events: {
-                        'onReady': onPlayerReady,
-                        'onStateChange': onPlayerStateChange,
-                        'onError': onPlayerError
-                    }
-                });
-                
-            } catch (error) {
-                console.error("Greška pri kreiranju playera:", error);
-                showError("Greška pri pokretanju playera");
-            }
+    showCustomThumbnail();
+
+    initializeDebugPanel();
+    startFPSMonitoring();
+
+    // Caption detection nakon malog kašnjenja (async)
+    setTimeout(detectAvailableCaptions, 700);
+}
+
+/****************************************************
+ * PLAYER STATE CHANGES
+ ****************************************************/
+function onPlayerStateChange(e) {
+
+    updateDebugState(e.data);
+
+    if (e.data === YT.PlayerState.PLAYING) {
+        hideCustomThumbnail();
+        startProgressTracking();
+    }
+
+    if (e.data === YT.PlayerState.PAUSED ||
+        e.data === YT.PlayerState.ENDED ||
+        e.data === YT.PlayerState.BUFFERING) {
+        stopProgressTracking();
+    }
+}
+
+/****************************************************
+ * PLAYER ERROR
+ ****************************************************/
+function onPlayerError(e) {
+    showInfo("Greška pri učitavanju videa (YT kod: " + e.data + ")");
+    console.error("YT ERROR:", e.data);
+}
+
+/****************************************************
+ * CUSTOM THUMBNAIL
+ ****************************************************/
+function showCustomThumbnail() {
+    if (customThumbnail) {
+        customThumbnail.style.display = "block";
+    }
+}
+function hideCustomThumbnail() {
+    if (customThumbnail) {
+        customThumbnail.style.display = "none";
+    }
+}
+
+/****************************************************
+ * PROGRESS TRACKING
+ ****************************************************/
+function startProgressTracking() {
+    stopProgressTracking();
+    progressTimer = setInterval(updateProgress, 1000);
+}
+
+function stopProgressTracking() {
+    if (progressTimer) clearInterval(progressTimer);
+}
+
+function updateProgress() {
+    if (!player) return;
+    let cur = player.getCurrentTime();
+    let dur = player.getDuration();
+    if (dur <= 0) return;
+    let pct = (cur / dur) * 100;
+    document.getElementById("progressBar").style.width = pct + "%";
+    updateDebugPlayback(cur, dur);
+}
+
+/****************************************************
+ * SHOW INFO PANEL
+ ****************************************************/
+function showInfo(msg) {
+    let panel = document.getElementById("infoPanel");
+    panel.textContent = msg;
+    panel.style.opacity = 1;
+
+    setTimeout(() => {
+        panel.style.opacity = 0;
+    }, 2500);
+}
+
+/****************************************************
+ * CAPTION DETECTION + AUTO TRANSLATE SYSTEM
+ ****************************************************/
+async function detectAvailableCaptions() {
+    try {
+        player.loadModule("captions");
+    } catch (e) {}
+
+    let tracks = [];
+    try {
+        tracks = player.getOption("captions", "tracklist") || [];
+    } catch (e) {}
+
+    updateDebugCaption(JSON.stringify(tracks, null, 2));
+
+    const lang = window._LANG;
+    const sys = window._SYS;
+
+    const related = {
+        "sr": ["sr","hr","bs","me"],
+        "hr": ["hr","bs","sr"],
+        "bs": ["bs","hr","sr"],
+        "me": ["me","sr","hr","bs"],
+        "sk": ["sk","cs"],
+        "cs": ["cs","sk"]
+    };
+
+    const sourcePriority = ["en","de","fr","es","pt","ko","ja"];
+
+    /********************************************
+     * 1) Primary + Related
+     ********************************************/
+    let priorityList = [];
+
+    if (lang) priorityList.push(lang);
+
+    if (related[lang]) priorityList.push(...related[lang]);
+
+    if (lang !== sys) {
+        priorityList.push(sys);
+        if (related[sys]) priorityList.push(...related[sys]);
+    }
+
+    // ORIGINAL TRACK?
+    for (let code of priorityList) {
+        let found = tracks.find(t => t.languageCode === code);
+        if (found) {
+            applyCaptionTrack(code);
+            updateDebugAutoTrans("Original: " + code);
+            return;
         }
+    }
 
-        function onPlayerReady(event) {
-            console.log("Player Ready!");
-            document.getElementById('loadingScreen').style.display = 'none';
-            
-            // Player je spreman - pokaži thumbnail DOK NE KRENE BILO KAKAV SADRŽAJ
-            showCustomThumbnail();
-            
-            hideControls();
-            
-            if (window.AndroidInterface) {
-                AndroidInterface.playerReady();
-            }
-            
-            showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
-            
-            // Pokreni proveru stanja za detekciju reklama
-            startAdDetection();
+    /********************************************
+     * 2) AUTO TRANSLATE CHECK
+     ********************************************/
+    let source = null;
+    for (let s of sourcePriority) {
+        let found = tracks.find(t => t.languageCode === s);
+        if (found) {
+            source = s;
+            break;
         }
+    }
 
-        function onPlayerStateChange(event) {
-            console.log("Player State:", event.data);
-            
-            if (event.data === YT.PlayerState.PLAYING) {
-                // BILO KAKAV SADRŽAJ JE POČEO - sakrij thumbnail
-                hideCustomThumbnail();
-                isPlaying = true;
-                startProgressTracking();
-                
-                // Proveri da li je ovo video ili reklama
-                checkIfAdOrVideo();
-            } 
-            else if (event.data === YT.PlayerState.PAUSED) {
-                isPlaying = false;
-                stopProgressTracking();
-            } 
-            else if (event.data === YT.PlayerState.ENDED) {
-                // Video je završen - pokaži thumbnail
-                isPlaying = false;
-                stopProgressTracking();
-                showCustomThumbnail();
-                hasVideoStarted = false;
-                hasAdStarted = false;
-                showInfo("Video završen");
-            }
-            else if (event.data === YT.PlayerState.BUFFERING) {
-                // Bufferovanje - pokaži thumbnail ako dugo traje
-                setTimeout(checkBuffering, 2000);
-            }
-            else if (event.data === YT.PlayerState.CUED) {
-                console.log("Video učitan");
-            }
-            else if (event.data === YT.PlayerState.UNSTARTED) {
-                // Nije počeo ništa - pokaži thumbnail
-                showCustomThumbnail();
-            }
-            
-            resetHideTimer();
-        }
+    if (source) {
+        applyAutoTranslate(source, lang);
+        updateDebugAutoTrans(source + " → " + lang);
+        return;
+    }
 
-        function checkIfAdOrVideo() {
-            if (!player) return;
-            
-            // Proveri trenutno vreme - reklame obično počinju od 0
-            const currentTime = player.getCurrentTime();
-            const duration = player.getDuration();
-            
-            console.log("Trenutno vreme:", currentTime, "Trajanje:", duration);
-            
-            if (currentTime === 0 && !hasVideoStarted) {
-                // Verovatno reklama - ne prikazuj thumbnail
-                console.log("Detektovana reklama - thumbnail ostaje sakriven");
-                hasAdStarted = true;
-            } else {
-                // Verovatno video
-                console.log("Detektovan video - thumbnail ostaje sakriven");
-                hasVideoStarted = true;
-            }
-        }
+    /********************************************
+     * 3) NO SUBTITLES
+     ********************************************/
+    noSubtitlesAvailable();
+}
 
-        function checkBuffering() {
-            if (player && player.getPlayerState() === YT.PlayerState.BUFFERING) {
-                // Ako i dalje bufferuje nakon 2 sekunde, pokaži thumbnail
-                showCustomThumbnail();
-            }
-        }
+/****************************************************
+ * APPLY ORIGINAL CAPTION TRACK
+ ****************************************************/
+function applyCaptionTrack(code) {
+    try {
+        player.setOption("captions", "track", { languageCode: code });
+        showInfo("Titl: " + code.toUpperCase());
+    } catch (e) {
+        console.error(e);
+    }
+}
 
-        // Detekcija reklama pomoću provere vremena
-        function startAdDetection() {
-            stateCheckInterval = setInterval(function() {
-                if (player && player.getPlayerState && player.getCurrentTime) {
-                    const state = player.getPlayerState();
-                    const currentTime = player.getCurrentTime();
-                    
-                    // Ako je video pauziran na početku (nakon reklama) - pokaži thumbnail
-                    if (state === YT.PlayerState.PAUSED && currentTime < 2 && hasAdStarted) {
-                        console.log("Pauza nakon reklama - pokaži thumbnail");
-                        showCustomThumbnail();
-                    }
-                    
-                    // Ako je video u BUFFERING stanju na početku (nakon reklama)
-                    if (state === YT.PlayerState.BUFFERING && currentTime < 2 && hasAdStarted) {
-                        console.log("Bufferovanje nakon reklama - pokaži thumbnail");
-                        showCustomThumbnail();
-                    }
-                    
-                    // Ako je UNSTARTED - uvek pokaži thumbnail
-                    if (state === YT.PlayerState.UNSTARTED) {
-                        showCustomThumbnail();
-                    }
-                    
-                    // Ako je ENDED - uvek pokaži thumbnail
-                    if (state === YT.PlayerState.ENDED) {
-                        showCustomThumbnail();
-                    }
-                }
-            }, 500);
-        }
+/****************************************************
+ * AUTO TRANSLATE CAPTION ENGINE
+ ****************************************************/
+function applyAutoTranslate(sourceLang, targetLang) {
+    try {
+        player.setOption("captions","track", {
+            languageCode: sourceLang,
+            name: "Auto-translate"
+        });
 
-        function stopAdDetection() {
-            if (stateCheckInterval) {
-                clearInterval(stateCheckInterval);
-            }
-        }
-
-        function onPlayerError(event) {
-            console.error('Player error:', event.data);
-            showError("YouTube greška: " + getErrorMessage(event.data));
-        }
-
-        function getErrorMessage(errorCode) {
-            const errors = {
-                2: "Pogrešan video ID",
-                5: "HTML5 video greška", 
-                100: "Video ne postoji",
-                101: "Video ne može da se repodukuje",
-                150: "Video ne može da se repodukuje"
-            };
-            return errors[errorCode] || "Nepoznata greška";
-        }
-
-        function showCustomThumbnail() {
-            if (customThumbnail && customThumbnail.style.display === 'none') {
-                customThumbnail.style.display = 'flex';
-                console.log("Thumbnail prikazan");
-            }
-        }
-
-        function hideCustomThumbnail() {
-            if (customThumbnail && customThumbnail.style.display !== 'none') {
-                customThumbnail.style.display = 'none';
-                console.log("Thumbnail sakriven");
-            }
-        }
-
-        // Progress tracking
-        function startProgressTracking() {
-            stopProgressTracking();
-            progressInterval = setInterval(updateProgress, 1000);
-        }
-
-        function stopProgressTracking() {
-            if (progressInterval) {
-                clearInterval(progressInterval);
-                progressInterval = null;
-            }
-        }
-
-        function updateProgress() {
-            if (player && player.getCurrentTime && player.getDuration) {
-                const currentTime = player.getCurrentTime();
-                const duration = player.getDuration();
-                const progress = (currentTime / duration) * 100;
-                
-                document.getElementById('progressBar').style.width = progress + '%';
-            }
-        }
-
-        // Seek funkcije
-        function seek(direction) {
-            if (isCCMenuOpen || !player) return;
-            
-            const seekAmount = 60;
-            const currentTime = player.getCurrentTime();
-            const duration = player.getDuration();
-            const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
-            
-            player.seekTo(newTime, true);
-            
-            showSeekIndicator(direction, seekAmount);
-            showControlsTemporary();
-        }
-
-        function showSeekIndicator(direction, seconds) {
-            const indicator = direction < 0 ? document.getElementById('seekBackward') : document.getElementById('seekForward');
-            if (indicator) {
-                indicator.style.opacity = '1';
-                setTimeout(() => {
-                    indicator.style.opacity = '0';
-                }, 1000);
-            }
-        }
-
-        // Play/Pause
-        function togglePlayPause() {
-            if (isCCMenuOpen) {
-                selectCCOption();
-                return;
-            }
-            
-            if (!player) return;
-            
-            if (isPlaying) {
-                player.pauseVideo();
-            } else {
-                player.playVideo();
-            }
-        }
-
-        // CC Menu funkcije
-        function showCCMenu() {
-            const menu = document.getElementById('ccMenu');
-            menu.classList.add('visible');
-            isCCMenuOpen = true;
-            currentCCSelection = 0;
-            updateCCSelection();
-        }
-
-        function hideCCMenu() {
-            const menu = document.getElementById('ccMenu');
-            menu.classList.remove('visible');
-            isCCMenuOpen = false;
-        }
-
-        function updateCCSelection() {
-            const options = document.querySelectorAll('.cc-option');
-            options.forEach((option, index) => {
-                if (index === currentCCSelection) {
-                    option.classList.add('selected');
-                } else {
-                    option.classList.remove('selected');
-                }
+        setTimeout(() => {
+            player.setOption("captions", "track", {
+                languageCode: targetLang,
+                name: "Auto-translate"
             });
+        }, 300);
+
+        showInfo("Prevod: " + sourceLang.toUpperCase() + " → " + targetLang.toUpperCase());
+
+    } catch (e) {
+        console.error("Auto translate error:", e);
+    }
+}
+
+/****************************************************
+ * NO SUBTITLES FALLBACK
+ ****************************************************/
+function noSubtitlesAvailable() {
+
+    // Signal Android app:
+    try { 
+        window.location.href = "yt://no_subtitles"; 
+    } catch (e) {}
+
+    // Show overlay for 3 seconds:
+    noSubsOverlay.style.display = "block";
+    setTimeout(() => {
+        noSubsOverlay.style.display = "none";
+    }, 3000);
+
+    showInfo("Nema dostupnih titlova");
+}
+
+/****************************************************
+ * DEBUG PANEL INITIALIZATION (FULL DEV MODE)
+ ****************************************************/
+function initializeDebugPanel() {
+    debugPanel = document.getElementById("debugPanel");
+}
+
+/****************************************************
+ * FPS MONITOR
+ ****************************************************/
+function startFPSMonitoring() {
+    function fpsLoop() {
+        frameCount++;
+        const now = performance.now();
+        const delta = now - lastFrameTime;
+
+        if (delta >= 1000) {
+            const fps = Math.round((frameCount * 1000) / delta);
+            document.getElementById("dbg_fps").textContent = fps;
+            frameCount = 0;
+            lastFrameTime = now;
         }
 
-        function navigateCCMenu(direction) {
-            if (!isCCMenuOpen) return;
-            
-            const options = document.querySelectorAll('.cc-option');
-            currentCCSelection += direction;
-            
-            if (currentCCSelection < 0) {
-                currentCCSelection = options.length - 1;
-            } else if (currentCCSelection >= options.length) {
-                currentCCSelection = 0;
-            }
-            
-            updateCCSelection();
+        fpsTimer = requestAnimationFrame(fpsLoop);
+    }
+
+    fpsLoop();
+}
+
+/****************************************************
+ * DEBUG PANEL UPDATERS
+ ****************************************************/
+function updateDebugState(s) {
+    let states = {
+        "-1": "UNSTARTED",
+        "0": "ENDED",
+        "1": "PLAYING",
+        "2": "PAUSED",
+        "3": "BUFFERING",
+        "5": "CUED"
+    };
+
+    document.getElementById("dbg_state").textContent = states[s] || s;
+}
+
+function updateDebugCaption(text) {
+    document.getElementById("dbg_caption").textContent = text;
+}
+
+function updateDebugAutoTrans(text) {
+    document.getElementById("dbg_autotrans").textContent = text;
+}
+
+function updateDebugPlayback(cur, dur) {
+    let pct = ((cur/dur)*100).toFixed(1);
+    document.getElementById("dbg_playback").textContent =
+        `Time: ${cur.toFixed(1)} / ${dur.toFixed(1)}  (${pct}%)`;
+}
+/****************************************************
+ * SEEK SYSTEM (TV REMOTE)
+ ****************************************************/
+function seek(seconds) {
+    try {
+        let cur = player.getCurrentTime();
+        player.seekTo(cur + seconds, true);
+        showInfo((seconds > 0 ? "+" : "") + seconds + "s");
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+/****************************************************
+ * PLAY / PAUSE TOGGLE
+ ****************************************************/
+function togglePlay() {
+    try {
+        let state = player.getPlayerState();
+        if (state === YT.PlayerState.PLAYING) {
+            player.pauseVideo();
+        } else {
+            player.playVideo();
         }
+    } catch (e) {
+        console.error(e);
+    }
+}
 
-        function selectCCOption() {
-            if (!isCCMenuOpen || !player) return;
-            
-            const options = document.querySelectorAll('.cc-option');
-            const selectedOption = options[currentCCSelection];
-            const language = selectedOption.getAttribute('data-language');
-            
-            setCaptionTrack(language);
-        }
+/****************************************************
+ * CLOSE PLAYER (BACK)
+ ****************************************************/
+function closePlayer() {
+    try {
+        window.history.back();
+    } catch (e) {
+        console.error(e);
+    }
+}
 
-        function setCaptionTrack(language) {
-            if (!player) return;
-            
-            try {
-                if (language === 'off') {
-                    player.setOption('captions', 'track', {});
-                    player.unloadModule('captions');
-                    showInfo("Titlovi: Isključeni");
-                } else {
-                    player.loadModule('captions');
-                    setTimeout(() => {
-                        player.setOption('captions', 'track', {languageCode: language});
-                        player.setOption('captions', 'reload', true);
-                    }, 100);
-                    showInfo(`Titlovi: ${getLanguageName(language)}`);
-                }
-            } catch (error) {
-                console.error("Greška pri postavljanju titlova:", error);
-                showInfo("Greška pri postavljanju titlova");
-            }
-            
-            hideCCMenu();
-        }
+/****************************************************
+ * REMOTE CONTROL EVENTS
+ ****************************************************/
+let debugSequence = [];
+let debugCode = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "Enter"];
 
-        function getLanguageName(code) {
-            const languages = {
-                'sr': 'Srpski',
-                'en': 'Engleski', 
-                'hr': 'Hrvatski',
-                'bs': 'Bosanski'
-            };
-            return languages[code] || code;
-        }
+document.addEventListener("keydown", function (e) {
 
-        // Kontrole
-        function showControls() {
-            if (isCCMenuOpen) return;
-            document.getElementById('progressContainer').style.opacity = '1';
-            resetHideTimer();
-        }
+    // --- Debug panel sequence record ---
+    debugSequence.push(e.key);
+    if (debugSequence.length > 5) debugSequence.shift();
 
-        function hideControls() {
-            document.getElementById('progressContainer').style.opacity = '0';
-            clearTimeout(hideTimeout);
-        }
+    // Activate debug: UP UP DOWN DOWN ENTER
+    if (JSON.stringify(debugSequence) === JSON.stringify(debugCode)) {
+        debugMode = !debugMode;
+        document.getElementById("debugPanel").style.display =
+            debugMode ? "block" : "none";
+        showInfo(debugMode ? "Debug Mode: ON" : "Debug Mode: OFF");
+    }
 
-        function showControlsTemporary() {
-            showControls();
-            resetHideTimer();
-        }
+    // Write keys into debug log
+    document.getElementById("dbg_keys").textContent = e.key;
 
-        function resetHideTimer() {
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(hideControls, 3000);
-        }
+    switch (e.key) {
 
-        function closePlayer() {
-            stopProgressTracking();
-            stopAdDetection();
-            if (window.AndroidInterface) {
-                AndroidInterface.closePlayer();
-            } else {
-                window.history.back();
-            }
-        }
+        case "ArrowLeft":
+            seek(-60);
+            break;
 
-        function showInfo(message) {
-            const infoPanel = document.getElementById('infoPanel');
-            if (infoPanel) {
-                infoPanel.textContent = message;
-                infoPanel.style.opacity = '1';
-                setTimeout(() => {
-                    infoPanel.style.opacity = '0';
-                }, 3000);
-            }
-        }
+        case "ArrowRight":
+            seek(60);
+            break;
 
-        function showError(message) {
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('errorScreen').style.display = 'flex';
-            document.getElementById('errorText').textContent = message;
-            if (customThumbnail) {
-                customThumbnail.style.display = 'none';
-            }
-            stopAdDetection();
-        }
+        case "Enter":
+        case " ":
+            togglePlay();
+            break;
 
-        function retryPlayer() {
-            document.getElementById('errorScreen').style.display = 'none';
-            document.getElementById('loadingScreen').style.display = 'flex';
-            if (customThumbnail) {
-                customThumbnail.style.display = 'none';
-            }
-            stopAdDetection();
-            initializePlayer();
-        }
+        case "Escape":
+        case "Backspace":
+            closePlayer();
+            break;
 
-        // TV komande
-        document.addEventListener('keydown', function(event) {
-            showControlsTemporary();
-            
-            switch(event.key) {
-                case 'ArrowUp':
-                    if (!isCCMenuOpen) {
-                        showCCMenu();
-                    } else {
-                        navigateCCMenu(-1);
-                    }
-                    event.preventDefault();
-                    break;
-                    
-                case 'ArrowDown':
-                    if (isCCMenuOpen) {
-                        navigateCCMenu(1);
-                    }
-                    event.preventDefault();
-                    break;
-                    
-                case 'Enter':
-                    if (isCCMenuOpen) {
-                        selectCCOption();
-                    } else {
-                        togglePlayPause();
-                    }
-                    event.preventDefault();
-                    break;
-                    
-                case ' ':
-                    if (!isCCMenuOpen) {
-                        togglePlayPause();
-                        event.preventDefault();
-                    }
-                    break;
-                    
-                case 'ArrowLeft':
-                    seek(-1);
-                    event.preventDefault();
-                    break;
-                    
-                case 'ArrowRight':
-                    seek(1);
-                    event.preventDefault();
-                    break;
-                    
-                case 'Escape':
-                case 'Backspace':
-                    if (isCCMenuOpen) {
-                        hideCCMenu();
-                    } else {
-                        closePlayer();
-                    }
-                    event.preventDefault();
-                    break;
-            }
-        });
+        default:
+            break;
+    }
+});
 
-        document.addEventListener('mousemove', showControlsTemporary);
-        document.addEventListener('click', showControlsTemporary);
+/****************************************************
+ * CLEANUP (on unload)
+ ****************************************************/
+window.addEventListener("beforeunload", function () {
+    try { stopProgressTracking(); } catch (e) {}
+    try { cancelAnimationFrame(fpsTimer); } catch (e) {}
+});
 
-        // Event listeneri
-        document.getElementById('retryButton').addEventListener('click', retryPlayer);
+</script>
 
-        // Inicijalno sakrij kontrole
-        window.addEventListener('load', function() {
-            setTimeout(hideControls, 2000);
-        });
-
-        window.addEventListener('beforeunload', function() {
-            stopProgressTracking();
-            stopAdDetection();
-        });
-    </script>
 </body>
 </html>

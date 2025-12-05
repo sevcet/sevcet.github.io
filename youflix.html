@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV YouTube Player</title>
+<style>
+/* ============ GLOBAL ============ */
+body, html {
+    margin: 0; padding: 0;
+    background: #000;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+/* ============ LOADING ============ */
+#loadingScreen {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    color: white;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    z-index: 10000;
+}
+.spinner {
+    width: 50px; height: 50px;
+    border: 5px solid #333;
+    border-top: 5px solid #ff4444;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg);} }
+
+/* ============ THUMBNAIL ============ */
+#customThumbnail {
+    position: absolute; top:0; left:0;
+    width:100%; height:100%;
+    display:none;
+    background-size:cover;
+    background-position:center;
+    background-image:url('https://sevcet.github.io/tv_thumbnail.jpg');
+    z-index:9998;
+    justify-content:center; align-items:center;
+}
+
+/* ============ ERROR SCREEN ============ */
+#errorScreen {
+    display:none;
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    background:#000;
+    z-index:10000;
+    justify-content:center; align-items:center;
+    flex-direction:column;
+    color:white; text-align:center;
+}
+
+/* ============ PROGRESS ============ */
+#progressContainer {
+    position:absolute; bottom:60px; left:5%;
+    width:90%; height:6px;
+    background:rgba(255,255,255,0.2);
+    border-radius:3px;
+    opacity:0;
+    transition:opacity 0.3s;
+}
+#progressBar {
+    width:0%; height:100%;
+    background:#ff4444;
+    border-radius:3px; 
+}
+
+/* ============ INFO PANEL ============ */
+#infoPanel {
+    position:absolute; top:30px; left:30px;
+    background:rgba(0,0,0,0.8);
+    border-left:4px solid #ff4444;
+    padding:12px 18px;
+    border-radius:8px;
+    color:white;
+    font-size:16px;
+    opacity:0;
+    transition:opacity 0.3s;
+    z-index:10001;
+}
+
+/* ============ CC MENU ============ */
+#ccMenu {
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    width:400px; max-height:500px;
+    background:rgba(0,0,0,0.95);
+    color:white;
+    padding:20px;
+    border-radius:12px;
+    z-index:10002;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.3s;
+    display:flex; flex-direction:column;
+}
+#ccMenu.visible { opacity:1; pointer-events:all; }
+
+.menu-title {
+    text-align:center;
+    font-size:20px;
+    color:#ff4444;
+    margin-bottom:10px;
+    border-bottom:2px solid #333;
+    padding-bottom:10px;
+}
+
+.cc-options-container {
+    flex:1;
+    overflow-y:auto;
+    max-height:400px;
+}
+
+.cc-option {
+    padding:12px 15px;
+    margin:5px 0;
+    background:rgba(255,255,255,0.1);
+    border-radius:6px;
+    cursor:pointer;
+    border:2px solid transparent;
+    transition:all 0.2s;
+}
+.cc-option:hover,
+.cc-option.selected {
+    background:rgba(255,68,68,0.3);
+    border-color:#ff4444;
+}
+
+/* SEEK indicators */
+.seek-indicator {
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    padding:10px 15px;
+    background:rgba(0,0,0,0.8);
+    color:white;
+    border-radius:8px;
+    opacity:0;
+    transition:opacity 0.3s;
+}
+#seekBackward { left:30px; }
+#seekForward { right:30px; }
+
+</style>
+</head>
+
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+    <div class="spinner"></div>
+    <div id="loadingText">Učitavam YouTube player...</div>
+</div>
+
+<!-- THUMBNAIL -->
+<div id="customThumbnail"></div>
+
+<!-- ERROR -->
+<div id="errorScreen">
+    <div id="errorText">Greška pri učitavanju</div>
+    <button onclick="retryPlayer()">POKUŠAJ PONOVO</button>
+</div>
+
+<!-- PLAYER -->
+<div id="playerContainer">
+    <div id="player"></div>
+</div>
+
+<!-- PROGRESS -->
+<div id="progressContainer"><div id="progressBar"></div></div>
+
+<!-- SEEK -->
+<div id="seekBackward" class="seek-indicator">⏪ -60s</div>
+<div id="seekForward" class="seek-indicator">+60s ⏩</div>
+
+<!-- CC MENU -->
+<div id="ccMenu">
+    <div class="menu-title">🎯 Odabir titlova</div>
+    <div id="ccOptions" class="cc-options-container"></div>
+</div>
+
+<div id="infoPanel"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+/* ===========================================================
+   GLOBALNE VARIJABLE
+=========================================================== */
+let player;
+let isPlaying = false;
+let isCCMenuOpen = false;
+let hideTimeout;
+let currentSubs = [];
+let selectedIndex = 0;
+
+/* ===========================================================
+   AUTOMATSKI ALGORITAM ZA IZBOR TITLOVA
+=========================================================== */
+function chooseBestSubtitle(system_lang, region, available) {
+    system_lang = system_lang.toLowerCase();
+    region = region.toUpperCase();
+
+    const region_map = {
+        "SK": ["sk","cs","en"], "CZ":["cs","sk","en"],
+        "RS":["sr","en"], "HR":["hr","en"], "BA":["bs","en"],
+        "DE": ["de","en"], "AT":["de","en"], 
+        "FR":["fr","en"], "IT":["it","en"],
+        "TR":["tr","en"], "ES":["es","en"], "MX":["es","en"],
+        "JP":["ja","en"], "KR":["ko","en"],
+        "IN":["hi","en"], "PK":["ur","en"],
+        "SA":["ar","en"], "AE":["ar","en"],
+        "US": ["en"], "GB":["en"], "AU":["en"], "CA":["en","fr"]
+    };
+
+    if (available.includes(system_lang)) return system_lang;
+
+    if (region in region_map) {
+        for (const lang of region_map[region]) {
+            if (available.includes(lang)) return lang;
+        }
+    }
+
+    if (available.includes("en")) return "en";
+
+    return available.length ? available[0] : null;
+}
+
+/* ===========================================================
+   UTOVAR TITLOVA IZ URL PARAMETARA
+=========================================================== */
+function loadSubtitleList() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const subs = urlParams.get('subs');
+
+    if (!subs) return [];
+
+    return subs.split(',').map(s => s.trim().toLowerCase());
+}
+
+/* ===========================================================
+   KREIRANJE CC MENIJA
+=========================================================== */
+function buildCCMenu(subs) {
+    const ccOptions = document.getElementById("ccOptions");
+    ccOptions.innerHTML = "";
+
+    // prva opcija -> bez titlova
+    const off = document.createElement("div");
+    off.className = "cc-option";
+    off.dataset.language = "off";
+    off.textContent = "❌ Bez titlova";
+    ccOptions.appendChild(off);
+
+    subs.forEach(lang => {
+        const div = document.createElement("div");
+        div.className = "cc-option";
+        div.dataset.language = lang;
+        div.textContent = lang.toUpperCase();
+        ccOptions.appendChild(div);
+    });
+}
+
+/* ===========================================================
+   YOUTUBE PLAYER INIT
+=========================================================== */
+function onYouTubeIframeAPIReady() { initializePlayer(); }
+
+function initializePlayer() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId = urlParams.get('videoId');
+
+    currentSubs = loadSubtitleList();
+    buildCCMenu(currentSubs);
+
+    player = new YT.Player('player', {
+        videoId: videoId,
+        playerVars:{
+            autoplay:1, controls:0, rel:0, fs:1,
+            modestbranding:1, cc_load_policy:0
+        },
+        events:{
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange
+        }
+    });
+}
+
+/* ===========================================================
+   AUTOMATSKO POSTAVLJANJE TITLOVA
+=========================================================== */
+function applyAutoSubs() {
+    if (!currentSubs.length) return;
+
+    const sysLang = (navigator.language || "en").substring(0,2);
+    const region = navigator.language.substring(3).toUpperCase();
+
+    const best = chooseBestSubtitle(sysLang, region, currentSubs);
+
+    if (best && player) {
+        setTimeout(() => {
+            player.loadModule("captions");
+            player.setOption("captions","track",{languageCode:best});
+            player.setOption("captions","reload",true);
+        }, 500);
+    }
+}
+
+/* ===========================================================
+   PLAYER DOGAĐAJI
+=========================================================== */
+function onPlayerReady() {
+    document.getElementById("loadingScreen").style.display="none";
+    applyAutoSubs();
+}
+function onPlayerStateChange(e){
+    if(e.data===YT.PlayerState.PLAYING){ isPlaying=true; }
+    if(e.data===YT.PlayerState.PAUSED){ isPlaying=false; }
+}
+
+/* ===========================================================
+   CC MENU KONTROLE
+=========================================================== */
+function toggleCCMenu() {
+    const menu = document.getElementById("ccMenu");
+    isCCMenuOpen = !isCCMenuOpen;
+    menu.classList.toggle("visible");
+}
+
+function selectSub(language){
+    if (language === "off") {
+        player.setOption('captions','track',{});
+        return;
+    }
+    player.loadModule("captions");
+    setTimeout(()=>{
+        player.setOption("captions","track",{languageCode:language});
+        player.setOption("captions","reload",true);
+    },200);
+}
+
+/* ===========================================================
+   TV REMOTE
+=========================================================== */
+document.addEventListener("keydown",function(ev){
+    if(ev.key==="ArrowUp"){ toggleCCMenu(); }
+    if(ev.key==="Enter" && isCCMenuOpen){
+        const opts=document.querySelectorAll(".cc-option");
+        const l = opts[selectedIndex].dataset.language;
+        selectSub(l);
+        toggleCCMenu();
+    }
+});
+</script>
+
+</body>
+</html>
