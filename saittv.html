@@ -16,6 +16,7 @@
             font-family: Arial, sans-serif;
         }
 
+        /* Loading Screen */
         #loadingScreen {
             position: absolute;
             top: 0;
@@ -45,18 +46,12 @@
             100% { transform: rotate(360deg); }
         }
 
-        #loadingText {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-
         #playerContainer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
         }
 
         #player {
@@ -64,6 +59,7 @@
             height: 100%;
         }
 
+        /* Debug panel */
         #debugPanel {
             position: absolute;
             bottom: 20px;
@@ -77,15 +73,16 @@
             max-height: 30%;
             overflow-y: auto;
             display: none;
-            z-index: 100000;
+            z-index: 10000;
         }
 
+        /* Toast */
         #toastBox {
             position: absolute;
             top: 40px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(20,20,20,0.9);
+            background: rgba(20,20,20,0.95);
             color: white;
             padding: 14px 26px;
             border-radius: 10px;
@@ -93,6 +90,43 @@
             z-index: 100000;
             opacity: 0;
             transition: opacity 0.4s ease;
+        }
+
+        /* MINI INFO OVERLAY (Smart TV Style) */
+        #infoOverlay {
+            position: absolute;
+            top: 60px;
+            left: 60px;
+            background: rgba(0,0,0,0.68);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            display: none;
+            z-index: 90000;
+            width: 420px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        #infoOverlay h2 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        #infoOverlay p {
+            margin: 6px 0;
+            font-size: 16px;
+        }
+
+        #infoIcons {
+            margin-top: 10px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -106,6 +140,14 @@
 
 <div id="toastBox"></div>
 
+<!-- MINI INFO OVERLAY -->
+<div id="infoOverlay">
+    <h2 id="infoTitle">–</h2>
+    <p id="infoChannel">–</p>
+    <p id="infoViews">–</p>
+    <div id="infoIcons">CC | Audio | Quality</div>
+</div>
+
 <div id="playerContainer">
     <div id="player"></div>
 </div>
@@ -116,147 +158,240 @@
 
 <script>
 /* ============================================================
-   PARAMETRI IZ ANDROID APLIKACIJE
+   URL PARAMS
 ============================================================ */
-const urlParams = new URLSearchParams(window.location.search);
-
-const VIDEO_ID = urlParams.get("videoId") || null;
-const USER_LANG = urlParams.get("lang") || "en";
-const DEBUG_ENABLED = urlParams.get("debug") === "1";
-
-logDebug("Loading video: " + VIDEO_ID);
-logDebug("User selected language: " + USER_LANG);
+const P = new URLSearchParams(window.location.search);
+const VIDEO_ID = P.get("videoId") || null;
+const SYS_LANG = P.get("sys") || "en";
+const USER_LANG = P.get("lang") || SYS_LANG;
+const DEBUG = P.get("debug") === "1";
 
 /* ============================================================
-   SRODNI JEZICI
+   DEBUG LOGGING
 ============================================================ */
-const RELATED_LANG = {
-    "sr": ["hr","bs"],
-    "hr": ["sr","bs"],
-    "bs": ["sr","hr"],
+function log(msg){
+    if(!DEBUG) return;
+    const box=document.getElementById("debugPanel");
+    box.style.display="block";
+    box.innerHTML+=msg+"<br>";
+}
+
+/* ============================================================
+   MINI INFO OVERLAY (SMART TV)
+============================================================ */
+let infoTimeout = null;
+
+function showInfoOverlay(){
+    const box = document.getElementById("infoOverlay");
+    box.style.display = "block";
+
+    if(infoTimeout) clearTimeout(infoTimeout);
+    infoTimeout = setTimeout(()=> box.style.display="none", 5000);
+}
+
+/* ============================================================
+   FETCH VIDEO METADATA (title, channel, views)
+============================================================ */
+async function loadVideoInfo(){
+    try{
+        let r = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${VIDEO_ID}`);
+        let j = await r.json();
+
+        document.getElementById("infoTitle").innerText = j.title || "Video";
+        document.getElementById("infoChannel").innerText = j.author_name || "Unknown channel";
+        document.getElementById("infoViews").innerText = j.author_url ? "" : "";
+    }catch(e){
+        log("INFO LOAD ERROR: "+e);
+    }
+}
+
+/* ============================================================
+   TITLOVI — FALLBACK SISTEM
+============================================================ */
+const RELATED = {
+    "sr": ["bs","hr","me"],
+    "bs": ["sr","hr","me"],
+    "hr": ["sr","bs","me"],
+    "me": ["sr","bs","hr"],
     "sk": ["cs"],
     "cs": ["sk"]
 };
 
-/* ============================================================
-   AUTOPRVI SUBTRACK
-============================================================ */
-function selectSubtitleTrack(availableSubs, lang) {
+function pickSubtitle(available){
+    log("Available: "+available.join(", "));
 
-    if (availableSubs.includes(lang)) return lang;
-
-    if (RELATED_LANG[lang]) {
-        for (let r of RELATED_LANG[lang])
-            if (availableSubs.includes(r)) return r;
+    // 1. User-chosen
+    if(available.includes(USER_LANG)){
+        log("Using USER_LANG: "+USER_LANG);
+        return USER_LANG;
+    }
+    // 2. System language
+    if(available.includes(SYS_LANG)){
+        log("Using SYS_LANG: "+SYS_LANG);
+        return SYS_LANG;
+    }
+    // 3. Related
+    if(RELATED[SYS_LANG]){
+        for(let r of RELATED[SYS_LANG]){
+            if(available.includes(r)){
+                log("Using related: "+r);
+                return r;
+            }
+        }
+    }
+    // 4. Auto translate from English
+    if(available.includes("en")){
+        log("Using auto-translate from English → "+USER_LANG);
+        return "auto-en";
     }
 
-    if (availableSubs.includes("en")) return "auto-en";  // auto translate
-
+    // 5. No subtitles
+    log("NO subtitles available");
     return null;
 }
 
 /* ============================================================
-   YOUTUBE API
+   YT PLAYER INIT
 ============================================================ */
-let player = null;
+let player=null;
+let longPressTimeout=null;
 
-function onYouTubeIframeAPIReady() {
-    player = new YT.Player("player", {
-        height: "100%",
-        width: "100%",
-        videoId: VIDEO_ID,
-        playerVars: {
-            autoplay: 1,
-            playsinline: 1,
-            controls: 1,
-            rel: 0,
-            fs: 1,
-            iv_load_policy: 3,
-            enablejsapi: 1,
-            cc_load_policy: 1
+function onYouTubeIframeAPIReady(){
+    loadVideoInfo();
+
+    player=new YT.Player("player",{
+        height:"100%",width:"100%",
+        videoId:VIDEO_ID,
+        playerVars:{
+            autoplay:1,
+            controls:1,
+            fs:1,
+            rel:0,
+            cc_load_policy:1,
+            hl:SYS_LANG
         },
-        events: {
-            onReady: onPlayerReady,
-            onStateChange: onPlayerStateChange
+        events:{
+            onReady:onReady
         }
     });
 }
 
-function onPlayerReady() {
-    hideLoading();
+function onReady(){
+    setTimeout(()=>{
+        let tracks = player.getOption("captions","tracklist") || [];
+        let available = tracks.map(t=>t.languageCode);
 
-    setTimeout(() => {
-        let tracks = player.getOption("captions", "tracklist") || [];
-        let subs = tracks.map(t => t.languageCode);
+        let chosen = pickSubtitle(available);
 
-        let chosen = selectSubtitleTrack(subs, USER_LANG);
-
-        if (chosen === "auto-en") {
-            player.setOption("captions", "track", { languageCode: "en" });
-            player.setOption("captions", "translate", USER_LANG);
-        } else if (chosen !== null) {
-            player.setOption("captions", "track", { languageCode: chosen });
+        if(chosen===null){
+            log("Subtitles OFF");
         }
-    }, 400);
+        else if(chosen==="auto-en"){
+            player.setOption("captions","track",{languageCode:"en"});
+            player.setOption("captions","translate",USER_LANG);
+        }
+        else{
+            player.setOption("captions","track",{languageCode:chosen});
+        }
+
+        hideLoading();
+
+    },800);
 }
 
-function onPlayerStateChange(e) {}
-
 /* ============================================================
-   LOADING
+   HIDING LOADING
 ============================================================ */
-function hideLoading() {
-    document.getElementById("loadingScreen").style.display = "none";
+function hideLoading(){
+    const e=document.getElementById("loadingScreen");
+    if(e) e.style.display="none";
 }
 
 /* ============================================================
-   DEBUG PANEL
+   TOAST
 ============================================================ */
-function logDebug(msg) {
-    if (!DEBUG_ENABLED) return;
-    const p = document.getElementById("debugPanel");
-    p.style.display = "block";
-    p.innerHTML += msg + "<br>";
+let toastTimeout=null;
+
+function toast(msg){
+    const box=document.getElementById("toastBox");
+    box.innerText=msg;
+    box.style.opacity=1;
+
+    if(toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout=setTimeout(()=>box.style.opacity=0,2500);
 }
 
 /* ============================================================
-   REMOTE CONTROLLER ENGINE (TV KEYS)
+   STATS FOR NERDS
+============================================================ */
+function openStats(){
+    try{
+        player.getIframe().contentWindow.postMessage(
+            JSON.stringify({event:"command",func:"showVideoStats"}),"*"
+        );
+    }catch(e){}
+}
+
+/* ============================================================
+   REMOTE CONTROL
 ============================================================ */
 document.addEventListener("keydown", e => {
 
-    if (!player) return;
-
-    switch (e.key) {
+    switch(e.key){
 
         case "ArrowLeft":
-            player.seekTo(Math.max(0, player.getCurrentTime() - 10), true);
-            break;
+            player.seekTo(player.getCurrentTime()-20,true);
+            toast("-20 sek");
+            e.preventDefault();
+        break;
 
         case "ArrowRight":
-            player.seekTo(player.getCurrentTime() + 10, true);
-            break;
+            player.seekTo(player.getCurrentTime()+20,true);
+            toast("+20 sek");
+            e.preventDefault();
+        break;
 
         case "Enter":
         case "OK":
-        case " ":
-        case "Center":
-        case "Select":
-            // OTVARA YOUTUBE SETTINGS MENU (cc / quality / speed / subtitles)
-            player.getIframe().contentWindow.postMessage(
-                JSON.stringify({ event: "command", func: "showVideoInfo" }),
-                "*"
-            );
-            break;
+            let state = player.getPlayerState();
+            if(state===1) player.pauseVideo();
+            else player.playVideo();
+            toast("Play/Pause");
+            e.preventDefault();
+        break;
 
         case "ArrowUp":
-            // YouTube internal controls (ostavi normalno ponašanje)
-            break;
+            // short press → mini info
+            if(longPressTimeout) clearTimeout(longPressTimeout);
+
+            longPressTimeout = setTimeout(()=>{
+                openStats();  // long press
+                toast("Stats for nerds");
+            }, 550); // long press threshold
+
+            // short press → show overlay
+            setTimeout(()=>{
+                if(!e.repeat){
+                    showInfoOverlay();
+                }
+            },120);
+
+            e.preventDefault();
+        break;
 
         case "ArrowDown":
-            // Isto
-            break;
+            // YouTube handles default controls
+        break;
     }
 });
+
+/* STOP LONG PRESS IF KEY RELEASED */
+document.addEventListener("keyup", e => {
+    if(e.key==="ArrowUp" && longPressTimeout){
+        clearTimeout(longPressTimeout);
+    }
+});
+
 </script>
 
 </body>
