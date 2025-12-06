@@ -51,6 +51,7 @@
             font-size: 18px;
         }
 
+        /* Player Container */
         #playerContainer {
             position: absolute;
             top: 0;
@@ -65,6 +66,7 @@
             height: 100%;
         }
 
+        /* Debug Panel */
         #debugPanel {
             position: absolute;
             bottom: 20px;
@@ -81,6 +83,7 @@
             z-index: 100000;
         }
 
+        /* Toast */
         #toastBox {
             position: absolute;
             top: 40px;
@@ -95,7 +98,6 @@
             opacity: 0;
             transition: opacity 0.4s ease;
         }
-
     </style>
 </head>
 
@@ -118,20 +120,21 @@
 
 <script>
 /* ============================================================
-   ANDROID PARAMS
+   URL parametri iz Android WebView
 ============================================================ */
 const urlParams = new URLSearchParams(window.location.search);
+
 const VIDEO_ID = urlParams.get("videoId") || null;
 const SYSTEM_LANG = urlParams.get("sys") || "en";
 const USER_LANG = urlParams.get("lang") || SYSTEM_LANG;
 const DEBUG_ENABLED = urlParams.get("debug") === "1";
 
-logDebug("VIDEO_ID = " + VIDEO_ID);
+logDebug("VIDEO = " + VIDEO_ID);
 logDebug("SYSTEM_LANG = " + SYSTEM_LANG);
 logDebug("USER_LANG = " + USER_LANG);
 
 /* ============================================================
-   SUPPORTED LANGUAGES
+   43 podržanih jezika u sistemu
 ============================================================ */
 const SUPPORTED_LANGUAGES = [
     "sr","bs","hr","me",
@@ -144,7 +147,7 @@ const SUPPORTED_LANGUAGES = [
 ];
 
 /* ============================================================
-   RELATED LANG GROUP
+   Srodni jezici
 ============================================================ */
 const RELATED_LANG = {
     "sr": ["bs","hr","me"],
@@ -156,236 +159,213 @@ const RELATED_LANG = {
 };
 
 /* ============================================================
-   SUBTITLE SELECTION LOGIC
+   FUNKCIJA — izaberi najbolji titl
 ============================================================ */
-function selectSubtitleTrack(availableSubs, lang) {
-    if (!availableSubs || availableSubs.length === 0) return null;
+function selectSubtitleTrack(availableSubs, requestedLang) {
+    logDebug("Available: " + availableSubs.join(", "));
 
-    // 1) USER CHOICE
-    if (availableSubs.includes(lang)) return lang;
+    // 1) User selected language
+    if (availableSubs.includes(requestedLang))
+        return requestedLang;
 
-    // 2) SYSTEM LANG
-    if (availableSubs.includes(SYSTEM_LANG)) return SYSTEM_LANG;
-
-    // 3) RELATED LANG
-    if (RELATED_LANG[lang]) {
-        for (let r of RELATED_LANG[lang])
-            if (availableSubs.includes(r)) return r;
+    // 2) Srodni jezik
+    if (RELATED_LANG[requestedLang]) {
+        for (let rel of RELATED_LANG[requestedLang]) {
+            if (availableSubs.includes(rel))
+                return rel;
+        }
     }
 
-    // 4) AUTO-TRANSLATE FROM EN
-    if (availableSubs.includes("en")) return "auto-en";
+    // 3) Engleski kao baza za auto-translate
+    if (availableSubs.includes("en"))
+        return "auto-en";
 
+    // 4) nema titlova
     return null;
 }
 
 /* ============================================================
-   YOUTUBE PLAYER
+   YouTube API Ready
 ============================================================ */
 let player = null;
 let chosenSubtitle = null;
 
 function onYouTubeIframeAPIReady() {
+
+    if (!VIDEO_ID) {
+        showToast("Video ID nedostaje.");
+        return;
+    }
+
     player = new YT.Player("player", {
-        width: "100%",
         height: "100%",
+        width: "100%",
         videoId: VIDEO_ID,
         playerVars: {
             autoplay: 1,
             controls: 1,
             fs: 1,
             rel: 0,
-            cc_load_policy: 1,
-            playsinline: 1,
-            enablejsapi: 1,
             iv_load_policy: 3,
-            modestbranding: 1
+            enablejsapi: 1,
+            cc_load_policy: 1,
+            hl: USER_LANG  // YouTube interface language
         },
         events: {
-            onReady: onPlayerReady,
-            onStateChange: onPlayerStateChange,
-            onError: onPlayerError
+            onReady: onReady,
+            onStateChange: onStateChange,
+            onError: onError
         }
     });
 }
 
 /* ============================================================
-   PLAYER READY
+   Player Ready → biramo titl
 ============================================================ */
-function onPlayerReady() {
+function onReady() {
+
+    let tracks = [];
+
+    try {
+        tracks = player.getOption("captions", "tracklist") || [];
+    } catch (e) {
+        logDebug("Tracklist ERROR: " + e);
+    }
+
+    const availableSubs = tracks.map(t => t.languageCode);
+
+    chosenSubtitle = selectSubtitleTrack(availableSubs, USER_LANG);
+
+    if (!chosenSubtitle) {
+        showToast("Nema dostupnih titlova");
+    } else if (chosenSubtitle === "auto-en") {
+        setTimeout(() => {
+            player.setOption("captions", "track", { languageCode: "en" });
+            player.setOption("captions", "translate", USER_LANG);
+        }, 500);
+    } else {
+        setTimeout(() => {
+            player.setOption("captions", "track", { languageCode: chosenSubtitle });
+        }, 500);
+    }
+
     hideLoading();
-
-    setTimeout(() => {
-        try {
-            let tracks = player.getOption("captions", "tracklist") || [];
-            let availableSubs = tracks.map(t => t.languageCode);
-
-            chosenSubtitle = selectSubtitleTrack(availableSubs, USER_LANG);
-
-            // NORMAL SUBTITLE
-            if (chosenSubtitle && !chosenSubtitle.startsWith("auto-")) {
-                player.setOption("captions", "track", { languageCode: chosenSubtitle });
-            }
-
-            // AUTO TRANSLATE
-            if (chosenSubtitle && chosenSubtitle.startsWith("auto-")) {
-                player.setOption("captions", "track", { languageCode: "en" });
-                player.setOption("captions", "translate", USER_LANG);
-            }
-
-        } catch (e) {
-            logDebug("Subtitle error: " + e);
-        }
-    }, 800);
 }
 
 /* ============================================================
-   STATE MACHINE
+   STATE CHANGE — stabilacija reklama
 ============================================================ */
-function onPlayerStateChange(e) {
-    if (e.data === YT.PlayerState.PLAYING) hideLoading();
+function onStateChange(e) {
+    if (e.data === YT.PlayerState.PLAYING) {
+        hideLoading();
+    }
 }
 
 /* ============================================================
-   ERRORS
+   ERROR HANDLING
 ============================================================ */
-function onPlayerError() {
-    showToast("Greška pri pokretanju videa");
+function onError(e) {
+    showToast("Greška pri reprodukciji");
+    logDebug(JSON.stringify(e));
 }
 
 /* ============================================================
-   UI HELPERS
+   Remote Control — FINALNO PONAŠANJE
 ============================================================ */
-function hideLoading() {
-    document.getElementById("loadingScreen").style.display = "none";
-}
-
-let toastTimeout = null;
-function showToast(t) {
-    const b = document.getElementById("toastBox");
-    b.innerText = t;
-    b.style.opacity = 1;
-
-    if (toastTimeout) clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => b.style.opacity = 0, 3000);
-}
-
-function logDebug(msg) {
-    if (!DEBUG_ENABLED) return;
-    const p = document.getElementById("debugPanel");
-    p.style.display = "block";
-    p.innerHTML += msg + "<br>";
-}
-
-/* ============================================================
-   REMOTE CONTROL
-============================================================ */
-let longPressTimeout = null;
-let longPressActive = false;
-
 document.addEventListener("keydown", (e) => {
 
     switch (e.key) {
 
+        /* LEFT = -20 sec */
         case "ArrowLeft":
-            try {
-                player.seekTo(Math.max(0, player.getCurrentTime() - 20), true);
-            } catch {}
+            try { player.seekTo(Math.max(0, player.getCurrentTime() - 20), true); } catch(err){}
             e.preventDefault();
         break;
 
+        /* RIGHT = +20 sec */
         case "ArrowRight":
-            try {
-                player.seekTo(player.getCurrentTime() + 20, true);
-            } catch {}
+            try { player.seekTo(player.getCurrentTime() + 20, true); } catch(err){}
             e.preventDefault();
         break;
 
+        /* UP = SETTINGS PANEL (SLIKA 2) */
+        case "ArrowUp":
+            try {
+                player.getIframe().contentWindow.postMessage(
+                    JSON.stringify({
+                        event: "command",
+                        func: "showSettingsMenu",
+                        args: []
+                    }),
+                    "*"
+                );
+            } catch (err) {
+                console.log("SETTINGS ERR:", err);
+            }
+            e.preventDefault();
+        break;
+
+        /* DOWN = show controls */
+        case "ArrowDown":
+            try {
+                player.getIframe().contentWindow.postMessage(
+                    JSON.stringify({
+                        event: "command",
+                        func: "showControls",
+                        args: [true]
+                    }),
+                    "*"
+                );
+            } catch (err) {}
+            e.preventDefault();
+        break;
+
+        /* OK / ENTER = Play/Pause */
         case "Enter":
         case "OK":
             try {
                 const st = player.getPlayerState();
                 if (st === 1) player.pauseVideo();
                 else player.playVideo();
-            } catch {}
+            } catch (err) {}
             e.preventDefault();
-        break;
-
-        case "ArrowUp":
-
-            // LONG PRESS = Stats for nerds
-            if (longPressTimeout) clearTimeout(longPressTimeout);
-            longPressActive = false;
-
-            longPressTimeout = setTimeout(() => {
-                longPressActive = true;
-                openStatsForNerds();
-            }, 650);
-
-            // SHORT PRESS = YOUTUBE SETTINGS PANEL (SLIKA 2)
-            setTimeout(() => {
-                if (!longPressActive) {
-                    openSettingsMenu();
-                }
-            }, 120);
-
-            e.preventDefault();
-        break;
-
-        case "ArrowDown":
-            // default YouTube controls
-            player.playVideo();
         break;
     }
 });
 
 /* ============================================================
-   OPEN SETTINGS MENU (SLIKA 2)
+   LOADING
 ============================================================ */
-function openSettingsMenu() {
-    try {
-        player.getIframe().contentWindow.postMessage(
-            JSON.stringify({
-                event: "command",
-                func: "showControls",
-                args: [true]
-            }),
-            "*"
-        );
-
-        player.getIframe().contentWindow.postMessage(
-            JSON.stringify({
-                event: "command",
-                func: "openSettingsMenu",
-                args: []
-            }),
-            "*"
-        );
-
-    } catch (e) {
-        logDebug("openSettingsMenu error: " + e);
-    }
+function hideLoading() {
+    const el = document.getElementById("loadingScreen");
+    if (el) el.style.display = "none";
 }
 
 /* ============================================================
-   STATS FOR NERDS
+   TOAST
 ============================================================ */
-function openStatsForNerds() {
-    try {
-        showToast("Stats for nerds");
-        player.getIframe().contentWindow.postMessage(
-            JSON.stringify({
-                event: "command",
-                func: "toggleStatsForNerds",
-                args: []
-            }),
-            "*"
-        );
-    } catch (e) {
-        logDebug("stats error: " + e);
-    }
+let toastTimeout = null;
+
+function showToast(t) {
+    const box = document.getElementById("toastBox");
+    box.innerText = t;
+    box.style.opacity = 1;
+
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        box.style.opacity = 0;
+    }, 3000);
 }
 
+/* ============================================================
+   DEBUG
+============================================================ */
+function logDebug(msg) {
+    if (!DEBUG_ENABLED) return;
+    const p = document.getElementById("debugPanel");
+    p.style.display = "block";
+    p.innerHTML += msg + "<br>";
+}
 </script>
 
 </body>
