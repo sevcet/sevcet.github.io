@@ -8,32 +8,30 @@
 
 <style>
     html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
+        margin:0;
+        padding:0;
+        width:100%;
+        height:100%;
+        background:#000;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
     }
 
     #player {
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        top:0;
-        left:0;
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
     }
 
     #loading {
         position:absolute;
-        top:0;left:0;
-        width:100%;height:100%;
+        top:0; left:0;
+        width:100%; height:100%;
         background:black;
         z-index:9999;
         display:flex;
-        align-items:center;
         justify-content:center;
+        align-items:center;
         flex-direction:column;
         color:white;
     }
@@ -46,14 +44,48 @@
         background:rgba(20,20,20,0.85);
         color:white;
         padding:12px 25px;
-        border-radius:12px;
-        opacity:0;
+        border-radius:10px;
         font-size:18px;
+        opacity:0;
         transition:opacity .4s;
         z-index:99999;
     }
-</style>
 
+    /* ---------- TITLOVI MENI ---------- */
+    #subtitleMenu {
+        position:absolute;
+        top:120px;
+        right:120px;
+        width:360px;
+        max-height:60%;
+        overflow-y:auto;
+        background:rgba(0,0,0,0.85);
+        border:2px solid #fff;
+        border-radius:12px;
+        padding:12px;
+        color:white;
+        display:none;
+        z-index:999999;
+    }
+
+    .menuTitle {
+        font-size:20px;
+        margin-bottom:10px;
+        font-weight:bold;
+    }
+
+    .menuItem {
+        padding:10px;
+        background:#222;
+        border-radius:6px;
+        margin-bottom:6px;
+    }
+
+    .menuItem.focused {
+        background:#555;
+        border:2px solid #fff;
+    }
+</style>
 </head>
 
 <body>
@@ -64,56 +96,77 @@
 </div>
 
 <div id="toast"></div>
+<div id="subtitleMenu"></div>
 <div id="player"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 /* ============================================================
-   PRIMAMO PODATKE IZ ANDROID-A
+   PARAMETRI IZ ANDROIDA
 ============================================================ */
 const params = new URLSearchParams(window.location.search);
 const VIDEO_ID = params.get("videoId");
 const USER_LANG = (params.get("lang") || "en").toLowerCase();
 
 /* ============================================================
-   SRODNI JEZICI — identično staroj verziji
+   PROŠIRENI RELATED
 ============================================================ */
 const RELATED = {
-    "sr": ["hr","bs","me"],
-    "hr": ["sr","bs","me"],
+    "sr": ["bs","hr","me"],
     "bs": ["sr","hr","me"],
+    "hr": ["sr","bs","me"],
     "me": ["sr","hr","bs"],
 
     "sk": ["cs"],
-    "cs": ["sk"]
+    "cs": ["sk"],
+    "sl": ["hr","sr"],
+    "pl": ["cs","sk"],
+
+    "da": ["sv","no"],
+    "sv": ["da","no","is"],
+    "no": ["sv","da"],
+    "is": ["sv"],
+
+    "mk": ["bg","sr"],
+    "bg": ["mk","sr"],
+
+    "uk": ["ru"],
+    "ru": ["uk"],
+
+    "fr": ["es","it","pt"],
+    "es": ["fr","pt","it"],
+    "pt": ["es","fr","it"],
+    "it": ["es","fr","pt"],
+
+    "zh": ["ja","ko"],
+    "ja": ["zh","ko"],
+    "ko": ["zh","ja"]
 };
 
 /* ============================================================
-   AUTOMATSKI IZBOR TITLA — originalna logika
+   AUTOPICK TITLA
 ============================================================ */
 function pickSub(available, lang) {
 
-    // 1) direktno
     if (available.includes(lang)) return lang;
 
-    // 2) srodni jezik
     if (RELATED[lang]) {
         for (let r of RELATED[lang]) {
             if (available.includes(r)) return r;
         }
     }
 
-    // 3) auto translate EN -> sistemski
     if (available.includes("en")) return "auto-en";
 
     return null;
 }
 
 /* ============================================================
-   YOUTUBE PLAYER
+   YOUTUBE
 ============================================================ */
 let player = null;
+let availableSubs = [];
 
 function onYouTubeIframeAPIReady() {
 
@@ -131,23 +184,21 @@ function onYouTubeIframeAPIReady() {
             hl:USER_LANG
         },
         events:{
-            onReady:onReady
+            onReady: onReady
         }
     });
 }
 
-/* ============================================================
-   READY → AUTOMATSKI TITLOVI
-============================================================ */
 function onReady() {
+
     setTimeout(() => {
 
-        let tracks = [];
-        try { tracks = player.getOption("captions","tracklist") || []; }
-        catch(e){}
+        try {
+            let tracks = player.getOption("captions","tracklist") || [];
+            availableSubs = tracks.map(t => t.languageCode.toLowerCase());
+        } catch(e){}
 
-        const available = tracks.map(t => t.languageCode.toLowerCase());
-        const chosen = pickSub(available, USER_LANG);
+        const chosen = pickSub(availableSubs, USER_LANG);
 
         if (!chosen) {
             toast("Nema titlova");
@@ -168,19 +219,107 @@ function onReady() {
 }
 
 /* ============================================================
-   DPAD — originalno + stabilno
+   DODAVAMO SUBTITLE MENU (manual selection)
 ============================================================ */
+function openSubtitleMenu() {
+
+    const menu = document.getElementById("subtitleMenu");
+    menu.innerHTML = "";
+
+    let html = `<div class="menuTitle">Titlovi</div>`;
+
+    // dostupni titlovi sa YouTube
+    availableSubs.forEach(lang => {
+        html += `<div class="menuItem" data-lang="${lang}">${lang.toUpperCase()}</div>`;
+    });
+
+    // auto translate
+    html += `<div class="menuTitle">Auto translate</div>`;
+    html += `<div class="menuItem" data-auto="1">AUTO → ${USER_LANG.toUpperCase()}</div>`;
+
+    menu.innerHTML = html;
+    menu.style.display = "block";
+
+    menuFocusIndex = 0;
+    focusMenuItem(menuFocusIndex);
+}
+
+function closeSubtitleMenu() {
+    document.getElementById("subtitleMenu").style.display = "none";
+}
+
+function focusMenuItem(index) {
+    const items = document.querySelectorAll(".menuItem");
+    items.forEach(i => i.classList.remove("focused"));
+    if (items[index]) items[index].classList.add("focused");
+}
+
+function activateMenuItem() {
+    const items = document.querySelectorAll(".menuItem");
+    const item = items[menuFocusIndex];
+    if (!item) return;
+
+    const lang = item.getAttribute("data-lang");
+    const auto = item.getAttribute("data-auto");
+
+    if (auto === "1") {
+        player.setOption("captions","track",{languageCode:"en"});
+        player.setOption("captions","translate", USER_LANG);
+        toast("Auto → " + USER_LANG.toUpperCase());
+    } else {
+        player.setOption("captions","track",{languageCode:lang});
+        toast("Titl: " + lang.toUpperCase());
+    }
+
+    closeSubtitleMenu();
+}
+
+/* DPAD nav */
+let menuOpen = false;
+let menuFocusIndex = 0;
+
 document.addEventListener("keydown", e => {
 
+    if (menuOpen) {
+        const items = document.querySelectorAll(".menuItem");
+
+        switch(e.key) {
+            case "ArrowDown":
+                menuFocusIndex = Math.min(menuFocusIndex + 1, items.length - 1);
+                focusMenuItem(menuFocusIndex);
+                e.preventDefault();
+                return;
+
+            case "ArrowUp":
+                menuFocusIndex = Math.max(menuFocusIndex - 1, 0);
+                focusMenuItem(menuFocusIndex);
+                e.preventDefault();
+                return;
+
+            case "Enter":
+                activateMenuItem();
+                e.preventDefault();
+                return;
+
+            case "Backspace":
+            case "Escape":
+            case "Back":
+                closeSubtitleMenu();
+                menuOpen = false;
+                return;
+        }
+    }
+
+    // normal DPAD controls
     switch(e.key) {
 
         case "ArrowLeft":
-            player.seekTo(Math.max(0, player.getCurrentTime() - 20), true);
+            player.seekTo(player.getCurrentTime()-20, true);
             e.preventDefault();
             break;
 
         case "ArrowRight":
-            player.seekTo(player.getCurrentTime() + 20, true);
+            player.seekTo(player.getCurrentTime()+20, true);
             e.preventDefault();
             break;
 
@@ -191,15 +330,13 @@ document.addEventListener("keydown", e => {
             e.preventDefault();
             break;
 
-        case "ArrowDown":
-            player.getIframe().contentWindow.postMessage(
-                JSON.stringify({event:"command",func:"showControls",args:[true]}),"*"
-            );
+        case "ArrowUp":
+            openSubtitleMenu();
+            menuOpen = true;
             e.preventDefault();
             break;
 
-        case "ArrowUp":
-            // otvara YouTube CC meni
+        case "ArrowDown":
             player.getIframe().contentWindow.postMessage(
                 JSON.stringify({event:"command",func:"showControls",args:[true]}),"*"
             );
