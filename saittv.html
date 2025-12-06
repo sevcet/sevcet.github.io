@@ -1,335 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouFlix TV Player</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouFlix TV Player</title>
 
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-            font-family: Arial, sans-serif;
-        }
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        font-family: Arial;
+    }
 
-        /* LOADING OVERLAY */
-        #loadingScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 99999;
-            color: white;
-        }
+    #loadingScreen {
+        position: absolute; top:0; left:0;
+        width:100%; height:100%;
+        background:#000;
+        display:flex; flex-direction:column;
+        justify-content:center; align-items:center;
+        z-index:99999; color:white;
+    }
 
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #444;
-            border-top: 5px solid #ff4444;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+    #player { width:100%; height:100%; }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    #subtitleMenu {
+        position:absolute;
+        top:120px;
+        right:100px;
+        width:380px;
+        max-height:65%;
+        overflow-y:auto;
+        background:rgba(0,0,0,0.85);
+        border:2px solid white;
+        border-radius:12px;
+        padding:15px;
+        color:white;
+        display:none;
+        z-index:999999;
+    }
 
-        #loadingText {
-            margin-top: 20px;
-            font-size: 18px;
-        }
+    .menuTitle {
+        font-size:22px;
+        margin-bottom:10px;
+        font-weight:bold;
+    }
 
-        /* PLAYER */
-        #playerContainer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
+    .menuItem {
+        padding:12px;
+        margin:5px 0;
+        background:#222;
+        border-radius:6px;
+        cursor:pointer;
+    }
 
-        #player {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* TOAST */
-        #toastBox {
-            position: absolute;
-            top: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(20,20,20,0.9);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-size: 18px;
-            z-index: 200000;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-
-        /* DEBUG PANEL */
-        #debugPanel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.6);
-            color: #0f0;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            max-width: 60%;
-            max-height: 30%;
-            overflow-y: auto;
-            display: none;
-            z-index: 200000;
-        }
-
-        /* SUBTITLE MENU POPUP (ArrowUp) */
-        #subtitleMenu {
-            position: absolute;
-            top: 100px;
-            right: 100px;
-            width: 350px;
-            max-height: 65%;
-            overflow-y: auto;
-            background: rgba(0,0,0,0.85);
-            border: 2px solid #fff;
-            border-radius: 12px;
-            display: none;
-            padding: 15px;
-            color: #fff;
-            z-index: 200000;
-        }
-
-        .menuTitle {
-            font-size: 20px;
-            margin-bottom: 12px;
-            font-weight: bold;
-        }
-
-        .menuItem {
-            padding: 10px;
-            margin: 4px 0;
-            background: #222;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .menuItem:hover {
-            background: #444;
-        }
-    </style>
+    .menuItem:focus {
+        outline:2px solid red;
+        background:#444;
+    }
+</style>
 </head>
 
 <body>
 
 <div id="loadingScreen">
-    <div class="spinner"></div>
-    <div id="loadingText">Učitavam YouFlix player...</div>
+    <div style="color:#fff;font-size:20px;">Učitavam player...</div>
 </div>
 
-<div id="toastBox"></div>
-
-<div id="playerContainer">
-    <div id="player"></div>
-</div>
-
+<div id="player"></div>
 <div id="subtitleMenu"></div>
-<div id="debugPanel"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 /* ============================================================
-   PARAMETRI IZ ANDROID WEBVIEW-A
-   https://.../saittv.html?videoId=XXX&lang=YY&debug=0|1
+   PARAMETRI IZ ANDROID-A
 ============================================================ */
-const params      = new URLSearchParams(window.location.search);
-const VIDEO_ID    = params.get("videoId") || null;
-const USER_LANG   = params.get("lang")    || "en";
-const DEBUG_MODE  = params.get("debug") === "1";
-
-log("VIDEO = " + VIDEO_ID);
-log("USER_LANG = " + USER_LANG);
+const params = new URLSearchParams(window.location.search);
+const VIDEO_ID = params.get("videoId");
+const USER_LANG = params.get("lang") || "en";
 
 /* ============================================================
-   43 PODRŽANA JEZIKA (ISTO KAO U APLIKACIJI)
-============================================================ */
-const SUPPORTED = [
-    "en","fr","de","es","it","pt",
-    "nl","pl","cs","sk","sl",
-    "hr","bs","sr","mk","sq","bg","ro","hu",
-    "tr","el",
-    "da","sv","fi","no","is",
-    "et","lv","lt","uk","ru",
-    "ar","fa","hi","bn",
-    "zh","ja","ko","vi","id","ms","th"
-];
-
-/* ============================================================
-   SRODNI JEZICI (FALLBACK ZA AUTOPICK)
+   RELATED jezici kao pre
 ============================================================ */
 const RELATED = {
-    /* Ex-YU */
-    "sr": ["bs","hr"],
-    "bs": ["sr","hr"],
-    "hr": ["sr","bs"],
-
-    /* Central Slavic */
-    "sk": ["cs"],
-    "cs": ["sk"],
-    "sl": ["hr","sr"],
-    "pl": ["cs","sk"],
-
-    /* Scandinavian */
-    "da": ["sv","no"],
-    "sv": ["da","no","is"],
-    "no": ["sv","da"],
-    "is": ["sv"],
-
-    /* Balkan East */
-    "mk": ["bg","sr"],
-    "bg": ["mk","sr"],
-
-    /* East Europe */
-    "uk": ["ru"],
-    "ru": ["uk"],
-
-    /* Romance */
-    "fr": ["es","it","pt"],
-    "es": ["fr","pt","it"],
-    "pt": ["es","fr","it"],
-    "it": ["es","fr","pt"],
-
-    /* East Asian */
-    "zh": ["ja","ko"],
-    "ja": ["zh","ko"],
-    "ko": ["zh","ja"]
+    "sr":["bs","hr"],
+    "bs":["sr","hr"],
+    "hr":["sr","bs"],
+    "sk":["cs"],
+    "cs":["sk"],
+    "sl":["hr","sr"],
+    "pl":["cs","sk"],
+    "da":["sv","no"],
+    "sv":["da","no"],
+    "no":["sv","da"],
+    "mk":["bg","sr"],
+    "bg":["mk","sr"],
+    "uk":["ru"],
+    "ru":["uk"],
+    "fr":["es","it","pt"],
+    "es":["fr","pt","it"],
+    "pt":["es","fr","it"],
+    "it":["es","fr","pt"],
+    "zh":["ja","ko"],
+    "ja":["zh","ko"],
+    "ko":["zh","ja"]
 };
 
 /* ============================================================
-   IZBOR TITLA (SAMO YT TRACKLIST, BEZ SPOLJNOG XML-A)
+   GLOBAL VARS
+============================================================ */
+let player = null;
+let tracks = [];
+let chosen = null;
+
+/* ============================================================
+   YT API load
+============================================================ */
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player("player", {
+        height:"100%", width:"100%",
+        videoId: VIDEO_ID,
+        playerVars:{
+            autoplay:1,
+            controls:1,
+            fs:1,
+            cc_load_policy:1,
+            enablejsapi:1,
+            iv_load_policy:3,
+            rel:0,
+            hl:USER_LANG
+        },
+        events:{
+            onReady:onReady
+        }
+    });
+}
+
+/* ============================================================
+   Auto pick SUBTITLE — STARA VERZIJA KOJA TI JE RADILA
 ============================================================ */
 function pickSubtitle(available, lang) {
-    log("Available subs: " + available.join(", "));
 
-    // 1) direktni pogodak
+    // 1) direct
     if (available.includes(lang)) return lang;
 
-    // 2) srodni jezici
+    // 2) related group
     if (RELATED[lang]) {
         for (let r of RELATED[lang]) {
             if (available.includes(r)) return r;
         }
     }
 
-    // 3) engleski kao baza za auto-translate
+    // 3) auto translate base
     if (available.includes("en")) return "auto-en";
 
-    // 4) nema titlova
     return null;
 }
 
 /* ============================================================
-   YT API GLOBALI
-============================================================ */
-let player = null;
-let tracks = [];
-let chosen = null;
-
-/* YouTube global callback */
-function onYouTubeIframeAPIReady() {
-    if (!VIDEO_ID) {
-        toast("Nedostaje video ID");
-        return;
-    }
-
-    player = new YT.Player("player", {
-        width: "100%",
-        height: "100%",
-        videoId: VIDEO_ID,
-        playerVars: {
-            autoplay: 1,
-            controls: 1,
-            fs: 1,
-            cc_load_policy: 1,
-            enablejsapi: 1,
-            iv_load_policy: 3,
-            rel: 0,
-            hl: USER_LANG   // jezik YouTube UI-ja
-        },
-        events: {
-            onReady: onReady,
-            onError: onError
-        }
-    });
-}
-
-/* ============================================================
-   PLAYER READY → SKINEMO LISTU TITLOVA I AUTO-BIRAMO
+   PLAYER READY
 ============================================================ */
 function onReady() {
-    setTimeout(() => {
-        try {
-            tracks = player.getOption("captions", "tracklist") || [];
-        } catch (e) {
-            log("Tracklist error: " + e);
-        }
 
-        const langs = tracks.map(t => t.languageCode || "");
+    setTimeout(() => {
+
+        try {
+            tracks = player.getOption("captions","tracklist") || [];
+        } catch(e){}
+
+        const langs = tracks.map(t=>t.languageCode);
         chosen = pickSubtitle(langs, USER_LANG);
 
+        /* AUTO APPLY SUBTITLE */
         if (!chosen) {
-            toast("Nema dostupnih titlova");
+            // nema titlova → auto translate sa engleskog
+            player.setOption("captions","track",{languageCode:"en"});
+            setTimeout(()=>{
+                player.setOption("captions","translate", USER_LANG);
+            }, 350);
+
         } else if (chosen === "auto-en") {
-            // auto translate sa engleskog
-            try {
-                player.setOption("captions", "track", { languageCode: "en" });
-                player.setOption("captions", "translate", USER_LANG);
-                toast("Auto prevod → " + USER_LANG);
-            } catch(e) {
-                log("Auto-translate setOption error: " + e);
-            }
+            // auto
+            player.setOption("captions","track",{languageCode:"en"});
+            setTimeout(()=>{
+                player.setOption("captions","translate", USER_LANG);
+            }, 350);
+
         } else {
-            // direktni titl
-            try {
-                player.setOption("captions", "track", { languageCode: chosen });
-                toast("Titl: " + chosen);
-            } catch(e) {
-                log("Direct subtitle error: " + e);
-            }
+            // direct match
+            player.setOption("captions","track",{languageCode:chosen});
         }
 
-        hideLoading();
-    }, 800);
+        document.getElementById("loadingScreen").style.display="none";
+
+    }, 1000);
 }
 
 /* ============================================================
-   ERROR HANDLER (bitno zbog logcata: onError is not defined)
-============================================================ */
-function onError(e) {
-    log("YT ERROR: " + JSON.stringify(e || {}));
-    toast("Greška u YouTube playeru");
-    hideLoading();
-}
-
-/* ============================================================
-   SUBTITLE MENU (ArrowUp) – YT tracklist + AUTO-TRANSLATE
+   SUBTITLE MENU (UP)
 ============================================================ */
 function openSubtitleMenu() {
     const menu = document.getElementById("subtitleMenu");
@@ -337,148 +209,91 @@ function openSubtitleMenu() {
 
     let html = `<div class="menuTitle">Titlovi</div>`;
 
-    const langs = tracks.map(t => t.languageCode || "");
-
-    // postojeći YT titlovi
-    langs.forEach(l => {
-        if (!l) return;
-        html += `<div class="menuItem" onclick="setSub('${l}')">${l}</div>`;
+    // existing YT subtitles FIRST
+    tracks.forEach(t => {
+        html += `<div class="menuItem" tabindex="0" onclick="setSub('${t.languageCode}')">${t.languageCode}</div>`;
     });
 
-    // auto translate sekcija
-    html += `<div class="menuTitle" style="margin-top:10px;">Auto Translate</div>`;
-    SUPPORTED.forEach(l => {
-        html += `<div class="menuItem" onclick="autoTranslate('${l}')">auto → ${l}</div>`;
+    // auto translate section
+    html += `<div class="menuTitle" style="margin-top:12px;">Auto Translate</div>`;
+    SUPPORTED.forEach(l=>{
+        html += `<div class="menuItem" tabindex="0" onclick="autoTranslate('${l}')">auto → ${l}</div>`;
     });
 
-    // isključi
-    html += `<div class="menuItem" onclick="subOff()">Isključi titlove</div>`;
+    html += `<div class="menuItem" tabindex="0" onclick="subOff()">Isključi titlove</div>`;
 
     menu.innerHTML = html;
     menu.style.display = "block";
+
+    // Set FOCUS on first item (TV navigation)
+    const first = menu.querySelector(".menuItem");
+    if (first) first.focus();
 }
 
-function setSub(lang) {
-    try {
-        player.setOption("captions", "track", { languageCode: lang });
-        toast("Titl: " + lang);
-    } catch(e) {
-        log("setSub error: " + e);
-    }
+/* DIRECT SUBTITLE */
+function setSub(l){
+    player.setOption("captions","track",{languageCode:l});
     closeMenu();
 }
 
-function autoTranslate(lang) {
-    try {
-        player.setOption("captions", "track", { languageCode: "en" });
-        player.setOption("captions", "translate", lang);
-        toast("Auto prevod → " + lang);
-    } catch(e) {
-        log("autoTranslate error: " + e);
-    }
+/* AUTO TRANSLATE */
+function autoTranslate(l){
+    player.setOption("captions","track",{languageCode:"en"});
+    setTimeout(()=>{
+        player.setOption("captions","translate", l);
+    },350);
     closeMenu();
 }
 
-function subOff() {
-    try {
-        player.setOption("captions", "track", {});  // gasi titl
-        toast("Titlovi isključeni");
-    } catch(e) {
-        log("subOff error: " + e);
-    }
+function subOff(){
+    player.setOption("captions","track",{});
     closeMenu();
 }
 
-function closeMenu() {
-    document.getElementById("subtitleMenu").style.display = "none";
+function closeMenu(){
+    document.getElementById("subtitleMenu").style.display="none";
 }
 
 /* ============================================================
-   DPAD KONTROLA – BEZ AUDIO, SAMO SEEK + PLAY/PAUSE + MENU
+   DPAD — IDENTIČAN STAROJ VERZIJI KOJA JE RADILA
 ============================================================ */
-document.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", e => {
 
-    switch (e.key) {
+    switch(e.key){
 
-        /* LEFT = -20 sec */
         case "ArrowLeft":
-            try {
-                const t = player.getCurrentTime();
-                player.seekTo(Math.max(0, t - 20), true);
-            } catch(err) {}
+            player.seekTo(player.getCurrentTime()-20, true);
             e.preventDefault();
             break;
 
-        /* RIGHT = +20 sec */
         case "ArrowRight":
-            try {
-                const t = player.getCurrentTime();
-                player.seekTo(t + 20, true);
-            } catch(err) {}
+            player.seekTo(player.getCurrentTime()+20, true);
             e.preventDefault();
             break;
 
-        /* UP = SUBTITLE MENU (NAŠ, NE YT) */
+        case "Enter":
+            if (player.getPlayerState()===1) player.pauseVideo();
+            else player.playVideo();
+            e.preventDefault();
+            break;
+
         case "ArrowUp":
             openSubtitleMenu();
             e.preventDefault();
             break;
 
-        /* DOWN = samo pokaži YouTube kontrole, BEZ audio track logike */
         case "ArrowDown":
+            // samo YouTube kontrole (kao pre)
             try {
                 player.getIframe().contentWindow.postMessage(
-                    JSON.stringify({
-                        event: "command",
-                        func: "showControls",
-                        args: [true]
-                    }),
+                    JSON.stringify({event:"command",func:"showControls",args:[true]}),
                     "*"
                 );
-            } catch(err) {}
-            e.preventDefault();
-            break;
-
-        /* OK / ENTER = Play / Pause */
-        case "Enter":
-        case "OK":
-            try {
-                const st = player.getPlayerState();
-                if (st === 1) player.pauseVideo();
-                else player.playVideo();
-            } catch(err) {}
+            } catch(err){}
             e.preventDefault();
             break;
     }
 });
-
-/* ============================================================
-   UTILITY
-============================================================ */
-function hideLoading() {
-    const el = document.getElementById("loadingScreen");
-    if (el) el.style.display = "none";
-}
-
-let toastTimer = null;
-function toast(msg) {
-    const box = document.getElementById("toastBox");
-    box.innerHTML = msg;
-    box.style.opacity = 1;
-
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        box.style.opacity = 0;
-    }, 3000);
-}
-
-function log(m) {
-    if (!DEBUG_MODE) return;
-    const p = document.getElementById("debugPanel");
-    p.style.display = "block";
-    p.innerHTML += m + "<br>";
-}
-
 </script>
 
 </body>
