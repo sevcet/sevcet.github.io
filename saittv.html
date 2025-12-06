@@ -16,7 +16,6 @@
             font-family: Arial, sans-serif;
         }
 
-        /* Loading Screen */
         #loadingScreen {
             position: absolute;
             top: 0;
@@ -51,7 +50,6 @@
             font-size: 18px;
         }
 
-        /* Player Container */
         #playerContainer {
             position: absolute;
             top: 0;
@@ -66,7 +64,6 @@
             height: 100%;
         }
 
-        /* Debug Panel */
         #debugPanel {
             position: absolute;
             bottom: 20px;
@@ -79,11 +76,10 @@
             max-width: 60%;
             max-height: 30%;
             overflow-y: auto;
-            display: none; /* default hidden */
+            display: none;
             z-index: 100000;
         }
 
-        /* Message Toast */
         #toastBox {
             position: absolute;
             top: 40px;
@@ -120,108 +116,51 @@
 
 <script>
 /* ============================================================
-   ANDROID → HTML parametri
+   PARAMETRI IZ ANDROID APLIKACIJE
 ============================================================ */
 const urlParams = new URLSearchParams(window.location.search);
 
 const VIDEO_ID = urlParams.get("videoId") || null;
-const SYSTEM_LANG = urlParams.get("sys") || "en";  // jezik sistema (npr: sr)
-const USER_LANG = urlParams.get("lang") || SYSTEM_LANG; // korisnički izbor kada dodamo meni
+const USER_LANG = urlParams.get("lang") || "en";
 const DEBUG_ENABLED = urlParams.get("debug") === "1";
 
-logDebug("Video ID: " + VIDEO_ID);
-logDebug("System Language: " + SYSTEM_LANG);
-logDebug("User Lang: " + USER_LANG);
-
+logDebug("Loading video: " + VIDEO_ID);
+logDebug("User selected language: " + USER_LANG);
 
 /* ============================================================
-   LISTA 43 JEZIKA KOJE TVOJA APLIKACIJA PODRŽAVA
-============================================================ */
-const SUPPORTED_LANGUAGES = [
-    "sr","bs","hr","me", // ex-yu fallback
-    "mk","sl","sq","bg","ro","hu",
-    "en","de","fr","es","it","pt",
-    "nl","pl","cs","sk","da","sv","fi","no","is",
-    "et","lv","lt","uk","ru","tr","el",
-    "ar","fa","hi","bn",
-    "zh","ja","ko","vi","id","ms","th"
-];
-
-logDebug("Supported languages: " + SUPPORTED_LANGUAGES.length);
-
-
-/* ============================================================
-   SRODNI JEZICI — primarno za srpski cluster
+   SRODNI JEZICI
 ============================================================ */
 const RELATED_LANG = {
-    "sr": ["bs","hr","me"],
-    "bs": ["sr","hr","me"],
-    "hr": ["sr","bs","me"],
-    "me": ["sr","bs","hr"],
-
+    "sr": ["hr","bs"],
+    "hr": ["sr","bs"],
+    "bs": ["sr","hr"],
     "sk": ["cs"],
     "cs": ["sk"]
 };
 
-
 /* ============================================================
-   FUNKCIJA: AUTOMATSKI IZBOR TITLOVA
-   1) Sistem
-   2) Srodni jezici
-   3) Engleski auto-translate
-   4) Ako nema → null
+   AUTOPRVI SUBTRACK
 ============================================================ */
-function selectSubtitleTrack(availableSubs, sysLang) {
-    if (!availableSubs || availableSubs.length === 0) {
-        logDebug("No available subtitles array!");
-        return null;
+function selectSubtitleTrack(availableSubs, lang) {
+
+    if (availableSubs.includes(lang)) return lang;
+
+    if (RELATED_LANG[lang]) {
+        for (let r of RELATED_LANG[lang])
+            if (availableSubs.includes(r)) return r;
     }
 
-    logDebug("Available YouTube subtitles: " + availableSubs.join(", "));
+    if (availableSubs.includes("en")) return "auto-en";  // auto translate
 
-    // 1. Sistem
-    if (availableSubs.includes(sysLang)) {
-        logDebug("Using SYSTEM subtitle: " + sysLang);
-        return sysLang;
-    }
-
-    // 2. Srodni jezici
-    if (RELATED_LANG[sysLang]) {
-        for (let rel of RELATED_LANG[sysLang]) {
-            if (availableSubs.includes(rel)) {
-                logDebug("Using RELATED subtitle: " + rel);
-                return rel;
-            }
-        }
-    }
-
-    // 3. Ako engleski postoji → auto-translate
-    if (availableSubs.includes("en")) {
-        logDebug("EN exists → using English for auto-translate");
-        return "auto-en";
-    }
-
-    // 4. Ako NIŠTA nema
-    logDebug("NO suitable subtitles found.");
     return null;
 }
 
-
 /* ============================================================
-   YouTube API READY
+   YOUTUBE API
 ============================================================ */
 let player = null;
-let chosenSubtitle = null;
-let hasStarted = false;
 
 function onYouTubeIframeAPIReady() {
-    if (!VIDEO_ID) {
-        showToast("Video ID nije prosleđen.");
-        return;
-    }
-
-    logDebug("Creating YT.Player...");
-
     player = new YT.Player("player", {
         height: "100%",
         width: "100%",
@@ -234,198 +173,90 @@ function onYouTubeIframeAPIReady() {
             fs: 1,
             iv_load_policy: 3,
             enablejsapi: 1,
-            cc_load_policy: 1,
-            hl: SYSTEM_LANG
+            cc_load_policy: 1
         },
         events: {
             onReady: onPlayerReady,
-            onStateChange: onPlayerStateChange,
-            onError: onPlayerError
+            onStateChange: onPlayerStateChange
         }
     });
 }
 
-
-/* ============================================================
-   when READY → tražimo dostupne titlove
-============================================================ */
 function onPlayerReady() {
-    logDebug("YT Player Ready");
-
-    try {
-        let tracks = player.getOption("captions", "tracklist") || [];
-        let availableSubs = tracks.map(t => t.languageCode);
-
-        chosenSubtitle = selectSubtitleTrack(availableSubs, USER_LANG);
-
-        if (chosenSubtitle === null) {
-            showToast("Titlovi nisu dostupni");
-        } else if (chosenSubtitle.startsWith("auto-en")) {
-            // auto-translate iz engleskog
-            setTimeout(() => {
-                player.setOption("captions", "track", { languageCode: "en" });
-                player.setOption("captions", "translate", USER_LANG);
-            }, 500);
-        } else {
-            // standardni titl
-            setTimeout(() => {
-                player.setOption("captions", "track", { languageCode: chosenSubtitle });
-            }, 500);
-        }
-
-    } catch (err) {
-        logDebug("Caption setup error: " + err);
-    }
-
     hideLoading();
-}
-/* ============================================================
-   STATE MACHINE — stabilno upravljanje reklamama i videom
-============================================================ */
-let isAdPlaying = false;
-let adStartTime = 0;
-let adTimeout = null;
 
-/*  YouTube states:
-    -1 UNSTARTED
-     0 ENDED
-     1 PLAYING
-     2 PAUSED
-     3 BUFFERING
-     5 VIDEO CUED
-   +108 AD START
-   +109 AD END
-*/
+    setTimeout(() => {
+        let tracks = player.getOption("captions", "tracklist") || [];
+        let subs = tracks.map(t => t.languageCode);
 
-function onPlayerStateChange(event) {
-    const state = event.data;
-    logDebug("YT State: " + state);
+        let chosen = selectSubtitleTrack(subs, USER_LANG);
 
-    switch (state) {
-
-        /* -----------------------------------------
-           108 — Reklama počinje
-        ----------------------------------------- */
-        case 108:
-            isAdPlaying = true;
-            adStartTime = Date.now();
-            logDebug("AD START detected (108)");
-            break;
-
-        /* -----------------------------------------
-           109 — Reklama završena
-        ----------------------------------------- */
-        case 109:
-            isAdPlaying = false;
-            logDebug("AD ENDED (109)");
-            break;
-
-        /* -----------------------------------------
-           1 — VIDEO PLAYING
-        ----------------------------------------- */
-        case YT.PlayerState.PLAYING:
-
-            if (!hasStarted && !isAdPlaying) {
-                hasStarted = true;
-                hideLoading();
-                showToast("Reprodukcija pokrenuta");
-            }
-
-            break;
-
-        /* -----------------------------------------
-           3 — BUFFERING (posebna kontrola reklama)
-        ----------------------------------------- */
-        case YT.PlayerState.BUFFERING:
-            // Ako buffer traje predugo → YouTube reklama failed → FORCE PLAY video
-            if (isAdPlaying) {
-                const elapsed = Date.now() - adStartTime;
-
-                if (elapsed > 6000) {  // max 6 sekundi reklama
-                    logDebug("Ad buffering timeout → forcing video start");
-                    isAdPlaying = false;
-                    safeForcePlay();
-                }
-            }
-            break;
-
-        /* -----------------------------------------
-           0 — ENDED
-        ----------------------------------------- */
-        case YT.PlayerState.ENDED:
-            showToast("Video završio");
-            break;
-    }
+        if (chosen === "auto-en") {
+            player.setOption("captions", "track", { languageCode: "en" });
+            player.setOption("captions", "translate", USER_LANG);
+        } else if (chosen !== null) {
+            player.setOption("captions", "track", { languageCode: chosen });
+        }
+    }, 400);
 }
 
+function onPlayerStateChange(e) {}
 
 /* ============================================================
-   FORCE PLAY — otklanja petlju reklama
-============================================================ */
-function safeForcePlay() {
-    try {
-        player.pauseVideo();
-        setTimeout(() => player.playVideo(), 300);
-        logDebug("ForcePlay executed");
-    } catch (e) {
-        logDebug("ForcePlay error: " + e);
-    }
-}
-
-
-/* ============================================================
-   ERROR HANDLER
-============================================================ */
-function onPlayerError(err) {
-    logDebug("PLAYER ERROR: " + JSON.stringify(err));
-    showToast("Greška pri pokretanju videa");
-}
-
-
-/* ============================================================
-   UI — LOADING
+   LOADING
 ============================================================ */
 function hideLoading() {
-    const el = document.getElementById("loadingScreen");
-    if (el) el.style.display = "none";
+    document.getElementById("loadingScreen").style.display = "none";
 }
-
-
-/* ============================================================
-   TOAST MESSAGE
-============================================================ */
-let toastTimeout = null;
-
-function showToast(text) {
-    const box = document.getElementById("toastBox");
-    if (!box) return;
-
-    box.innerText = text;
-    box.style.opacity = 1;
-
-    if (toastTimeout) clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => {
-        box.style.opacity = 0;
-    }, 3000);
-}
-
 
 /* ============================================================
    DEBUG PANEL
 ============================================================ */
 function logDebug(msg) {
     if (!DEBUG_ENABLED) return;
-    const panel = document.getElementById("debugPanel");
-    panel.style.display = "block";
-    panel.innerHTML += msg + "<br>";
+    const p = document.getElementById("debugPanel");
+    p.style.display = "block";
+    p.innerHTML += msg + "<br>";
 }
-/* ============================================================
-   AUTO-START PLAYER LOGIC
-============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-    logDebug("DOM loaded, waiting for YouTube API...");
-});
 
+/* ============================================================
+   REMOTE CONTROLLER ENGINE (TV KEYS)
+============================================================ */
+document.addEventListener("keydown", e => {
+
+    if (!player) return;
+
+    switch (e.key) {
+
+        case "ArrowLeft":
+            player.seekTo(Math.max(0, player.getCurrentTime() - 10), true);
+            break;
+
+        case "ArrowRight":
+            player.seekTo(player.getCurrentTime() + 10, true);
+            break;
+
+        case "Enter":
+        case "OK":
+        case " ":
+        case "Center":
+        case "Select":
+            // OTVARA YOUTUBE SETTINGS MENU (cc / quality / speed / subtitles)
+            player.getIframe().contentWindow.postMessage(
+                JSON.stringify({ event: "command", func: "showVideoInfo" }),
+                "*"
+            );
+            break;
+
+        case "ArrowUp":
+            // YouTube internal controls (ostavi normalno ponašanje)
+            break;
+
+        case "ArrowDown":
+            // Isto
+            break;
+    }
+});
 </script>
 
 </body>
