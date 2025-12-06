@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouFlix TV Player</title>
 
     <style>
@@ -18,10 +18,8 @@
 
         #loadingScreen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: #000;
             display: flex;
             flex-direction: column;
@@ -32,67 +30,52 @@
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
             border: 5px solid #444;
             border-top: 5px solid #ff4444;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
+        @keyframes spin { 0%{transform:rotate(0deg);}100%{transform:rotate(360deg);} }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        #loadingText {
-            margin-top: 20px;
-            font-size: 18px;
-        }
+        #loadingText { margin-top: 20px; font-size: 18px; }
 
         #playerContainer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 1;
         }
 
-        #player {
-            width: 100%;
-            height: 100%;
-        }
+        #player { width: 100%; height: 100%; }
 
         #debugPanel {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            color: #0f0;
+            bottom: 20px; left: 20px;
             padding: 12px 18px;
-            border-radius: 8px;
+            background: rgba(0,0,0,0.6);
+            color: #0f0;
             font-size: 14px;
+            border-radius: 8px;
+            display: none;
+            z-index: 100000;
             max-width: 60%;
             max-height: 30%;
             overflow-y: auto;
-            display: none;
-            z-index: 100000;
         }
 
         #toastBox {
             position: absolute;
-            top: 40px;
-            left: 50%;
+            top: 40px; left: 50%;
             transform: translateX(-50%);
+            padding: 14px 26px;
             background: rgba(20,20,20,0.9);
             color: white;
-            padding: 14px 26px;
-            border-radius: 10px;
             font-size: 18px;
+            border-radius: 10px;
             z-index: 100000;
             opacity: 0;
-            transition: opacity 0.4s ease;
+            transition: opacity .4s ease;
         }
     </style>
 </head>
@@ -106,32 +89,30 @@
 
 <div id="toastBox"></div>
 
-<div id="playerContainer">
-    <div id="player"></div>
-</div>
+<div id="playerContainer"><div id="player"></div></div>
 
 <div id="debugPanel"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ============================================================
-   URL parametri iz Android WebView
-============================================================ */
+/*============================================================
+  URL parametri (Android WebView)
+============================================================*/
 const urlParams = new URLSearchParams(window.location.search);
 
-const VIDEO_ID = urlParams.get("videoId") || null;
-const SYSTEM_LANG = urlParams.get("sys") || "en";
-const USER_LANG = urlParams.get("lang") || SYSTEM_LANG;
+const VIDEO_ID     = urlParams.get("videoId") || null;
+const SYSTEM_LANG  = urlParams.get("sys") || "en";
+const USER_LANG    = urlParams.get("lang") || SYSTEM_LANG;
 const DEBUG_ENABLED = urlParams.get("debug") === "1";
 
 logDebug("VIDEO = " + VIDEO_ID);
 logDebug("SYSTEM_LANG = " + SYSTEM_LANG);
 logDebug("USER_LANG = " + USER_LANG);
 
-/* ============================================================
-   43 podržanih jezika
-============================================================ */
+/*============================================================
+  43 jezika (ne briši ovo)
+============================================================*/
 const SUPPORTED_LANGUAGES = [
     "sr","bs","hr","me",
     "mk","sl","sq","bg","ro","hu",
@@ -142,9 +123,9 @@ const SUPPORTED_LANGUAGES = [
     "zh","ja","ko","vi","id","ms","th"
 ];
 
-/* ============================================================
-   Srodni jezici
-============================================================ */
+/*============================================================
+  SRODNI JEZICI (ne briši)
+============================================================*/
 const RELATED_LANG = {
     "sr": ["bs","hr","me"],
     "bs": ["sr","hr","me"],
@@ -154,54 +135,44 @@ const RELATED_LANG = {
     "cs": ["sk"]
 };
 
-/* ============================================================
-   Izbor najboljeg titla
-============================================================ */
-function selectSubtitleTrack(availableSubs, requestedLang) {
+/*============================================================
+  IZBOR TITLA (ostaje ista logika)
+============================================================*/
+function selectSubtitleTrack(availableSubs, lang) {
 
-    logDebug("Available subtitles: " + availableSubs.join(", "));
+    logDebug("Available subs: " + availableSubs.join(", "));
 
-    // 1. USER LANGUAGE
-    if (availableSubs.includes(requestedLang))
-        return requestedLang;
+    if (availableSubs.includes(lang)) return lang;
 
-    // 2. RELATED LANG
-    if (RELATED_LANG[requestedLang]) {
-        for (let rel of RELATED_LANG[requestedLang]) {
-            if (availableSubs.includes(rel))
-                return rel;
+    if (RELATED_LANG[lang]) {
+        for (let r of RELATED_LANG[lang]) {
+            if (availableSubs.includes(r)) return r;
         }
     }
 
-    // 3. AUTO_TRANSLATE from English
-    if (availableSubs.includes("en"))
-        return "auto-en";
+    if (availableSubs.includes("en")) return "auto-en";
 
-    return null;
+    return null; // bez poruke
 }
 
-/* ============================================================
-   YouTube API Ready
-============================================================ */
+/*============================================================
+   PLAYER INIT
+============================================================*/
 let player = null;
 let chosenSubtitle = null;
 
 function onYouTubeIframeAPIReady() {
 
-    if (!VIDEO_ID) {
-        showToast("Video ID nedostaje.");
-        return;
-    }
+    if (!VIDEO_ID) return;
 
     player = new YT.Player("player", {
-        height: "100%",
-        width: "100%",
+        width: "100%", height: "100%",
         videoId: VIDEO_ID,
         playerVars: {
             autoplay: 1,
             controls: 1,
-            fs: 1,
             rel: 0,
+            fs: 1,
             iv_load_policy: 3,
             enablejsapi: 1,
             cc_load_policy: 1,
@@ -209,173 +180,131 @@ function onYouTubeIframeAPIReady() {
         },
         events: {
             onReady: onReady,
-            onStateChange: onStateChange,
-            onError: onError
+            onStateChange: (e)=>{ if(e.data===YT.PlayerState.PLAYING) hideLoading(); }
         }
     });
 }
 
-/* ============================================================
-   Player Ready → subtitle selection
-============================================================ */
 function onReady() {
 
     let tracks = [];
-
-    try {
-        tracks = player.getOption("captions", "tracklist") || [];
-    } catch (err) {
-        logDebug("Tracklist ERROR: " + err);
-    }
+    try { tracks = player.getOption("captions","tracklist") || []; } catch(e){}
 
     const availableSubs = tracks.map(t => t.languageCode);
-
     chosenSubtitle = selectSubtitleTrack(availableSubs, USER_LANG);
 
-    if (!chosenSubtitle) {
-        showToast("Nema dostupnih titlova");
-    } else if (chosenSubtitle === "auto-en") {
-        setTimeout(() => {
-            player.setOption("captions", "track", { languageCode: "en" });
-            player.setOption("captions", "translate", USER_LANG);
-        }, 400);
-    } else {
-        setTimeout(() => {
-            player.setOption("captions", "track", { languageCode: chosenSubtitle });
-        }, 400);
+    if (chosenSubtitle === "auto-en") {
+        setTimeout(()=>{
+            player.setOption("captions","track",{languageCode:"en"});
+            player.setOption("captions","translate",USER_LANG);
+        },300);
+    }
+    else if (chosenSubtitle) {
+        setTimeout(()=>{
+            player.setOption("captions","track",{languageCode:chosenSubtitle});
+        },300);
     }
 
     hideLoading();
 }
 
-/* ============================================================
-   Player State
-============================================================ */
-function onStateChange(e) {
-    if (e.data === YT.PlayerState.PLAYING) hideLoading();
-}
+/*============================================================
+  REMOTE CONTROL FINAL
+============================================================*/
+document.addEventListener("keydown", (e)=>{
 
-function onError(e) {
-    showToast("Greška pri reprodukciji");
-    logDebug(JSON.stringify(e));
-}
+    switch(e.key){
 
-/* ============================================================
-   REMOTE CONTROL — FINAL
-============================================================ */
-document.addEventListener("keydown", (e) => {
-
-    switch (e.key) {
-
-        /* LEFT = -20 sec */
         case "ArrowLeft":
-            try { player.seekTo(Math.max(0, player.getCurrentTime() - 20), true); } catch(e){}
+            try { player.seekTo(Math.max(0,player.getCurrentTime()-20),true); } catch{}
             e.preventDefault();
-            break;
+        break;
 
-        /* RIGHT = +20 sec */
         case "ArrowRight":
-            try { player.seekTo(player.getCurrentTime() + 20, true); } catch(e){}
+            try { player.seekTo(player.getCurrentTime()+20,true); } catch{}
             e.preventDefault();
-            break;
+        break;
 
-        /* UP = OPEN SETTINGS (REAL KEY EVENT → WORKS) */
-        case "ArrowUp":
-            try {
-                const iframe = player.getIframe();
-                iframe.contentWindow.postMessage(JSON.stringify({
-                    "event": "command",
-                    "func": "dispatchEvent",
-                    "args": [{
-                        "type": "keydown",
-                        "keyCode": 38,
-                        "which": 38,
-                        "key": "ArrowUp",
-                        "code": "ArrowUp",
-                        "bubbles": true
-                    }]
-                }), "*");
-
-                iframe.contentWindow.postMessage(JSON.stringify({
-                    "event": "command",
-                    "func": "dispatchEvent",
-                    "args": [{
-                        "type": "keyup",
-                        "keyCode": 38,
-                        "which": 38,
-                        "key": "ArrowUp",
-                        "code": "ArrowUp",
-                        "bubbles": true
-                    }]
-                }), "*");
-
-            } catch(err) {
-                console.log("SETTINGS ERROR:", err);
-            }
-            e.preventDefault();
-            break;
-
-        /* DOWN = show controls */
-        case "ArrowDown":
-            try {
-                player.getIframe().contentWindow.postMessage(
-                    JSON.stringify({
-                        event: "command",
-                        func: "showControls",
-                        args: [true]
-                    }),
-                    "*"
-                );
-            } catch(e){}
-            e.preventDefault();
-            break;
-
-        /* OK / ENTER = Play / Pause */
         case "Enter":
         case "OK":
             try {
                 const s = player.getPlayerState();
                 if (s === 1) player.pauseVideo();
                 else player.playVideo();
-            } catch(e){}
+            } catch{}
             e.preventDefault();
-            break;
+        break;
+
+        case "ArrowDown":
+            try {
+                player.getIframe().contentWindow.postMessage(
+                    JSON.stringify({
+                        event:"command",
+                        func:"showControls",
+                        args:[true]
+                    }),
+                "*");
+            } catch{}
+            e.preventDefault();
+        break;
+
+        /*======================================================
+           ARROW UP = OTVORI YOUTUBE SETTINGS (ZUPČANIK)
+           * radi preko real key dispatch u iframe *
+        ======================================================*/
+        case "ArrowUp":
+            try {
+                const iframe = player.getIframe().contentWindow;
+
+                iframe.postMessage(JSON.stringify({
+                    event:"command",
+                    func:"dispatchEvent",
+                    args:[{
+                        type:"keydown",
+                        key:"ArrowUp",
+                        code:"ArrowUp",
+                        keyCode:38,
+                        which:38,
+                        bubbles:true
+                    }]
+                }),"*");
+
+                iframe.postMessage(JSON.stringify({
+                    event:"command",
+                    func:"dispatchEvent",
+                    args:[{
+                        type:"keyup",
+                        key:"ArrowUp",
+                        code:"ArrowUp",
+                        keyCode:38,
+                        which:38,
+                        bubbles:true
+                    }]
+                }),"*");
+
+            } catch(err){
+                logDebug("UP error: "+err);
+            }
+            e.preventDefault();
+        break;
     }
 });
 
-/* ============================================================
-   LOADING HIDE
-============================================================ */
-function hideLoading() {
-    const el = document.getElementById("loadingScreen");
-    if (el) el.style.display = "none";
+/*============================================================
+  UI HELPERS
+============================================================*/
+function hideLoading(){
+    const el=document.getElementById("loadingScreen");
+    if(el) el.style.display="none";
 }
 
-/* ============================================================
-   TOAST
-============================================================ */
-let toastTimeout = null;
-
-function showToast(text) {
-    const box = document.getElementById("toastBox");
-    box.innerText = text;
-    box.style.opacity = 1;
-
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => {
-        box.style.opacity = 0;
-    }, 3000);
+function logDebug(msg){
+    if(!DEBUG_ENABLED) return;
+    const p=document.getElementById("debugPanel");
+    p.style.display="block";
+    p.innerHTML+=msg+"<br>";
 }
 
-/* ============================================================
-   DEBUG LOG
-============================================================ */
-function logDebug(msg) {
-    if (!DEBUG_ENABLED) return;
-    const p = document.getElementById("debugPanel");
-    p.style.display = "block";
-    p.innerHTML += msg + "<br>";
-}
 </script>
 
 </body>
