@@ -24,10 +24,10 @@
             height: 100%;
             background: #000;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 99999;
+            flex-direction: column;
+            z-index: 9999;
             color: white;
         }
 
@@ -35,30 +35,11 @@
             width: 50px;
             height: 50px;
             border: 5px solid #444;
-            border-top: 5px solid #ff4444;
+            border-top: 5px solid red;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
-
-        #loadingText {
-            margin-top: 20px;
-            font-size: 18px;
-        }
-
-        #playerContainer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        #player {
-            width: 100%;
-            height: 100%;
-        }
 
         #toastBox {
             position: absolute;
@@ -66,57 +47,41 @@
             left: 50%;
             transform: translateX(-50%);
             background: rgba(20,20,20,0.9);
-            color: white;
             padding: 12px 24px;
             border-radius: 10px;
-            font-size: 18px;
-            z-index: 200000;
+            color: white;
             opacity: 0;
+            font-size: 18px;
+            z-index: 99999;
             transition: opacity 0.4s ease;
         }
 
-        #debugPanel {
+        /* Popup meni */
+        #subtitleMenu, #audioMenu {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.6);
-            color: #0f0;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            max-width: 60%;
-            max-height: 30%;
-            overflow-y: auto;
-            display: none;
-            z-index: 200000;
-        }
-
-        /* SUBTITLE MENU POPUP */
-        #subtitleMenu {
-            position: absolute;
-            top: 100px;
-            right: 100px;
-            width: 350px;
+            top: 80px;
+            right: 80px;
+            width: 360px;
             max-height: 65%;
             overflow-y: auto;
             background: rgba(0,0,0,0.85);
-            border: 2px solid #fff;
+            border: 2px solid white;
             border-radius: 12px;
-            display: none;
             padding: 15px;
-            color: #fff;
-            z-index: 200000;
+            color: white;
+            display: none;
+            z-index: 99999;
         }
 
         .menuTitle {
-            font-size: 20px;
-            margin-bottom: 12px;
+            font-size: 22px;
             font-weight: bold;
+            margin-bottom: 12px;
         }
 
         .menuItem {
             padding: 10px;
-            margin: 4px 0;
+            margin: 5px 0;
             background: #222;
             border-radius: 6px;
             cursor: pointer;
@@ -125,6 +90,11 @@
         .menuItem:hover {
             background: #444;
         }
+
+        #player {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 
@@ -132,37 +102,34 @@
 
 <div id="loadingScreen">
     <div class="spinner"></div>
-    <div id="loadingText">Učitavam YouFlix player...</div>
+    <div style="margin-top:20px;font-size:18px;">Učitavam YouFlix player...</div>
 </div>
 
 <div id="toastBox"></div>
 
-<div id="playerContainer">
-    <div id="player"></div>
-</div>
+<div id="player"></div>
 
 <div id="subtitleMenu"></div>
-
-<div id="debugPanel"></div>
+<div id="audioMenu"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ============================================================
-   PARAMETERS FROM ANDROID
-============================================================ */
+/* ================================================================
+   PARAMETRI IZ ANDROID PlayerActivity
+================================================================ */
 const params = new URLSearchParams(window.location.search);
+const VIDEO_ID = params.get("videoId");
+const USER_LANG = params.get("lang") || "en";
+const XML_URL   = params.get("xml");  // NOVI PARAMETAR
 
-const VIDEO_ID    = params.get("videoId") || null;
-const USER_LANG   = params.get("lang") || "en";
-const DEBUG_MODE  = params.get("debug") === "1";
+if (!VIDEO_ID || !XML_URL) {
+    alert("Missing parameters videoId/xml");
+}
 
-log("VIDEO = " + VIDEO_ID);
-log("USER_LANG = " + USER_LANG);
-
-/* ============================================================
-   43 SUPPORTED LANGUAGES (MUST MATCH ANDROID)
-============================================================ */
+/* ================================================================
+   43 PODRŽANA JEZIKA
+================================================================ */
 const SUPPORTED = [
     "sr","bs","hr","me",
     "mk","sl","sq","bg","ro","hu",
@@ -173,157 +140,165 @@ const SUPPORTED = [
     "zh","ja","ko","vi","id","ms","th"
 ];
 
-/* ============================================================
-   EXTENDED RELATED LANGUAGE GROUPS
-============================================================ */
+/* ================================================================
+   RELATED GRUPE (tvoj zahtev)
+================================================================ */
 const RELATED = {
-    /* Ex-YU */
     "sr": ["bs","hr","me"],
     "bs": ["sr","hr","me"],
     "hr": ["sr","bs","me"],
     "me": ["sr","bs","hr"],
 
-    /* Central Slavic */
     "sk": ["cs"],
     "cs": ["sk"],
     "sl": ["hr","sr"],
     "pl": ["cs","sk"],
 
-    /* Scandinavian */
     "da": ["sv","no"],
     "sv": ["da","no","is"],
     "no": ["sv","da"],
     "is": ["sv"],
 
-    /* Balkan East */
     "mk": ["bg","sr"],
     "bg": ["mk","sr"],
 
-    /* East Europe */
     "uk": ["ru"],
     "ru": ["uk"],
 
-    /* Turkish */
     "tr": ["az"],
 
-    /* Romance */
     "fr": ["es","it","pt"],
     "es": ["fr","pt","it"],
     "pt": ["es","fr","it"],
     "it": ["es","fr","pt"],
 
-    /* East Asian */
     "zh": ["ja","ko"],
     "ja": ["zh","ko"],
     "ko": ["zh","ja"]
 };
 
-/* ============================================================
-   SUBTITLE SELECTION LOGIC
-============================================================ */
-function pickSubtitle(available, lang) {
-    log("Available subs: " + available.join(", "));
+/* ================================================================
+   GLOBALNE LISTE IZ XML-a
+================================================================ */
+let xmlSubs = [];
+let xmlAudio = [];
 
-    // 1) direct match
-    if (available.includes(lang)) return lang;
+/* ================================================================
+   UČITAVANJE XML-a I PRONAĐI VIDEO
+================================================================ */
+function loadXML() {
+    return fetch(XML_URL)
+        .then(r => r.text())
+        .then(str => (new window.DOMParser()).parseFromString(str, "text/xml"))
+        .then(xml => {
+            const movies = [...xml.getElementsByTagName("movie")];
 
-    // 2) related languages
+            for (let m of movies) {
+                let vid = m.getElementsByTagName("videoId")[0]?.textContent.trim();
+
+                if (vid === VIDEO_ID) {
+                    xmlSubs = [...m.getElementsByTagName("available_subtitles")[0].getElementsByTagName("sub")]
+                             .map(s => s.textContent.trim());
+
+                    xmlAudio = [...m.getElementsByTagName("available_audio")[0].getElementsByTagName("audio")]
+                             .map(a => a.textContent.trim());
+
+                    return true;
+                }
+            }
+            return false;
+        })
+        .catch(err => {
+            console.error("XML ERROR:", err);
+            return false;
+        });
+}
+
+/* ================================================================
+   AUTO-PICK SUBTITLE (XML primary)
+================================================================ */
+function chooseSubtitle() {
+    const lang = USER_LANG;
+
+    // 1 — Direct match
+    if (xmlSubs.includes(lang)) return lang;
+
+    // 2 — Related
     if (RELATED[lang]) {
         for (let r of RELATED[lang]) {
-            if (available.includes(r)) return r;
+            if (xmlSubs.includes(r)) return r;
         }
     }
 
-    // 3) auto-translate base (English)
-    if (available.includes("en")) return "auto-en";
+    // 3 — Auto translate EN -> USER_LANG
+    if (xmlSubs.includes("en")) return "auto-en";
 
-    // 4) none
+    // 4 — No subs
     return null;
 }
 
-/* ============================================================
-   YOUTUBE API READY
-============================================================ */
+/* ================================================================
+   YOUTUBE PLAYER
+================================================================ */
 let player = null;
-let tracks = [];
-let chosen = null;
 
 function onYouTubeIframeAPIReady() {
-    if (!VIDEO_ID) {
-        toast("Nedostaje video ID");
-        return;
-    }
-
     player = new YT.Player("player", {
+        videoId: VIDEO_ID,
         width: "100%",
         height: "100%",
-        videoId: VIDEO_ID,
         playerVars: {
             autoplay: 1,
             controls: 1,
             fs: 1,
             cc_load_policy: 1,
-            enablejsapi: 1,
             iv_load_policy: 3,
-            rel: 0,
-            hl: USER_LANG
+            rel: 0
         },
         events: {
-            onReady: onReady,
-            onError: onError
+            onReady: applySubtitle
         }
     });
 }
 
-/* ============================================================
-   PLAYER READY → detect subtitles
-============================================================ */
-function onReady() {
-    setTimeout(() => {
-        try {
-            tracks = player.getOption("captions", "tracklist") || [];
-        } catch(e) { log("Tracklist error: " + e); }
+function applySubtitle() {
+    const choice = chooseSubtitle();
 
-        let langs = tracks.map(t => t.languageCode);
-        chosen = pickSubtitle(langs, USER_LANG);
-
-        if (!chosen) {
-            toast("Nema titlova");
-        } else if (chosen === "auto-en") {
-            player.setOption("captions", "track", { languageCode: "en" });
-            player.setOption("captions", "translate", USER_LANG);
-        } else {
-            player.setOption("captions", "track", { languageCode: chosen });
-        }
-
+    if (!choice) {
+        toast("Nema titlova");
         hideLoading();
-    }, 800);
+        return;
+    }
+
+    if (choice === "auto-en") {
+        player.setOption("captions", "track", { languageCode: "en" });
+        player.setOption("captions", "translate", USER_LANG);
+        toast("Auto → " + USER_LANG);
+    } else {
+        player.setOption("captions", "track", { languageCode: choice });
+        toast("Titl: " + choice);
+    }
+
+    hideLoading();
 }
 
-/* ============================================================
-   SUBTITLE MENU (ArrowUp)
-============================================================ */
+/* ================================================================
+   SUBTITLE MENU (UP)
+================================================================ */
 function openSubtitleMenu() {
     const menu = document.getElementById("subtitleMenu");
-    menu.innerHTML = "";
+    let html = `<div class='menuTitle'>Titlovi</div>`;
 
-    const langs = tracks.map(t => t.languageCode);
-
-    let html = `<div class="menuTitle">Titlovi</div>`;
-
-    // Direct tracks
-    langs.forEach(l => {
-        html += `<div class="menuItem" onclick="setSub('${l}')">${l}</div>`;
+    xmlSubs.forEach(s => {
+        html += `<div class='menuItem' onclick='setSub("${s}")'>${s}</div>`;
     });
 
-    // Auto translate options
-    html += `<div class="menuTitle" style="margin-top:10px;">Auto Translate</div>`;
-    SUPPORTED.forEach(l => {
-        html += `<div class="menuItem" onclick="autoTranslate('${l}')">auto → ${l}</div>`;
+    html += `<div class='menuTitle' style='margin-top:10px;'>Auto Translate</div>`;
+    SUPPORTED.forEach(s => {
+        html += `<div class='menuItem' onclick='autoTranslate("${s}")'>auto → ${s}</div>`;
     });
 
-    // Off
-    html += `<div class="menuItem" onclick="subOff()">Isključi titlove</div>`;
+    html += `<div class='menuItem' onclick='subOff()'>Isključi titlove</div>`;
 
     menu.innerHTML = html;
     menu.style.display = "block";
@@ -332,92 +307,112 @@ function openSubtitleMenu() {
 function setSub(lang) {
     player.setOption("captions", "track", { languageCode: lang });
     toast("Titl: " + lang);
-    closeMenu();
+    closeMenus();
 }
 
 function autoTranslate(lang) {
     player.setOption("captions", "track", { languageCode: "en" });
     player.setOption("captions", "translate", lang);
-    toast("Auto prevod → " + lang);
-    closeMenu();
+    toast("Auto → " + lang);
+    closeMenus();
 }
 
 function subOff() {
     player.setOption("captions", "track", {});
-    toast("Titlovi isključeni");
-    closeMenu();
+    toast("Titlovi off");
+    closeMenus();
 }
 
-function closeMenu() {
-    document.getElementById("subtitleMenu").style.display = "none";
+/* ================================================================
+   AUDIO MENU (DOWN)
+================================================================ */
+function openAudioMenu() {
+    const menu = document.getElementById("audioMenu");
+    let html = `<div class='menuTitle'>Audio</div>`;
+
+    xmlAudio.forEach(a => {
+        html += `<div class='menuItem' onclick='setAudio("${a}")'>${a}</div>`;
+    });
+
+    menu.innerHTML = html;
+    menu.style.display = "block";
 }
 
-/* ============================================================
-   DPAD REMOTE CONTROL
-============================================================ */
-document.addEventListener("keydown", (e) => {
+function setAudio(track) {
+    player.setOption("captions", "audioTrack", track);
+    toast("Audio: " + track);
+    closeMenus();
+}
 
-    switch(e.key) {
-
+/* ================================================================
+   DPAD REMOTE
+================================================================ */
+document.addEventListener("keydown", e => {
+    switch (e.key) {
         case "ArrowLeft":
-            try { player.seekTo(Math.max(0, player.getCurrentTime() - 20), true);}catch(e){}
+            player.seekTo(Math.max(0, player.getCurrentTime() - 20), true);
             e.preventDefault();
             break;
 
         case "ArrowRight":
-            try { player.seekTo(player.getCurrentTime() + 20, true);}catch(e){}
+            player.seekTo(player.getCurrentTime() + 20, true);
             e.preventDefault();
             break;
 
         case "Enter":
-            try {
-                let s = player.getPlayerState();
-                if (s === 1) player.pauseVideo();
-                else player.playVideo();
-            } catch(e){}
+            let s = player.getPlayerState();
+            if (s === 1) player.pauseVideo();
+            else player.playVideo();
             e.preventDefault();
             break;
 
         case "ArrowUp":
+            closeMenus();
             openSubtitleMenu();
             e.preventDefault();
             break;
 
         case "ArrowDown":
-            try {
-                player.getIframe().contentWindow.postMessage(
-                    JSON.stringify({event:"command",func:"showControls",args:[true]}),"*"
-                );
-            }catch(e){}
+            closeMenus();
+            openAudioMenu();
             e.preventDefault();
             break;
     }
 });
 
-/* ============================================================
-   UTILITY FUNCTIONS
-============================================================ */
-function hideLoading(){
+function closeMenus() {
+    document.getElementById("subtitleMenu").style.display = "none";
+    document.getElementById("audioMenu").style.display = "none";
+}
+
+/* ================================================================
+   HELPERS
+================================================================ */
+function hideLoading() {
     document.getElementById("loadingScreen").style.display = "none";
 }
 
 let toastTimer = null;
-function toast(msg){
+function toast(msg) {
     const box = document.getElementById("toastBox");
     box.innerHTML = msg;
     box.style.opacity = 1;
 
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=>{ box.style.opacity = 0; }, 3000);
+    toastTimer = setTimeout(() => {
+        box.style.opacity = 0;
+    }, 2500);
 }
 
-function log(m){
-    if (!DEBUG_MODE) return;
-    const p = document.getElementById("debugPanel");
-    p.style.display = "block";
-    p.innerHTML += m + "<br>";
-}
-
+/* ================================================================
+   START
+================================================================ */
+loadXML().then(ok => {
+    if (!ok) {
+        toast("XML error");
+        hideLoading();
+    }
+});
 </script>
 
 </body>
