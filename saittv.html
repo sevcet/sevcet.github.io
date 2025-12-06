@@ -19,10 +19,8 @@
         /* Loading */
         #loadingScreen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: #000;
             display: flex;
             flex-direction: column;
@@ -33,62 +31,83 @@
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
             border: 5px solid #444;
             border-top: 5px solid #ff4444;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin { 
-            0% { transform: rotate(0deg);} 
-            100% { transform: rotate(360deg);} 
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg);} }
 
-        #loadingText { margin-top: 20px; font-size: 18px; }
+        #playerContainer { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+        #player { width:100%; height:100%; }
 
-        /* Player */
-        #playerContainer {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1;
-        }
-
-        #player { width: 100%; height: 100%; }
-
-        /* Toast */
         #toastBox {
             position: absolute;
-            top: 40px;
-            left: 50%;
+            top: 40px; left: 50%;
             transform: translateX(-50%);
             background: rgba(20,20,20,0.9);
             color: white;
             padding: 14px 26px;
             border-radius: 10px;
             font-size: 18px;
-            z-index: 100000;
             opacity: 0;
-            transition: opacity .4s ease;
+            transition: opacity 0.4s;
+            z-index: 100000;
         }
 
-        /* Debug */
-        #debugPanel {
+        /* Subtitle Menu */
+        #subtitleMenu {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,.6);
-            color: #0f0;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            max-width: 60%;
-            max-height: 30%;
-            overflow-y: auto;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 420px;
+            max-height: 65%;
+            background: rgba(0,0,0,0.85);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
             display: none;
+            flex-direction: column;
             z-index: 100000;
+        }
+
+        #subtitleMenu h2 {
+            margin: 0 0 10px 0;
+            font-size: 22px;
+            text-align: center;
+        }
+
+        #subtitleList {
+            margin-top: 10px;
+            overflow-y: auto;
+            max-height: 70%;
+        }
+
+        .subItem {
+            padding: 12px;
+            margin-bottom: 6px;
+            font-size: 18px;
+            background: #222;
+            border-radius: 8px;
+        }
+
+        .subItem.focused {
+            background: #ff4444;
+        }
+
+        #debugPanel {
+            position: absolute; bottom:20px; left:20px;
+            background: rgba(0,0,0,0.6);
+            color:#0f0;
+            padding:12px 18px;
+            border-radius:8px;
+            font-size:14px;
+            max-width:60%; max-height:30%;
+            overflow-y:auto;
+            display:none;
+            z-index:100000;
         }
     </style>
 </head>
@@ -101,36 +120,35 @@
 </div>
 
 <div id="toastBox"></div>
+
 <div id="playerContainer"><div id="player"></div></div>
+
+<div id="subtitleMenu">
+    <h2>Subtitles</h2>
+    <div id="subtitleList"></div>
+</div>
+
 <div id="debugPanel"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 /* ============================================================
-   URL Parametri iz Android WebView
+   PARAMS
 ============================================================ */
 const urlParams = new URLSearchParams(window.location.search);
-
-const VIDEO_ID = urlParams.get("videoId") || null;
+const VIDEO_ID = urlParams.get("videoId");
 const USER_LANG = urlParams.get("lang") || "en";
-const DEBUG_ENABLED = urlParams.get("debug") === "1";
+const DEBUG = urlParams.get("debug") === "1";
 
-logDebug("VIDEO = " + VIDEO_ID);
-logDebug("USER_LANG = " + USER_LANG);
+log("HTML Loaded");
+log("VIDEO = " + VIDEO_ID);
+log("USER_LANG = " + USER_LANG);
 
-/* 43 podržana jezika */
-const SUPPORTED_LANGUAGES = [
-    "sr","bs","hr","me","mk","sl","sq","bg","ro","hu",
-    "en","de","fr","es","it","pt",
-    "nl","pl","cs","sk","da","sv","fi","no","is",
-    "et","lv","lt","uk","ru","tr","el",
-    "ar","fa","hi","bn",
-    "zh","ja","ko","vi","id","ms","th"
-];
-
-/* Srodni jezici */
-const RELATED_LANG = {
+/* ============================================================
+   SUBTITLE GROUPS
+============================================================ */
+const RELATED = {
     "sr": ["bs","hr","me"],
     "bs": ["sr","hr","me"],
     "hr": ["sr","bs","me"],
@@ -139,39 +157,19 @@ const RELATED_LANG = {
     "cs": ["sk"]
 };
 
-function selectSubtitleTrack(availableSubs, requestedLang) {
-
-    logDebug("Available subs: " + availableSubs.join(", "));
-
-    if (availableSubs.includes(requestedLang)) return requestedLang;
-
-    if (RELATED_LANG[requestedLang]) {
-        for (let rel of RELATED_LANG[requestedLang]) {
-            if (availableSubs.includes(rel)) return rel;
-        }
-    }
-
-    if (availableSubs.includes("en")) return "auto-en";
-
-    return null;
-}
-
 /* ============================================================
-   YT Iframe API
+   PLAYER
 ============================================================ */
 let player = null;
-let chosenSubtitle = null;
+let availableSubs = [];
+let currentIndex = 0;
+let menuOpen = false;
 
 function onYouTubeIframeAPIReady() {
-
-    if (!VIDEO_ID) {
-        showToast("Video ID nedostaje");
-        return;
-    }
+    if (!VIDEO_ID) return;
 
     player = new YT.Player("player", {
-        height: "100%",
-        width: "100%",
+        height: "100%", width: "100%",
         videoId: VIDEO_ID,
         playerVars: {
             autoplay: 1,
@@ -180,150 +178,248 @@ function onYouTubeIframeAPIReady() {
             rel: 0,
             enablejsapi: 1,
             cc_load_policy: 1,
-            iv_load_policy: 3,
             hl: USER_LANG
         },
         events: {
             onReady: onReady,
-            onStateChange: onStateChange,
-            onError: onError
+            onError: e => log("YT ERROR: " + JSON.stringify(e))
         }
     });
 }
 
-function onReady() {
-    let tracks = [];
-
-    try {
-        tracks = player.getOption("captions", "tracklist") || [];
-    } catch (e) {
-        logDebug("Tracks ERROR: " + e);
-    }
-
-    const subs = tracks.map(t => t.languageCode);
-    chosenSubtitle = selectSubtitleTrack(subs, USER_LANG);
-
-    if (!chosenSubtitle) {
-        logDebug("No subtitles available");
-    } else if (chosenSubtitle === "auto-en") {
-        setTimeout(() => {
-            player.setOption("captions", "track", { languageCode: "en" });
-            player.setOption("captions", "translate", USER_LANG);
-        }, 500);
-    } else {
-        setTimeout(() => {
-            player.setOption("captions", "track", { languageCode: chosenSubtitle });
-        }, 500);
-    }
-
-    hideLoading();
-}
-
-function onStateChange(e) {
-    if (e.data === YT.PlayerState.PLAYING) hideLoading();
-}
-
-function onError(e) {
-    showToast("Greška pri reprodukciji");
-    logDebug(JSON.stringify(e));
-}
-
 /* ============================================================
-   SIMULIRANI KLIK NA YOUTUBE SETTINGS IKONICU (UP)
+   ON READY
 ============================================================ */
-function openYouTubeSettings() {
+function onReady() {
+    hideLoading();
 
-    try {
-        const iframe = player.getIframe();
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
+    setTimeout(() => {
+        let tracks = [];
 
-        // setovanje izgleda YouTube settings dugmeta
-        const btn = doc.querySelector(".ytp-settings-button");
+        try {
+            tracks = player.getOption("captions", "tracklist") || [];
+        } catch {}
 
-        if (btn) {
-            btn.click();
-            logDebug("Settings opened via CLICK");
-            return;
+        availableSubs = tracks.map(t => t.languageCode);
+
+        if (availableSubs.length === 0) {
+            showToast("No subtitles available");
         }
 
-        logDebug("Settings button NOT FOUND");
-    } catch (err) {
-        logDebug("Settings click error: " + err);
+        loadInitialSubtitle();
+        buildSubtitleMenuUI();
+
+    }, 800);
+}
+
+/* ======================= SELECT INITIAL ====================== */
+function loadInitialSubtitle() {
+    if (availableSubs.includes(USER_LANG)) {
+        setSubtitle(USER_LANG);
+        return;
+    }
+
+    if (RELATED[USER_LANG]) {
+        for (let r of RELATED[USER_LANG]) {
+            if (availableSubs.includes(r)) {
+                setSubtitle(r);
+                return;
+            }
+        }
+    }
+
+    if (availableSubs.includes("en")) {
+        setAutoTranslate(USER_LANG);
+        return;
     }
 }
 
-/* ============================================================
-   Remote Control – LEVO / DESNO / OK / DOWN / UP
-============================================================ */
-document.addEventListener("keydown", (e) => {
+/* ============================ MENU UI ========================= */
+function buildSubtitleMenuUI() {
+    const list = document.getElementById("subtitleList");
+    list.innerHTML = "";
 
+    availableSubs.forEach(lang => {
+        const item = document.createElement("div");
+        item.className = "subItem";
+        item.innerText = lang;
+        list.appendChild(item);
+    });
+
+    const auto = document.createElement("div");
+    auto.className = "subItem";
+    auto.innerText = "Auto-translate → " + USER_LANG;
+    auto.dataset.auto = "1";
+    list.appendChild(auto);
+
+    const off = document.createElement("div");
+    off.className = "subItem";
+    off.innerText = "Turn off subtitles";
+    off.dataset.off = "1";
+    list.appendChild(off);
+}
+
+/* =========================== SHOW MENU ======================== */
+function openMenu() {
+    document.getElementById("subtitleMenu").style.display = "flex";
+    menuOpen = true;
+    focusItem(0);
+}
+
+/* =========================== CLOSE MENU ======================= */
+function closeMenu() {
+    document.getElementById("subtitleMenu").style.display = "none";
+    menuOpen = false;
+}
+
+/* =========================== FOCUS HANDLING =================== */
+function focusItem(i) {
+    const items = document.querySelectorAll(".subItem");
+    items.forEach(x => x.classList.remove("focused"));
+    items[i].classList.add("focused");
+    currentIndex = i;
+}
+
+/* ============================ APPLY SUB ======================= */
+function applyCurrentItem() {
+    const item = document.querySelectorAll(".subItem")[currentIndex];
+
+    if (item.dataset.auto === "1") {
+        setAutoTranslate(USER_LANG);
+        showToast("Auto-translate → " + USER_LANG);
+    }
+    else if (item.dataset.off === "1") {
+        disableSub();
+        showToast("Subtitles off");
+    }
+    else {
+        setSubtitle(item.innerText);
+        showToast("Subtitle: " + item.innerText);
+    }
+
+    closeMenu();
+}
+
+/* ============================ SET SUB ========================= */
+function setSubtitle(code) {
+    try {
+        player.setOption("captions", "track", { languageCode: code });
+    } catch {}
+}
+
+function disableSub() {
+    try {
+        player.setOption("captions", "track", {});
+    } catch {}
+}
+
+function setAutoTranslate(toLang) {
+    try {
+        player.setOption("captions", "track", { languageCode: "en" });
+        player.setOption("captions", "translate", toLang);
+    } catch {}
+}
+
+/* ============================================================
+   REMOTE CONTROL (DPAD)
+============================================================ */
+document.addEventListener("keydown", e => {
+
+    /* MENU MODE */
+    if (menuOpen) {
+        switch (e.key) {
+            case "ArrowUp":
+                focusItem(Math.max(0, currentIndex - 1));
+                break;
+
+            case "ArrowDown":
+                const max = document.querySelectorAll(".subItem").length - 1;
+                focusItem(Math.min(max, currentIndex + 1));
+                break;
+
+            case "Enter":
+            case "OK":
+                applyCurrentItem();
+                break;
+
+            case "Backspace":
+            case "Escape":
+                closeMenu();
+                break;
+        }
+        e.preventDefault();
+        return;
+    }
+
+    /* NORMAL MODE */
     switch (e.key) {
 
-        /* ← minus 20 sekundi */
+        /* Skip backward */
         case "ArrowLeft":
-            try { player.seekTo(Math.max(0, player.getCurrentTime() - 20), true); } catch(e){}
+            try { player.seekTo(Math.max(0, player.getCurrentTime() - 20), true);} catch {}
             e.preventDefault();
-        break;
+            break;
 
-        /* → plus 20 sekundi */
+        /* Skip forward */
         case "ArrowRight":
-            try { player.seekTo(player.getCurrentTime() + 20, true); } catch(e){}
+            try { player.seekTo(player.getCurrentTime() + 20, true);} catch {}
             e.preventDefault();
-        break;
+            break;
 
-        /* OK = play/pause */
+        /* OPEN SUBTITLE MENU */
+        case "ArrowUp":
+            openMenu();
+            e.preventDefault();
+            break;
+
+        /* Show controls */
+        case "ArrowDown":
+            try {
+                player.getIframe().contentWindow.postMessage(JSON.stringify({
+                    event:"command",
+                    func:"showControls",
+                    args:[true]
+                }), "*");
+            } catch {}
+            e.preventDefault();
+            break;
+
+        /* Play/Pause */
         case "Enter":
         case "OK":
             try {
-                const s = player.getPlayerState();
-                if (s === 1) player.pauseVideo();
+                const st = player.getPlayerState();
+                if (st === 1) player.pauseVideo();
                 else player.playVideo();
-            } catch(e){}
+            } catch {}
             e.preventDefault();
-        break;
-
-        /* ↓ = Show controls */
-        case "ArrowDown":
-            try {
-                player.getIframe().contentWindow.postMessage(
-                    JSON.stringify({ event:"command", func:"showControls", args:[true] }),
-                    "*"
-                );
-            } catch(e){}
-            e.preventDefault();
-        break;
-
-        /* ↑ = OTVORI SETTINGS (CLICK METOD!) */
-        case "ArrowUp":
-            openYouTubeSettings();
-            e.preventDefault();
-        break;
+            break;
     }
 });
 
 /* ============================================================
-   Helpers
+   UI HELPERS
 ============================================================ */
 function hideLoading() {
-    const l = document.getElementById("loadingScreen");
-    if (l) l.style.display = "none";
+    const el = document.getElementById("loadingScreen");
+    if (el) el.style.display = "none";
 }
 
-let toastTimeout = null;
 function showToast(t) {
-    const b = document.getElementById("toastBox");
-    b.innerText = t;
-    b.style.opacity = 1;
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => b.style.opacity = 0, 3000);
+    const box = document.getElementById("toastBox");
+    box.innerText = t;
+    box.style.opacity = 1;
+
+    setTimeout(() => { box.style.opacity = 0; }, 3000);
 }
 
-function logDebug(msg) {
-    if (!DEBUG_ENABLED) return;
+function log(m) {
+    if (!DEBUG) return;
     const p = document.getElementById("debugPanel");
     p.style.display = "block";
-    p.innerHTML += msg + "<br>";
+    p.innerHTML += m + "<br>";
 }
+
 </script>
 
 </body>
