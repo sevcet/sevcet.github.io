@@ -164,6 +164,59 @@ function applySubtitles(){
     document.getElementById("loading").style.display = "none";
 }
 </script>
+/* =======================================================================
+   REMOVE YouTube dark overlay (ads dimming) – FULL FIX
+   ======================================================================= */
+function removeDarkOverlay() {
+    try {
+        const selectors = [
+            ".ytp-ad-player-overlay",
+            ".ytp-ad-overlay-slot",
+            ".ytp-ad-text-overlay",
+            ".ytp-ad-image-overlay",
+            ".ytp-ad-preview-container",
+            ".ytp-ad-progress-list",
+            ".ytp-ad-overlay-container",
+            ".ytp-ad-message-container",
+            ".video-ads",
+            ".ytp-paid-content-overlay",
+            ".ytp-preview-ad",
+            ".ytp-ad-bottom-bar",
+            ".ytp-ad-skip-button-slot"
+        ];
+
+        selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                el.style.display = "none";
+                el.style.opacity = "0";
+                el.remove();
+            });
+        });
+
+        // YouTube ubaci ponekad veliki crni DIV preko celog ekrana
+        const blockers = document.querySelectorAll("div");
+        blockers.forEach(div => {
+            const cs = getComputedStyle(div);
+            if (
+                cs.backgroundColor === "rgb(0, 0, 0)" &&
+                parseInt(cs.zIndex) > 100 &&
+                div.clientHeight > window.innerHeight / 2
+            ) {
+                div.style.display = "none";
+                div.remove();
+            }
+        });
+
+    } catch (e) { console.log("Overlay remover error:", e); }
+}
+
+/* Run every 300ms (sigurno skida sve slojeve) */
+setInterval(removeDarkOverlay, 300);
+
+/* Takođe pozovi odmah posle učitavanja videa */
+document.addEventListener("DOMContentLoaded", removeDarkOverlay);
+window.addEventListener("load", removeDarkOverlay);
+
 
 </body>
 </html>
