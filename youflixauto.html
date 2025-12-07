@@ -19,6 +19,7 @@
         position:absolute;
         top:0; left:0;
         width:100%; height:100%;
+        z-index:1;
     }
 
     #loading {
@@ -102,65 +103,26 @@ const VIDEO_ID = params.get("videoId");
 const USER_LANG = (params.get("lang") || "en").toLowerCase();
 
 /* ============================================================
-   FULL LANGUAGE NAME MAP (puni nazivi)
+   FULL LANGUAGE NAME MAP
 ============================================================ */
 const LANG_NAMES = {
-    "en":"English",
-    "sr":"Serbian",
-    "bs":"Bosnian",
-    "hr":"Croatian",
-    "me":"Montenegrin",
-    "sl":"Slovenian",
-    "mk":"Macedonian",
-    "sq":"Albanian",
-    "bg":"Bulgarian",
-    "ro":"Romanian",
-    "hu":"Hungarian",
-    "sk":"Slovak",
-    "cs":"Czech",
-    "pl":"Polish",
-    "fr":"French",
-    "es":"Spanish",
-    "it":"Italian",
-    "pt":"Portuguese",
-    "de":"German",
-    "nl":"Dutch",
-    "da":"Danish",
-    "sv":"Swedish",
-    "fi":"Finnish",
-    "no":"Norwegian",
-    "is":"Icelandic",
-    "et":"Estonian",
-    "lv":"Latvian",
-    "lt":"Lithuanian",
-    "uk":"Ukrainian",
-    "ru":"Russian",
-    "tr":"Turkish",
-    "el":"Greek",
-    "ar":"Arabic",
-    "fa":"Persian",
-    "hi":"Hindi",
-    "bn":"Bengali",
-    "zh":"Chinese",
-    "ja":"Japanese",
-    "ko":"Korean",
-    "vi":"Vietnamese",
-    "id":"Indonesian",
-    "ms":"Malay",
-    "th":"Thai"
+    "en":"English","sr":"Serbian","bs":"Bosnian","hr":"Croatian","me":"Montenegrin",
+    "sl":"Slovenian","mk":"Macedonian","sq":"Albanian","bg":"Bulgarian",
+    "ro":"Romanian","hu":"Hungarian","sk":"Slovak","cs":"Czech","pl":"Polish",
+    "fr":"French","es":"Spanish","it":"Italian","pt":"Portuguese","de":"German",
+    "nl":"Dutch","da":"Danish","sv":"Swedish","fi":"Finnish","no":"Norwegian",
+    "is":"Icelandic","et":"Estonian","lv":"Latvian","lt":"Lithuanian",
+    "uk":"Ukrainian","ru":"Russian","tr":"Turkish","el":"Greek","ar":"Arabic",
+    "fa":"Persian","hi":"Hindi","bn":"Bengali","zh":"Chinese","ja":"Japanese",
+    "ko":"Korean","vi":"Vietnamese","id":"Indonesian","ms":"Malay","th":"Thai"
 };
 
 /* ============================================================
-   RELATED LANGUAGE FALLBACK
+   RELATED LANGUAGES
 ============================================================ */
 const RELATED = {
-    "sr":["bs","hr","me"],
-    "bs":["sr","hr","me"],
-    "hr":["sr","bs","me"],
-    "me":["sr","bs","hr"],
-    "sk":["cs"], "cs":["sk"],
-    "sl":["hr","sr"],
-    "pl":["cs","sk"],
+    "sr":["bs","hr","me"], "bs":["sr","hr","me"], "hr":["sr","bs","me"], "me":["sr","bs","hr"],
+    "sk":["cs"], "cs":["sk"], "sl":["hr","sr"], "pl":["cs","sk"],
     "da":["sv","no"], "sv":["da","no","is"], "no":["sv","da"], "is":["sv"],
     "mk":["bg","sr"], "bg":["mk","sr"],
     "uk":["ru"], "ru":["uk"],
@@ -182,7 +144,8 @@ function onYouTubeIframeAPIReady(){
         playerVars:{
             autoplay:1, controls:1, rel:0, fs:1,
             hl:USER_LANG,
-            iv_load_policy:3
+            iv_load_policy:3,
+            modestbranding:1
         },
         events:{
             onReady:onReady,
@@ -205,7 +168,7 @@ function onState(e){
 }
 
 /* ============================================================
-   DETECT + APPLY SUBTITLE AUTOMATICALLY
+   SUBTITLE DETECTION + AUTO LOGIC
 ============================================================ */
 function detectSubs(){
     let tracks = [];
@@ -220,17 +183,13 @@ function applySubtitleLogic(){
     let lang = USER_LANG;
 
     const last = localStorage.getItem("lastSub");
-
     if (last && availableSubs.includes(last)){
         lang = last;
     }
     else if (!availableSubs.includes(lang)){
         if (RELATED[lang]){
             for (let r of RELATED[lang]){
-                if (availableSubs.includes(r)){
-                    lang = r;
-                    break;
-                }
+                if (availableSubs.includes(r)){ lang = r; break; }
             }
         }
     }
@@ -282,7 +241,6 @@ function updateFocus(){
 
     if (items[menuIndex]){
         items[menuIndex].classList.add("focused");
-
         document.getElementById("subtitleMenu").scrollTo({
             top: items[menuIndex].offsetTop - 140,
             behavior:"smooth"
@@ -305,36 +263,24 @@ function activateItem(){
 }
 
 /* ============================================================
-   DPAD REMOTE
+   DPAD REMOTE CONTROL — HYBRID MODE
 ============================================================ */
 document.addEventListener("keydown", e => {
 
     if (menuOpen){
         const items = document.querySelectorAll(".menuItem");
 
-        if (e.key === "ArrowUp"){
-            menuIndex = Math.max(0, menuIndex - 1);
-            updateFocus();
-            return;
-        }
-        if (e.key === "ArrowDown"){
-            menuIndex = Math.min(items.length - 1, menuIndex + 1);
-            updateFocus();
-            return;
-        }
-        if (e.key === "Enter"){
-            activateItem();
-            return;
-        }
-        if (e.key === "Backspace" || e.key === "Escape"){
-            closeSubtitleMenu();
-            return;
-        }
+        if (e.key === "ArrowUp"){ menuIndex = Math.max(0, menuIndex - 1); updateFocus(); return; }
+        if (e.key === "ArrowDown"){ menuIndex = Math.min(items.length - 1, menuIndex + 1); updateFocus(); return; }
+        if (e.key === "Enter"){ activateItem(); return; }
+        if (e.key === "Backspace" || e.key === "Escape"){ closeSubtitleMenu(); return; }
         return;
     }
 
     switch(e.key){
+
         case "ArrowUp":
+            e.preventDefault();
             openSubtitleMenu();
             break;
 
