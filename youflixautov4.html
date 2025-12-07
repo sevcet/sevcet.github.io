@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouFlix Player v4</title>
+
+<style>
+    html, body {
+        margin:0; padding:0;
+        width:100%; height:100%;
+        background:#000;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
+    }
+
+    #player {
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
+        z-index:1;
+    }
+
+    #loading {
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
+        background:black;
+        color:white;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        flex-direction:column;
+        z-index:9999;
+    }
+
+    #subtitleMenu {
+        position:absolute;
+        top:120px;
+        right:120px;
+        width:430px;
+        max-height:62%;
+        overflow-y:auto;
+        background:rgba(0,0,0,0.88);
+        border:2px solid #fff;
+        border-radius:12px;
+        padding:12px;
+        color:white;
+        display:none;
+        z-index:99999;
+        font-size:22px;
+    }
+
+    .menuItem {
+        padding:12px;
+        background:#222;
+        border-radius:6px;
+        margin-bottom:8px;
+    }
+
+    .menuItem.focused {
+        background:#666;
+        border:2px solid white;
+    }
+
+    #toast {
+        position:absolute;
+        top:40px;
+        left:50%;
+        transform:translateX(-50%);
+        background:rgba(20,20,20,0.85);
+        color:white;
+        padding:12px 25px;
+        border-radius:12px;
+        font-size:22px;
+        opacity:0;
+        transition:opacity .3s;
+        z-index:99999;
+    }
+</style>
+
+</head>
+
+<body>
+
+<div id="loading">
+    <div style="border:5px solid #444;border-top:5px solid red;width:55px;height:55px;border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <div style="margin-top:20px;font-size:22px;">Loading video...</div>
+</div>
+
+<div id="toast"></div>
+<div id="subtitleMenu"></div>
+<div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+/* ============================================================
+   PARAMETERS
+============================================================ */
+const params = new URLSearchParams(window.location.search);
+const VIDEO_ID = params.get("videoId");
+const USER_LANG = (params.get("lang") || "en").toLowerCase();
+
+/* ============================================================
+   FULL LANGUAGE NAMES
+============================================================ */
+const LANG_NAMES = {
+   "en":"English","sr":"Serbian","bs":"Bosnian","hr":"Croatian","me":"Montenegrin",
+   "sl":"Slovenian","mk":"Macedonian","sq":"Albanian","bg":"Bulgarian",
+   "ro":"Romanian","hu":"Hungarian","sk":"Slovak","cs":"Czech","pl":"Polish",
+   "fr":"French","es":"Spanish","it":"Italian","pt":"Portuguese","de":"German",
+   "nl":"Dutch","da":"Danish","sv":"Swedish","fi":"Finnish","no":"Norwegian",
+   "is":"Icelandic","et":"Estonian","lv":"Latvian","lt":"Lithuanian",
+   "uk":"Ukrainian","ru":"Russian","tr":"Turkish","el":"Greek","ar":"Arabic",
+   "fa":"Persian","hi":"Hindi","bn":"Bengali","zh":"Chinese","ja":"Japanese",
+   "ko":"Korean","vi":"Vietnamese","id":"Indonesian","ms":"Malay","th":"Thai"
+};
+
+/* ============================================================
+   RELATED LANGUAGES – v4 optimized
+============================================================ */
+const RELATED = {
+   "sr":["bs","hr","me"], "bs":["sr","hr","me"], "hr":["sr","bs","me"], "me":["sr","bs","hr"],
+   "sk":["cs"], "cs":["sk"], "sl":["hr","sr"], "pl":["cs","sk"],
+   "da":["sv","no"], "sv":["da","no","is"], "no":["sv","da"], "is":["sv"],
+   "mk":["bg","sr"], "bg":["mk","sr"],
+   "uk":["ru"], "ru":["uk"],
+   "fr":["es","it","pt"], "es":["fr","pt","it"], "pt":["es","fr","it"], "it":["es","fr","pt"],
+   "zh":["ja","ko"], "ja":["zh","ko"], "ko":["zh","ja"]
+};
+
+/* ============================================================
+   YOUTUBE PLAYER
+============================================================ */
+let player, availableSubs = [], realStarted = false;
+
+function onYouTubeIframeAPIReady(){
+    player = new YT.Player("player", {
+        videoId: VIDEO_ID,
+        width:"100%",
+        height:"100%",
+        playerVars:{
+            autoplay:1,
+            controls:1,
+            rel:0,
+            fs:1,
+            hl:USER_LANG,
+            iv_load_policy:3,
+            modestbranding:1
+        },
+        events:{
+            onReady:()=> document.getElementById("loading").style.display="none",
+            onStateChange:onState
+        }
+    });
+}
+
+function onState(e){
+    if (e.data === 1 && !realStarted){
+        realStarted = true;
+        detectSubs();
+    }
+}
+
+/* ============================================================
+   SUBTITLE ENGINE v4
+============================================================ */
+function detectSubs(){
+    let tracks=[];
+    try { tracks = player.getOption("captions","tracklist") || []; } catch(err){}
+
+    availableSubs = tracks.map(t => t.languageCode.toLowerCase());
+
+    applySubtitleLogic();
+}
+
+function applySubtitleLogic(){
+    let L = USER_LANG;
+    const last = localStorage.getItem("lastSub");
+
+    if (last && availableSubs.includes(last)){
+        setSub(last);
+        return;
+    }
+
+    if (availableSubs.includes(L)){
+        setSub(L);
+        return;
+    }
+
+    if (RELATED[L]){
+        for (let r of RELATED[L]){
+            if (availableSubs.includes(r)){
+                setSub(r);
+                return;
+            }
+        }
+    }
+
+    /* AUTO TRANSLATE ALWAYS WORKS */
+    player.setOption("captions","track",{languageCode:"auto"});
+    player.setOption("captions","translate", L);
+    toast("Auto-Translate → " + LANG_NAMES[L]);
+}
+
+function setSub(code){
+    player.setOption("captions","track",{languageCode:code});
+    toast("Subtitle: " + LANG_NAMES[code]);
+}
+
+/* ============================================================
+   SUBTITLE MENU v4
+============================================================ */
+let menuOpen = false, menuIndex = 0;
+
+function openSubtitleMenu(){
+    const menu = document.getElementById("subtitleMenu");
+    menu.innerHTML = "";
+
+    availableSubs.forEach(l => {
+        menu.innerHTML += `<div class="menuItem" data-lang="${l}">${LANG_NAMES[l]}</div>`;
+    });
+
+    menuOpen = true;
+    menu.style.display="block";
+    menuIndex = 0;
+    updateFocus();
+}
+
+function closeSubtitleMenu(){
+    document.getElementById("subtitleMenu").style.display="none";
+    menuOpen = false;
+}
+
+function updateFocus(){
+    const items = document.querySelectorAll(".menuItem");
+    items.forEach(i => i.classList.remove("focused"));
+
+    if (items[menuIndex]){
+        items[menuIndex].classList.add("focused");
+        document.getElementById("subtitleMenu").scrollTo({
+            top: items[menuIndex].offsetTop - 140,
+            behavior:"smooth"
+        });
+    }
+}
+
+function activateItem(){
+    const item = document.querySelectorAll(".menuItem")[menuIndex];
+    if (!item) return;
+
+    const lang = item.dataset.lang;
+    localStorage.setItem("lastSub", lang);
+    setSub(lang);
+    closeSubtitleMenu();
+}
+
+/* ============================================================
+   GDPR SUPER-SHIELD v4
+============================================================ */
+function gdprKill(){
+    try {
+        const iframe = player.getIframe();
+        iframe.contentWindow.postMessage('{"event":"consentAccepted"}',"*");
+        iframe.contentWindow.postMessage('{"event":"command","func":"onReady"}',"*");
+    } catch(e){}
+}
+setInterval(gdprKill, 300);
+
+/* ============================================================
+   DPAD v4 – PERFECT
+============================================================ */
+window.addEventListener("keydown", e => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Enter","Backspace"].includes(e.key)){
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }
+}, true);
+
+document.addEventListener("keydown", e => {
+
+    if (menuOpen){
+        const items = document.querySelectorAll(".menuItem");
+
+        if (e.key === "ArrowUp"){ menuIndex = Math.max(0, menuIndex-1); updateFocus(); return; }
+        if (e.key === "ArrowDown"){ menuIndex = Math.min(items.length-1, menuIndex+1); updateFocus(); return; }
+        if (e.key === "Enter"){ activateItem(); return; }
+        if (e.key === "Backspace"){ closeSubtitleMenu(); return; }
+
+        return;
+    }
+
+    switch(e.key){
+
+        case "ArrowUp":
+            openSubtitleMenu();
+            break;
+
+        case "ArrowLeft":
+            player.seekTo(player.getCurrentTime()-20,true);
+            break;
+
+        case "ArrowRight":
+            player.seekTo(player.getCurrentTime()+20,true);
+            break;
+
+        case "Enter":
+            const st = player.getPlayerState();
+            if (st===1) player.pauseVideo();
+            else player.playVideo();
+            break;
+    }
+});
+
+/* ============================================================
+   TOAST
+============================================================ */
+let toastTimer=null;
+function toast(msg){
+    const t=document.getElementById("toast");
+    t.innerHTML=msg;
+    t.style.opacity=1;
+
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=> t.style.opacity=0,2500);
+}
+</script>
+
+</body>
+</html>
