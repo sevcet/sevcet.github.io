@@ -102,8 +102,112 @@ const params = new URLSearchParams(window.location.search);
 const VIDEO_ID = params.get("videoId");
 const USER_LANG = (params.get("lang") || "en").toLowerCase();
 
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouFlix Player</title>
+
+<style>
+    html, body {
+        margin:0; padding:0;
+        width:100%; height:100%;
+        background:#000;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
+    }
+
+    #player {
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
+        z-index:1;
+    }
+
+    #loading {
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
+        background:black;
+        color:white;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        flex-direction:column;
+        z-index:9999;
+    }
+
+    #subtitleMenu {
+        position:absolute;
+        top:120px;
+        right:120px;
+        width:420px;
+        max-height:60%;
+        overflow-y:auto;
+        background:rgba(0,0,0,0.85);
+        border:2px solid #fff;
+        border-radius:12px;
+        padding:12px;
+        color:white;
+        display:none;
+        z-index:99999;
+        font-size:20px;
+    }
+
+    .menuItem {
+        padding:10px;
+        background:#222;
+        border-radius:6px;
+        margin-bottom:6px;
+    }
+    .menuItem.focused {
+        background:#555;
+        border:2px solid #fff;
+    }
+
+    #toast {
+        position:absolute;
+        top:40px;
+        left:50%;
+        transform:translateX(-50%);
+        background:rgba(20,20,20,0.85);
+        padding:12px 24px;
+        border-radius:10px;
+        color:white;
+        opacity:0;
+        transition:opacity .3s;
+        z-index:99999;
+        font-size:22px;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="loading">
+    <div style="border:5px solid #444;border-top:5px solid red;width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite;"></div>
+    <div style="margin-top:20px;font-size:20px;">Loading video...</div>
+</div>
+
+<div id="toast"></div>
+<div id="subtitleMenu"></div>
+
+<div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
 /* ============================================================
-   FULL LANGUAGE NAME MAP
+   PARAMETERS
+============================================================ */
+const params = new URLSearchParams(window.location.search);
+const VIDEO_ID = params.get("videoId");
+const USER_LANG = (params.get("lang") || "en").toLowerCase();
+
+/* ============================================================
+   LANGUAGE NAMES
 ============================================================ */
 const LANG_NAMES = {
     "en":"English","sr":"Serbian","bs":"Bosnian","hr":"Croatian","me":"Montenegrin",
@@ -128,6 +232,203 @@ const RELATED = {
     "uk":["ru"], "ru":["uk"],
     "fr":["es","it","pt"], "es":["fr","pt","it"], "pt":["es","fr","it"], "it":["es","fr","pt"],
     "zh":["ja","ko"], "ja":["zh","ko"], "ko":["zh","ja"]
+};
+
+/* ============================================================
+   YOUTUBE PLAYER
+============================================================ */
+let player;
+let availableSubs = [];
+let realVideoStarted = false;
+
+function onYouTubeIframeAPIReady(){
+    player = new YT.Player("player", {
+        width:"100%", height:"100%",
+        videoId: VIDEO_ID,
+        playerVars:{
+            autoplay:1, controls:1, rel:0, fs:1,
+            hl:USER_LANG,
+            iv_load_policy:3,
+            modestbranding:1
+        },
+        events:{
+            onReady:onReady,
+            onStateChange:onState
+        }
+    });
+}
+
+function onReady(){
+    setTimeout(()=>{
+        document.getElementById("loading").style.display="none";
+    },800);
+}
+
+function onState(e){
+    if (e.data === 1 && !realVideoStarted){
+        realVideoStarted = true;
+        detectSubs();
+    }
+}
+
+/* ============================================================
+   SUBTITLE DETECTION + AUTO LOGIC (RESTORED)
+============================================================ */
+function detectSubs(){
+    let tracks = [];
+    try { tracks = player.getOption("captions","tracklist") || []; } catch(e){}
+
+    availableSubs = tracks.map(t => t.languageCode.toLowerCase());
+
+    applySubtitleLogic();
+}
+
+function applySubtitleLogic(){
+    let lang = USER_LANG;
+
+    const last = localStorage.getItem("lastSub");
+    if (last && availableSubs.includes(last)){
+        lang = last;
+    }
+    else if (!availableSubs.includes(lang)){
+        if (RELATED[lang]){
+            for (let r of RELATED[lang]){
+                if (availableSubs.includes(r)){ lang = r; break; }
+            }
+        }
+    }
+
+    /* ----------------------------------------------
+       AUTO TRANSLATE FIX  — restored original logic
+    ---------------------------------------------- */
+    if (!availableSubs.includes(lang)){
+
+        // čak i ako EN nije u listi – YT će ga generisati
+        player.setOption("captions","track",{languageCode:"en"});
+        player.setOption("captions","translate", USER_LANG);
+
+        toast("Auto-Translate → " + (LANG_NAMES[USER_LANG] || USER_LANG.toUpperCase()));
+        return;
+    }
+
+    player.setOption("captions","track",{languageCode:lang});
+    toast("Subtitle: " + LANG_NAMES[lang]);
+}
+
+/* ============================================================
+   SUBTITLE MENU
+============================================================ */
+let menuOpen = false;
+let menuIndex = 0;
+
+function openSubtitleMenu(){
+    const menu = document.getElementById("subtitleMenu");
+    menu.innerHTML = "";
+
+    availableSubs.forEach(l => {
+        const name = LANG_NAMES[l] || l.toUpperCase();
+        menu.innerHTML += `<div class="menuItem" data-lang="${l}">${name}</div>`;
+    });
+
+    menu.style.display="block";
+    menuOpen = true;
+    menuIndex = 0;
+    updateFocus();
+}
+
+function closeSubtitleMenu(){
+    document.getElementById("subtitleMenu").style.display="none";
+    menuOpen = false;
+}
+
+function updateFocus(){
+    const items = document.querySelectorAll(".menuItem");
+    items.forEach(i => i.classList.remove("focused"));
+
+    if (items[menuIndex]){
+        items[menuIndex].classList.add("focused");
+
+        document.getElementById("subtitleMenu").scrollTo({
+            top: items[menuIndex].offsetTop - 140,
+            behavior:"smooth"
+        });
+    }
+}
+
+function activateItem(){
+    const items = document.querySelectorAll(".menuItem");
+    const item = items[menuIndex];
+    if (!item) return;
+
+    const lang = item.getAttribute("data-lang");
+    localStorage.setItem("lastSub", lang);
+
+    player.setOption("captions","track",{languageCode:lang});
+    toast("Subtitle: " + LANG_NAMES[lang]);
+
+    closeSubtitleMenu();
+}
+
+/* ============================================================
+   DPAD – LOCKED MENU CONTROL (NO MORE YT UI)
+============================================================ */
+document.addEventListener("keydown", e => {
+
+    if (menuOpen){
+
+        // BLOKIRAMO YouTube UI
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        const items = document.querySelectorAll(".menuItem");
+
+        if (e.key === "ArrowUp"){ menuIndex = Math.max(0, menuIndex - 1); updateFocus(); return; }
+        if (e.key === "ArrowDown"){ menuIndex = Math.min(items.length - 1, menuIndex + 1); updateFocus(); return; }
+        if (e.key === "Enter"){ activateItem(); return; }
+        if (e.key === "Backspace" || e.key === "Escape"){ closeSubtitleMenu(); return; }
+
+        return;
+    }
+
+    switch(e.key){
+
+        case "ArrowUp":
+            e.preventDefault();
+            openSubtitleMenu();
+            break;
+
+        case "ArrowLeft":
+            player.seekTo(player.getCurrentTime() - 20, true);
+            break;
+
+        case "ArrowRight":
+            player.seekTo(player.getCurrentTime() + 20, true);
+            break;
+
+        case "Enter":
+            let st = player.getPlayerState();
+            if (st === 1) player.pauseVideo();
+            else player.playVideo();
+            break;
+    }
+});
+
+/* ============================================================
+   TOAST
+============================================================ */
+let toastTimer=null;
+function toast(msg){
+    const t=document.getElementById("toast");
+    t.innerHTML=msg;
+    t.style.opacity=1;
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.style.opacity=0,2500);
+}
+</script>
+
+</body>
+</html>
+
 };
 
 /* ============================================================
