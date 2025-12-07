@@ -1,41 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouFlix Player</title>
+<title>YouFlix Player v5 FIX</title>
 
 <style>
     html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
+        margin:0; padding:0;
+        width:100%; height:100%;
+        background:black;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
     }
 
     #player {
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        top:0;
-        left:0;
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
+        z-index:1;
+        background:black;
     }
 
-    #loading {
+    #subtitleMenu {
         position:absolute;
-        top:0;left:0;
-        width:100%;height:100%;
-        background:black;
-        z-index:9999;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        flex-direction:column;
-        color:white;
+        top:120px;
+        right:120px;
+        width:420px;
+        max-height:60%;
+        overflow-y:auto;
+        background:rgba(0,0,0,0.85);
+        border:2px solid white;
+        border-radius:12px;
+        padding:15px;
+        display:none;
+        font-size:20px;
+        z-index:99999;
+    }
+
+    .menuItem {
+        padding:10px;
+        background:#222;
+        margin-bottom:6px;
+        border-radius:6px;
+    }
+
+    .menuItem.focused {
+        background:#555;
+        border:2px solid #fff;
     }
 
     #toast {
@@ -43,196 +55,212 @@
         top:40px;
         left:50%;
         transform:translateX(-50%);
-        background:rgba(20,20,20,0.85);
-        color:white;
-        padding:12px 25px;
+        background:rgba(0,0,0,0.85);
+        padding:12px 26px;
         border-radius:12px;
+        color:white;
+        font-size:22px;
         opacity:0;
-        font-size:18px;
-        transition:opacity .4s;
+        transition:opacity .3s;
         z-index:99999;
     }
 </style>
-
 </head>
 
 <body>
 
-<div id="loading">
-    <div style="border:5px solid #444;border-top:5px solid red;width:50px;height:50px;border-radius:50%;animation:spin 1s linear infinite;"></div>
-    <div style="margin-top:20px;font-size:18px;">Učitavam video...</div>
-</div>
-
-<div id="toast"></div>
 <div id="player"></div>
+<div id="subtitleMenu"></div>
+<div id="toast"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 /* ============================================================
-   PRIMAMO PODATKE IZ ANDROID-A
+   INPUT PARAMS
 ============================================================ */
 const params = new URLSearchParams(window.location.search);
 const VIDEO_ID = params.get("videoId");
 const USER_LANG = (params.get("lang") || "en").toLowerCase();
 
 /* ============================================================
-   SRODNI JEZICI (FALLBACK ZA AUTOPICK)
-============================================================ */
-const RELATED = {
-    /* Ex-YU */
-    "sr": ["bs","hr"],
-    "bs": ["sr","hr"],
-    "hr": ["sr","bs"],
-
-    /* Central Slavic */
-    "sk": ["cs"],
-    "cs": ["sk"],
-    "sl": ["hr","sr"],
-    "pl": ["cs","sk"],
-
-    /* Scandinavian */
-    "da": ["sv","no"],
-    "sv": ["da","no","is"],
-    "no": ["sv","da"],
-    "is": ["sv"],
-
-    /* Balkan East */
-    "mk": ["bg","sr"],
-    "bg": ["mk","sr"],
-
-    /* East Europe */
-    "uk": ["ru"],
-    "ru": ["uk"],
-
-    /* Romance */
-    "fr": ["es","it","pt"],
-    "es": ["fr","pt","it"],
-    "pt": ["es","fr","it"],
-    "it": ["es","fr","pt"],
-
-    /* East Asian */
-    "zh": ["ja","ko"],
-    "ja": ["zh","ko"],
-    "ko": ["zh","ja"]
-};
-
-
-/* ============================================================
-   AUTOMATSKI IZBOR TITLA — originalna logika
-============================================================ */
-function pickSub(available, lang) {
-
-    // 1) direktno
-    if (available.includes(lang)) return lang;
-
-    // 2) srodni jezik
-    if (RELATED[lang]) {
-        for (let r of RELATED[lang]) {
-            if (available.includes(r)) return r;
-        }
-    }
-
-    // 3) auto translate EN -> sistemski
-    if (available.includes("en")) return "auto-en";
-
-    return null;
-}
-
-/* ============================================================
    YOUTUBE PLAYER
 ============================================================ */
-let player = null;
+let player;
+let availableSubs = [];
+let menuOpen = false;
+let menuIndex = 0;
 
-function onYouTubeIframeAPIReady() {
-
+function onYouTubeIframeAPIReady(){
     player = new YT.Player("player", {
         videoId: VIDEO_ID,
-        width:"100%",
-        height:"100%",
-        playerVars:{
-            autoplay:1,
-            controls:1,
-            cc_load_policy:1,
-            iv_load_policy:3,
-            rel:0,
-            fs:1,
-            hl:USER_LANG
+        width: "100%",
+        height: "100%",
+        playerVars: {
+            autoplay: 1,
+            controls: 0,
+            fs: 0,
+            rel: 0,
+            modestbranding: 1,
+            iv_load_policy: 3,
+            cc_load_policy: 1,
+            hl: USER_LANG
         },
-        events:{
-            onReady:onReady
+        events: {
+            onReady: onReady,
+            onStateChange: onState
         }
     });
 }
 
-/* ============================================================
-   READY → AUTOMATSKI TITLOVI
-============================================================ */
-function onReady() {
-    setTimeout(() => {
+function onReady(){
+    setTimeout(() => detectSubs(), 1200);
+}
 
-        let tracks = [];
-        try { tracks = player.getOption("captions","tracklist") || []; }
-        catch(e){}
-
-        const available = tracks.map(t => t.languageCode.toLowerCase());
-        const chosen = pickSub(available, USER_LANG);
-
-        if (!chosen) {
-            toast("Nema titlova");
-        }
-        else if (chosen === "auto-en") {
-            player.setOption("captions","track",{languageCode:"en"});
-            player.setOption("captions","translate", USER_LANG);
-            toast("Auto prevod → " + USER_LANG.toUpperCase());
-        }
-        else {
-            player.setOption("captions","track",{languageCode:chosen});
-            toast("Titl: " + chosen.toUpperCase());
-        }
-
-        document.getElementById("loading").style.display = "none";
-
-    }, 900);
+function onState(e){
+    if (e.data === 1) detectSubs();
 }
 
 /* ============================================================
-   DPAD — originalno + stabilno
+   AUTO SUBTITLE ENGINE
 ============================================================ */
+const RELATED = {
+    "sr":["bs","hr","me"], "bs":["sr","hr","me"], "hr":["sr","bs","me"], "me":["sr","bs","hr"],
+    "sk":["cs"], "cs":["sk"], "sl":["hr","sr"], "pl":["cs","sk"],
+    "da":["sv","no"], "sv":["da","no","is"], "no":["sv","da"], "is":["sv"],
+    "mk":["bg","sr"], "bg":["mk","sr"],
+    "uk":["ru"], "ru":["uk"],
+    "fr":["es","it","pt"], "es":["fr","pt","it"], "pt":["es","fr","it"], "it":["es","fr","pt"],
+    "zh":["ja","ko"], "ja":["zh","ko"], "ko":["zh","ja"]
+};
+
+function detectSubs(){
+    let tracks = [];
+    try { tracks = player.getOption("captions", "tracklist") || []; }
+    catch(e){}
+
+    availableSubs = tracks.map(t => t.languageCode.toLowerCase());
+
+    applySubtitleLogic();
+}
+
+function applySubtitleLogic(){
+    let selected = USER_LANG;
+    const last = localStorage.getItem("lastSub");
+
+    if (last && availableSubs.includes(last)){
+        setSubtitle(last);
+        toast("Subtitle: " + last.toUpperCase());
+        return;
+    }
+
+    if (availableSubs.includes(selected)){
+        setSubtitle(selected);
+        toast("Subtitle: " + selected.toUpperCase());
+        return;
+    }
+
+    if (RELATED[selected]){
+        for (const r of RELATED[selected]){
+            if (availableSubs.includes(r)){
+                setSubtitle(r);
+                toast("Subtitle: " + r.toUpperCase());
+                return;
+            }
+        }
+    }
+
+    player.setOption("captions","track",{languageCode:"auto"});
+    player.setOption("captions","translate", USER_LANG);
+    toast("Auto-Translate → " + USER_LANG.toUpperCase());
+}
+
+function setSubtitle(lang){
+    player.setOption("captions", "track", { languageCode: lang });
+    localStorage.setItem("lastSub", lang);
+}
+
+/* ============================================================
+   SUBTITLE MENU
+============================================================ */
+function openSubtitleMenu(){
+    const menu = document.getElementById("subtitleMenu");
+    menu.innerHTML = "";
+
+    availableSubs.forEach(l => {
+        menu.innerHTML += `<div class="menuItem" data-lang="${l}">${l.toUpperCase()}</div>`;
+    });
+
+    menu.style.display = "block";
+    menuOpen = true;
+    menuIndex = 0;
+    updateFocus();
+}
+
+function closeSubtitleMenu(){
+    document.getElementById("subtitleMenu").style.display = "none";
+    menuOpen = false;
+}
+
+function updateFocus(){
+    const items = document.querySelectorAll(".menuItem");
+    items.forEach(i => i.classList.remove("focused"));
+
+    if (items[menuIndex]){
+        items[menuIndex].classList.add("focused");
+        items[menuIndex].scrollIntoView({behavior:"smooth", block:"center"});
+    }
+}
+
+function activateItem(){
+    const items = document.querySelectorAll(".menuItem");
+    const item = items[menuIndex];
+    if (!item) return;
+
+    const lang = item.getAttribute("data-lang");
+    setSubtitle(lang);
+    toast("Subtitle: " + lang.toUpperCase());
+    closeSubtitleMenu();
+}
+
+/* ============================================================
+   DPAD CONTROL – 100% STABLE
+============================================================ */
+window.addEventListener("keydown", e => {
+    e.stopImmediatePropagation();
+}, {capture:true});
+
 document.addEventListener("keydown", e => {
 
-    switch(e.key) {
+    if (menuOpen){
+        const items = document.querySelectorAll(".menuItem");
+
+        if (e.key === "ArrowUp"){ menuIndex = Math.max(0, menuIndex - 1); updateFocus(); return; }
+        if (e.key === "ArrowDown"){ menuIndex = Math.min(items.length - 1, menuIndex + 1); updateFocus(); return; }
+        if (e.key === "Enter"){ activateItem(); return; }
+        if (e.key === "Backspace" || e.key === "Escape"){ closeSubtitleMenu(); return; }
+
+        return;
+    }
+
+    switch(e.key){
+
+        case "ArrowUp":
+            openSubtitleMenu();
+            break;
 
         case "ArrowLeft":
-            player.seekTo(Math.max(0, player.getCurrentTime() - 20), true);
-            e.preventDefault();
+            player.seekTo(player.getCurrentTime() - 20, true);
             break;
 
         case "ArrowRight":
             player.seekTo(player.getCurrentTime() + 20, true);
-            e.preventDefault();
             break;
 
         case "Enter":
-            let s = player.getPlayerState();
-            if (s === 1) player.pauseVideo();
+            let st = player.getPlayerState();
+            if (st === 1) player.pauseVideo();
             else player.playVideo();
-            e.preventDefault();
-            break;
-
-        case "ArrowDown":
-            player.getIframe().contentWindow.postMessage(
-                JSON.stringify({event:"command",func:"showControls",args:[true]}),"*"
-            );
-            e.preventDefault();
-            break;
-
-        case "ArrowUp":
-            // otvara YouTube CC meni
-            player.getIframe().contentWindow.postMessage(
-                JSON.stringify({event:"command",func:"showControls",args:[true]}),"*"
-            );
-            e.preventDefault();
             break;
     }
 });
@@ -241,6 +269,7 @@ document.addEventListener("keydown", e => {
    TOAST
 ============================================================ */
 let toastTimer=null;
+
 function toast(msg){
     const t=document.getElementById("toast");
     t.innerHTML=msg;
