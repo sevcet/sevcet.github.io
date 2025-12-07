@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -86,56 +87,45 @@
 
 <div id="toast"></div>
 <div id="subtitleMenu"></div>
-
 <div id="player"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 /* ============================================================
-   PARAMETERS
+   PARAMETERS FROM ANDROID
 ============================================================ */
 const params = new URLSearchParams(window.location.search);
 const VIDEO_ID = params.get("videoId");
 const USER_LANG = (params.get("lang") || "en").toLowerCase();
 
 /* ============================================================
-   RELATED LANGUAGES
+   FALLBACK LANGUAGE GROUPS
 ============================================================ */
 const RELATED = {
     "sr":["bs","hr","me"],
     "bs":["sr","hr","me"],
     "hr":["sr","bs","me"],
     "me":["sr","bs","hr"],
-    "sk":["cs"],
-    "cs":["sk"],
-    "sl":["hr","sr"],
-    "pl":["cs","sk"],
-    "da":["sv","no"],
-    "sv":["da","no","is"],
-    "no":["sv","da"],
-    "is":["sv"],
-    "mk":["bg","sr"],
-    "bg":["mk","sr"],
-    "uk":["ru"],
-    "ru":["uk"],
-    "fr":["es","it","pt"],
-    "es":["fr","pt","it"],
-    "pt":["es","fr","it"],
-    "it":["es","fr","pt"],
-    "zh":["ja","ko"],
-    "ja":["zh","ko"],
-    "ko":["zh","ja"]
+    "sk":["cs"], "cs":["sk"],
+    "sl":["hr","sr"], "pl":["cs","sk"],
+    "da":["sv","no"], "sv":["da","no","is"],
+    "no":["sv","da"], "is":["sv"],
+    "mk":["bg","sr"], "bg":["mk","sr"],
+    "uk":["ru"], "ru":["uk"],
+    "fr":["es","it","pt"], "es":["fr","pt","it"],
+    "pt":["es","fr","it"], "it":["es","fr","pt"],
+    "zh":["ja","ko"], "ja":["zh","ko"], "ko":["zh","ja"]
 };
 
+/* ============================================================
+   YOUTUBE PLAYER
+============================================================ */
 let player, availableSubs = [];
 let realVideoStarted = false;
 let menuOpen = false;
 let menuIndex = 0;
 
-/* ============================================================
-   YOUTUBE INIT
-============================================================ */
 function onYouTubeIframeAPIReady(){
     player = new YT.Player("player", {
         width:"100%",
@@ -148,7 +138,8 @@ function onYouTubeIframeAPIReady(){
             fs:1,
             hl:USER_LANG,
             iv_load_policy:3,
-            modestbranding:1
+            modestbranding:1,
+            cc_load_policy:1
         },
         events:{
             onReady:onReady,
@@ -164,26 +155,29 @@ function onReady(){
 }
 
 function onStateChange(e){
-    if (e.data === 1 && !realVideoStarted){
+    // Apply subtitles only when MAIN VIDEO starts (not ads)
+    if (e.data === YT.PlayerState.PLAYING && !realVideoStarted){
         realVideoStarted = true;
         initSubs();
     }
 }
 
 /* ============================================================
-   SUBTITLE AUTOPICK
+   INIT SUBTITLES
 ============================================================ */
 function initSubs(){
     let tracks = [];
-    try{
+    try {
         tracks = player.getOption("captions","tracklist") || [];
-    }catch(e){}
+    } catch(e){}
 
     availableSubs = tracks.map(t => t.languageCode.toLowerCase());
-
     applyAutoSub();
 }
 
+/* ============================================================
+   AUTO SELECT SUBTITLE
+============================================================ */
 function applyAutoSub(){
     let lang = USER_LANG;
 
@@ -198,10 +192,8 @@ function applyAutoSub(){
         }
     }
 
-    if (!availableSubs.includes(lang)){
-        if (availableSubs.includes("en"))
-            lang = "en";
-    }
+    if (!availableSubs.includes(lang) && availableSubs.includes("en"))
+        lang = "en";
 
     if (availableSubs.includes(lang)){
         player.setOption("captions","track",{languageCode:lang});
@@ -210,24 +202,24 @@ function applyAutoSub(){
 }
 
 /* ============================================================
-   SUBTITLE MENU (DPAD)
+   SUBTITLE MENU
 ============================================================ */
 function openSubtitleMenu(){
-    const menu = document.getElementById("subtitleMenu");
-    menu.innerHTML = "";
+    const m = document.getElementById("subtitleMenu");
+    m.innerHTML = "";
 
     availableSubs.forEach(l => {
-        menu.innerHTML += `<div class="menuItem" data-lang="${l}">${l.toUpperCase()}</div>`;
+        m.innerHTML += `<div class="menuItem" data-lang="${l}">${l.toUpperCase()}</div>`;
     });
 
-    menu.style.display = "block";
+    m.style.display = "block";
     menuOpen = true;
     menuIndex = 0;
     updateFocus();
 }
 
 function closeSubtitleMenu(){
-    document.getElementById("subtitleMenu").style.display="none";
+    document.getElementById("subtitleMenu").style.display = "none";
     menuOpen = false;
 }
 
@@ -249,9 +241,10 @@ function activateItem(){
 }
 
 /* ============================================================
-   DPAD
+   DPAD EVENTS
 ============================================================ */
 document.addEventListener("keydown", e => {
+
     if (menuOpen){
         const items = document.querySelectorAll(".menuItem");
 
@@ -277,12 +270,22 @@ document.addEventListener("keydown", e => {
     }
 
     switch(e.key){
-        case "ArrowUp": openSubtitleMenu(); break;
-        case "ArrowLeft": player.seekTo(player.getCurrentTime()-20,true); break;
-        case "ArrowRight": player.seekTo(player.getCurrentTime()+20,true); break;
+        case "ArrowUp":
+            openSubtitleMenu();
+            break;
+
+        case "ArrowLeft":
+            player.seekTo(player.getCurrentTime() - 20, true);
+            break;
+
+        case "ArrowRight":
+            player.seekTo(player.getCurrentTime() + 20, true);
+            break;
+
         case "Enter":
-            let s = player.getPlayerState();
-            if (s===1) player.pauseVideo(); else player.playVideo();
+            let st = player.getPlayerState();
+            if (st === 1) player.pauseVideo();
+            else player.playVideo();
             break;
     }
 });
@@ -290,63 +293,14 @@ document.addEventListener("keydown", e => {
 /* ============================================================
    TOAST
 ============================================================ */
-let tmr=null;
+let timer=null;
 function toast(msg){
     const t=document.getElementById("toast");
     t.innerHTML=msg;
     t.style.opacity=1;
-    clearTimeout(tmr);
-    tmr=setTimeout(()=>t.style.opacity=0,2500);
+    clearTimeout(timer);
+    timer=setTimeout(()=>t.style.opacity=0,2500);
 }
-
-/* ============================================================
-   REMOVE DARK OVERLAY (inside script, NOW WORKS)
-============================================================ */
-function removeDarkOverlay(){
-    try{
-        const selectors = [
-            ".ytp-ad-player-overlay",
-            ".ytp-ad-overlay-slot",
-            ".ytp-ad-text-overlay",
-            ".ytp-ad-image-overlay",
-            ".ytp-ad-preview-container",
-            ".ytp-ad-progress-list",
-            ".ytp-ad-overlay-container",
-            ".ytp-ad-message-container",
-            ".video-ads",
-            ".ytp-paid-content-overlay",
-            ".ytp-preview-ad",
-            ".ytp-ad-bottom-bar",
-            ".ytp-ad-skip-button-slot"
-        ];
-
-        selectors.forEach(sel=>{
-            document.querySelectorAll(sel).forEach(el=>{
-                el.style.display="none";
-                el.style.opacity="0";
-                el.remove();
-            });
-        });
-
-        document.querySelectorAll("div").forEach(div=>{
-            const cs=getComputedStyle(div);
-            if(
-                cs.backgroundColor==="rgb(0, 0, 0)" &&
-                parseInt(cs.zIndex)>100 &&
-                div.clientHeight>window.innerHeight/2
-            ){
-                div.style.display="none";
-                div.remove();
-            }
-        });
-
-    }catch(e){}
-}
-
-setInterval(removeDarkOverlay,300);
-document.addEventListener("DOMContentLoaded",removeDarkOverlay);
-window.addEventListener("load",removeDarkOverlay);
-
 </script>
 
 </body>
