@@ -92,10 +92,16 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
+/* ============================================================
+   PARAMETERS
+============================================================ */
 const params = new URLSearchParams(window.location.search);
 const VIDEO_ID = params.get("videoId");
 const USER_LANG = (params.get("lang") || "en").toLowerCase();
 
+/* ============================================================
+   RELATED LANGUAGES
+============================================================ */
 const RELATED = {
     "sr":["bs","hr","me"],
     "bs":["sr","hr","me"],
@@ -127,6 +133,9 @@ let realVideoStarted = false;
 let menuOpen = false;
 let menuIndex = 0;
 
+/* ============================================================
+   YOUTUBE INIT
+============================================================ */
 function onYouTubeIframeAPIReady(){
     player = new YT.Player("player", {
         width:"100%",
@@ -149,7 +158,6 @@ function onYouTubeIframeAPIReady(){
 }
 
 function onReady(){
-    // sakrij loading nakon kratkog vremena
     setTimeout(() => {
         document.getElementById("loading").style.display = "none";
     }, 700);
@@ -162,6 +170,9 @@ function onStateChange(e){
     }
 }
 
+/* ============================================================
+   SUBTITLE AUTOPICK
+============================================================ */
 function initSubs(){
     let tracks = [];
     try{
@@ -198,6 +209,9 @@ function applyAutoSub(){
     }
 }
 
+/* ============================================================
+   SUBTITLE MENU (DPAD)
+============================================================ */
 function openSubtitleMenu(){
     const menu = document.getElementById("subtitleMenu");
     menu.innerHTML = "";
@@ -213,7 +227,7 @@ function openSubtitleMenu(){
 }
 
 function closeSubtitleMenu(){
-    document.getElementById("subtitleMenu").style.display = "none";
+    document.getElementById("subtitleMenu").style.display="none";
     menuOpen = false;
 }
 
@@ -234,8 +248,10 @@ function activateItem(){
     closeSubtitleMenu();
 }
 
+/* ============================================================
+   DPAD
+============================================================ */
 document.addEventListener("keydown", e => {
-
     if (menuOpen){
         const items = document.querySelectorAll(".menuItem");
 
@@ -261,26 +277,19 @@ document.addEventListener("keydown", e => {
     }
 
     switch(e.key){
-        case "ArrowUp":
-            openSubtitleMenu();
-            break;
-
-        case "ArrowLeft":
-            player.seekTo(player.getCurrentTime() - 20, true);
-            break;
-
-        case "ArrowRight":
-            player.seekTo(player.getCurrentTime() + 20, true);
-            break;
-
+        case "ArrowUp": openSubtitleMenu(); break;
+        case "ArrowLeft": player.seekTo(player.getCurrentTime()-20,true); break;
+        case "ArrowRight": player.seekTo(player.getCurrentTime()+20,true); break;
         case "Enter":
-            let st = player.getPlayerState();
-            if (st === 1) player.pauseVideo();
-            else player.playVideo();
+            let s = player.getPlayerState();
+            if (s===1) player.pauseVideo(); else player.playVideo();
             break;
     }
 });
 
+/* ============================================================
+   TOAST
+============================================================ */
 let tmr=null;
 function toast(msg){
     const t=document.getElementById("toast");
@@ -289,12 +298,12 @@ function toast(msg){
     clearTimeout(tmr);
     tmr=setTimeout(()=>t.style.opacity=0,2500);
 }
-</script>
-/* =======================================================================
-   REMOVE YouTube dark overlay (ads dimming) – FULL FIX
-   ======================================================================= */
-function removeDarkOverlay() {
-    try {
+
+/* ============================================================
+   REMOVE DARK OVERLAY (inside script, NOW WORKS)
+============================================================ */
+function removeDarkOverlay(){
+    try{
         const selectors = [
             ".ytp-ad-player-overlay",
             ".ytp-ad-overlay-slot",
@@ -311,38 +320,34 @@ function removeDarkOverlay() {
             ".ytp-ad-skip-button-slot"
         ];
 
-        selectors.forEach(sel => {
-            document.querySelectorAll(sel).forEach(el => {
-                el.style.display = "none";
-                el.style.opacity = "0";
+        selectors.forEach(sel=>{
+            document.querySelectorAll(sel).forEach(el=>{
+                el.style.display="none";
+                el.style.opacity="0";
                 el.remove();
             });
         });
 
-        // YouTube ubaci ponekad veliki crni DIV preko celog ekrana
-        const blockers = document.querySelectorAll("div");
-        blockers.forEach(div => {
-            const cs = getComputedStyle(div);
-            if (
-                cs.backgroundColor === "rgb(0, 0, 0)" &&
-                parseInt(cs.zIndex) > 100 &&
-                div.clientHeight > window.innerHeight / 2
-            ) {
-                div.style.display = "none";
+        document.querySelectorAll("div").forEach(div=>{
+            const cs=getComputedStyle(div);
+            if(
+                cs.backgroundColor==="rgb(0, 0, 0)" &&
+                parseInt(cs.zIndex)>100 &&
+                div.clientHeight>window.innerHeight/2
+            ){
+                div.style.display="none";
                 div.remove();
             }
         });
 
-    } catch (e) { console.log("Overlay remover error:", e); }
+    }catch(e){}
 }
 
-/* Run every 300ms (sigurno skida sve slojeve) */
-setInterval(removeDarkOverlay, 300);
+setInterval(removeDarkOverlay,300);
+document.addEventListener("DOMContentLoaded",removeDarkOverlay);
+window.addEventListener("load",removeDarkOverlay);
 
-/* Takođe pozovi odmah posle učitavanja videa */
-document.addEventListener("DOMContentLoaded", removeDarkOverlay);
-window.addEventListener("load", removeDarkOverlay);
-
+</script>
 
 </body>
 </html>
