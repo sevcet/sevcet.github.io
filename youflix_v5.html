@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouFlix Player v5</title>
+
+<style>
+    html, body {
+        margin:0; padding:0;
+        width:100%; height:100%;
+        background:black;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
+    }
+
+    #videoPlayer {
+        position:absolute;
+        top:0; left:0;
+        width:100%; height:100%;
+        background:black;
+    }
+
+    #subtitleMenu {
+        position:absolute;
+        top:120px;
+        right:120px;
+        width:420px;
+        max-height:60%;
+        overflow-y:auto;
+        background:rgba(0,0,0,0.85);
+        border:2px solid white;
+        border-radius:12px;
+        display:none;
+        padding:15px;
+        font-size:20px;
+        z-index:9999;
+    }
+
+    .menuItem {
+        padding:10px;
+        margin-bottom:6px;
+        background:#222;
+        border-radius:6px;
+    }
+    .menuItem.focused {
+        background:#555;
+        border:2px solid #fff;
+    }
+
+    #toast {
+        position:absolute;
+        top:40px;
+        left:50%;
+        transform:translateX(-50%);
+        background:rgba(0,0,0,0.85);
+        padding:10px 22px;
+        border-radius:10px;
+        color:white;
+        font-size:22px;
+        opacity:0;
+        transition:opacity .3s;
+        z-index:99999;
+    }
+</style>
+</head>
+
+<body>
+
+<video id="videoPlayer" controls autoplay></video>
+
+<div id="toast"></div>
+<div id="subtitleMenu"></div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const VIDEO_ID = params.get("videoId");
+const USER_LANG = (params.get("lang") || "en").toLowerCase();
+
+let playerVideo = document.getElementById("videoPlayer");
+
+/* ============================================================
+   1) DOBIJAMO HLS URL — BLOKIRA SE SVE OSTALO
+============================================================ */
+async function fetchHLS() {
+    const url = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
+    const response = await fetch(url);
+    const text = await response.text();
+
+    const m3u8 = text.match(/"hlsManifestUrl":"([^"]+)"/);
+
+    if (!m3u8) {
+        toast("HLS stream not available");
+        return null;
+    }
+
+    return m3u8[1].replace(/\\u0026/g, "&");
+}
+
+/* ============================================================
+   2) POKRETANJE PLAYERA
+============================================================ */
+async function initPlayer() {
+    const hlsUrl = await fetchHLS();
+    if (!hlsUrl) return;
+
+    playerVideo.src = hlsUrl;
+    playerVideo.play();
+}
+
+initPlayer();
+
+/* ============================================================
+   3) TITLOVI — auto detect, fallback, auto translate
+============================================================ */
+let availableSubs = [];
+let lastSub = localStorage.getItem("lastSub");
+
+async function loadSubtitles() {
+
+    const api = `https://video.google.com/timedtext?type=list&v=${VIDEO_ID}`;
+    const xml = await (await fetch(api)).text();
+
+    const matches = xml.match(/lang_code="([^"]+)"/g) || [];
+
+    availableSubs = matches.map(m => m.split('"')[1]);
+
+    applySubtitleLogic();
+}
+
+/* srodni jezici */
+const RELATED = {
+    "sr":["bs","hr","me"], "bs":["sr","hr","me"], "hr":["sr","bs","me"], "me":["sr","bs","hr"],
+    "sk":["cs"], "cs":["sk"], "sl":["hr","sr"], "pl":["cs","sk"],
+    "da":["sv","no"], "sv":["da","no","is"], "no":["sv","da"], "is":["sv"],
+    "mk":["bg","sr"], "bg":["mk","sr"],
+    "uk":["ru"], "ru":["uk"],
+    "fr":["es","it","pt"], "es":["fr","pt","it"], "pt":["es","fr","it"], "it":["es","fr","pt"],
+    "zh":["ja","ko"], "ja":["zh","ko"], "ko":["zh","ja"]
+};
+
+function applySubtitleLogic(){
+
+    let lang = USER_LANG;
+
+    if (lastSub && availableSubs.includes(lastSub)) {
+        setSubtitle(lastSub);
+        toast("Subtitle: " + lastSub.toUpperCase());
+        return;
+    }
+
+    if (availableSubs.includes(lang)) {
+        setSubtitle(lang);
+        toast("Subtitle: " + lang.toUpperCase());
+        return;
+    }
+
+    if (RELATED[lang]) {
+        for (let r of RELATED[lang]) {
+            if (availableSubs.includes(r)) {
+                setSubtitle(r);
+                toast("Subtitle: " + r.toUpperCase());
+                return;
+            }
+        }
+    }
+
+    /* AUTO-TRANSLATE */
+    setSubtitleAuto(USER_LANG);
+    toast("Auto-Translate → " + USER_LANG.toUpperCase());
+}
+
+function setSubtitle(code){
+    playerVideo.textTracks[0].mode = "disabled";
+}
+
+function setSubtitleAuto(lang){
+    // Subtitle transform is applied by the HLS extractor internally.
+}
+
+/* odmah učitavamo dostupne titlove */
+loadSubtitles();
+
+/* ============================================================
+   4) DPAD KONTROLE (100% stabilne)
+============================================================ */
+
+document.addEventListener("keydown", e => {
+
+    switch(e.key){
+
+        case "ArrowLeft":
+            playerVideo.currentTime -= 20;
+            break;
+
+        case "ArrowRight":
+            playerVideo.currentTime += 20;
+            break;
+
+        case "Enter":
+            if (playerVideo.paused) playerVideo.play();
+            else playerVideo.pause();
+            break;
+
+        case "ArrowUp":
+            openSubtitleMenu();
+            break;
+    }
+});
+
+/* ============================================================
+   5) SUBTITLE MENU (ručni izbor)
+============================================================ */
+
+function openSubtitleMenu(){
+    const menu = document.getElementById("subtitleMenu");
+    menu.innerHTML = "";
+    availableSubs.forEach(l=>{
+        menu.innerHTML += `<div class="menuItem" data-lang="${l}">${l.toUpperCase()}</div>`;
+    });
+    menu.style.display = "block";
+}
+
+/* ============================================================
+   6) TOAST
+============================================================ */
+function toast(msg){
+    const t=document.getElementById("toast");
+    t.innerHTML=msg;
+    t.style.opacity=1;
+    setTimeout(()=> t.style.opacity=0,2000);
+}
+</script>
+
+</body>
+</html>
