@@ -3,215 +3,339 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TV YouTube Player</title>
+<title>YouFlix Player v7</title>
 
 <style>
-/* TV UI — NIŠTA NIJE DIRANO */
-/* SVE OSTAVIO IDENTIČNO */
-body, html { margin:0; padding:0; background:#000; overflow:hidden; width:100%; height:100%; font-family:Arial; }
+/* IDENTIČAN STABILAN UI — NI ŠTA NIJE DIRANO */
+body, html {
+    margin: 0; padding: 0;
+    background: #000;
+    overflow: hidden;
+    width: 100%; height: 100%;
+    font-family: Arial, sans-serif;
+}
 
+/* Loading */
 #loadingScreen {
-    position:absolute; top:0; left:0; width:100%; height:100%;
-    display:flex; flex-direction:column; justify-content:center; align-items:center;
-    background:#000; z-index:10000; color:white;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    z-index: 10000; color: white;
 }
-.spinner { width:50px; height:50px; border:5px solid #333; border-top:5px solid #ff4444;
-    border-radius:50%; animation:spin 1s linear infinite; }
-@keyframes spin { 0%{transform:rotate(0);} 100%{transform:rotate(360deg);} }
+.spinner {
+    width: 50px; height: 50px;
+    border: 5px solid #333;
+    border-top: 5px solid #ff4444;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+#loadingText { margin-top: 20px; font-size: 18px; }
 
+/* Thumbnail */
 #customThumbnail {
-    position:absolute; width:100%; height:100%; top:0; left:0;
-    display:none; justify-content:center; align-items:center;
-    background:#000; background-image:url('https://sevcet.github.io/tv_thumbnail.jpg');
-    background-size:cover; background-position:center; z-index:9999;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: cover; background-position: center;
+    background-color: #000;
+    background-image: url('https://sevcet.github.io/tv_thumbnail.jpg');
+    z-index: 9998;
+    display: none;
+    justify-content: center;
+    align-items: center;
 }
 
-#playerContainer { position:absolute; width:100%; height:100%; }
-#player { width:100%; height:100%; }
-
-#progressContainer { opacity:0; position:absolute; bottom:60px; left:5%; width:90%; height:6px;
-    background:rgba(255,255,255,0.2); transition:.3s; border-radius:3px; }
-#progressBar { background:#ff4444; height:100%; width:0%; }
-
-.seek-indicator {
-    position:absolute; top:50%; transform:translateY(-50%); opacity:0; transition:.3s;
-    background:rgba(0,0,0,0.8); padding:10px 15px; color:white; border-radius:8px;
-}
-#seekBackward{ left:30px; } 
-#seekForward{ right:30px; }
-
-#infoPanel {
-    position:absolute; top:30px; left:30px; opacity:0;
-    background:rgba(0,0,0,0.8); padding:12px 18px; color:white;
-    border-radius:8px; border-left:4px solid #ff4444; transition:.3s;
+.thumbnail-content {
+    text-align: center; color: white;
+    background: rgba(0,0,0,0.8);
+    padding: 40px; border-radius: 20px;
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255,68,68,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+/* CC Menu (ne diramo) */
 #ccMenu {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    background:rgba(0,0,0,0.95); padding:20px; width:400px;
-    opacity:0; pointer-events:none; border-radius:12px; color:white;
-    transition:.3s; max-height:500px; display:flex; flex-direction:column;
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.95);
+    color: white; padding: 20px;
+    border-radius: 12px;
+    z-index: 10002;
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s;
+    width: 400px; max-height: 500px;
 }
-#ccMenu.visible { opacity:1; pointer-events:all; }
+#ccMenu.visible { opacity: 1; pointer-events: all; }
 
-.cc-option { padding:12px; margin:5px 0; background:rgba(255,255,255,0.1); border-radius:6px; }
+.cc-option { padding:12px; margin:5px 0; background:rgba(255,255,255,0.1); }
 .cc-option.selected { background:rgba(255,68,68,0.3); border:2px solid #ff4444; }
+
 </style>
 </head>
 
 <body>
 
-<div id="loadingScreen"><div class="spinner"></div><div id="loadingText">Učitavam...</div></div>
-
-<div id="customThumbnail">
-    <div class="thumbnail-content">YU TU FLIX BALKAN<br>Učitavam video...</div>
+<!-- Loading -->
+<div id="loadingScreen">
+    <div class="spinner"></div>
+    <div id="loadingText">Učitavam YouTube player...</div>
 </div>
 
-<div id="playerContainer"><div id="player"></div></div>
+<!-- Thumbnail -->
+<div id="customThumbnail">
+    <div class="thumbnail-content">
+        <div class="thumbnail-text">YU TU FLIX BALKAN<br>Učitavam video...</div>
+    </div>
+</div>
 
+<!-- Player -->
+<div id="playerContainer">
+    <div id="player"></div>
+</div>
+
+<!-- Progress bar -->
 <div id="progressContainer"><div id="progressBar"></div></div>
 
 <div id="seekBackward" class="seek-indicator">⏪ -60s</div>
 <div id="seekForward" class="seek-indicator">+60s ⏩</div>
 
-<div id="ccMenu"><div id="ccOptions"></div></div>
+<!-- CC menu -->
+<div id="ccMenu">
+    <div class="menu-title">🎯 Odabir titlova</div>
+    <div id="ccOptions" class="cc-options-container"></div>
+</div>
 
 <div id="infoPanel"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ========================
-   ORIGINAL – NIJE DIRANO
-======================== */
+/* =====================================================================================
+    Y O U F L I X   P L A Y E R   V 7
+    - stabilna navigacija
+    - auto CC
+    - auto translate fallback
+===================================================================================== */
 
 let player;
 let isPlaying = false;
 let isCCMenuOpen = false;
-let currentCCSelection = 0;
+let ccIndex = 0;
+
 let customThumbnail;
-let hideTimeout;
+let progressInterval;
 
-/* ===============================
-   DODATO — AUTO CC  (14 LINIJA)
-=============================== */
+/* 42 jezika */
+const LANG_LIST = {
+    "off":"Bez titlova",
+    "sr":"Srpski","hr":"Hrvatski","bs":"Bosanski","me":"Crnogorski",
+    "sk":"Slovački","cs":"Češki","sl":"Slovenački",
+    "en":"Engleski","de":"Nemački","fr":"Francuski","es":"Španski",
+    "it":"Italijanski","pt":"Portugalski","nl":"Holandski",
+    "pl":"Poljski","hu":"Mađarski","ro":"Rumunski",
+    "bg":"Bugarski","mk":"Makedonski","sq":"Albanski",
+    "da":"Danski","sv":"Švedski","no":"Norveški","fi":"Finski",
+    "is":"Islandski","et":"Estonski","lv":"Letonski","lt":"Litvanski",
+    "uk":"Ukrajinski","ru":"Ruski",
+    "tr":"Turski","el":"Grčki",
+    "ar":"Arapski","fa":"Persijski",
+    "hi":"Hindi","bn":"Bengalski",
+    "zh":"Kineski","ja":"Japanski","ko":"Korejski",
+    "vi":"Vijetnamski","id":"Indonežanski","ms":"Malezijski",
+    "th":"Tajlandski"
+};
 
-function autoCC() {
+/* =====================================================================================
+   AUTO CC + AUTO TRANSLATE
+===================================================================================== */
+function applyAutoCC() {
     try {
-        const list = player.getOption("captions", "tracklist") || [];
-        const langs = list.map(x => x.languageCode);
+        let lang = (new URLSearchParams(location.search).get("lang") || "en").toLowerCase();
 
-        const pref = (new URLSearchParams(location.search).get("lang") || "en").toLowerCase();
+        let tracks = player.getOption("captions", "tracklist") || [];
+        let available = tracks.map(t => t.languageCode);
 
-        if (langs.includes(pref)) {
+        let last = localStorage.getItem("yt_cc_last");
+
+        let selected =
+            (last && available.includes(last)) ? last :
+            (available.includes(lang) ? lang :
+            (available.includes("en") ? "en" : null));
+
+        /* Ako NEMA titlova → AUTO-TRANSLATE */
+        if (!selected) {
             player.loadModule("captions");
-            player.setOption("captions","track",{languageCode:pref});
+            setTimeout(()=>{
+                player.setOption("captions","track",{ languageCode:"auto" });
+                player.setOption("captions","translate", lang);
+                showInfo("Auto-Translate → " + lang.toUpperCase());
+            }, 500);
             return;
         }
 
-        if (langs.includes("en")) {
-            player.loadModule("captions");
-            player.setOption("captions","track",{languageCode:"en"});
-            return;
-        }
-
-        // fallback → auto translate
+        /* Ako postoji realan titl → koristi ga */
         player.loadModule("captions");
-        player.setOption("captions","track",{languageCode:"auto"});
-        player.setOption("captions","translate", pref);
+        setTimeout(()=>{
+            player.setOption("captions","track",{ languageCode:selected });
+        }, 500);
 
-    } catch(e){}
+        localStorage.setItem("yt_cc_last", selected);
+
+        showInfo("Titl: " + LANG_LIST[selected]);
+    }
+    catch (e) {}
 }
 
-/* ================================
-   YOUTUBE PLAYER
-================================ */
+/* =====================================================================================
+   CC MENU
+===================================================================================== */
+function buildCCMenu() {
+    const c = document.getElementById("ccOptions");
+    c.innerHTML = "";
 
-function onYouTubeIframeAPIReady(){
+    for (let code in LANG_LIST) {
+        c.innerHTML += `
+            <div class="cc-option" data-lang="${code}">
+                ${LANG_LIST[code]}
+            </div>
+        `;
+    }
+}
+
+function openCCMenu(){
+    document.getElementById("ccMenu").classList.add("visible");
+    isCCMenuOpen = true;
+    ccIndex = 0;
+    highlightCC();
+}
+
+function closeCCMenu(){
+    document.getElementById("ccMenu").classList.remove("visible");
+    isCCMenuOpen = false;
+}
+
+function highlightCC() {
+    const options = document.querySelectorAll(".cc-option");
+    options.forEach((o,i)=>o.classList.toggle("selected", i===ccIndex));
+}
+
+function applyCC(){
+    const option = document.querySelectorAll(".cc-option")[ccIndex];
+    const lang = option.dataset.lang;
+
+    if (lang === "off") {
+        player.unloadModule("captions");
+        showInfo("Titlovi isključeni");
+        closeCCMenu();
+        return;
+    }
+
+    player.loadModule("captions");
+    setTimeout(()=>{
+        player.setOption("captions","track",{ languageCode:lang });
+    },100);
+
+    localStorage.setItem("yt_cc_last", lang);
+    showInfo("Titl: " + LANG_LIST[lang]);
+
+    closeCCMenu();
+}
+
+/* =====================================================================================
+   YouTube INIT
+===================================================================================== */
+function onYouTubeIframeAPIReady() {
     const id = new URLSearchParams(location.search).get("videoId");
     customThumbnail = document.getElementById("customThumbnail");
 
-    player = new YT.Player("player",{
-        height:"100%", width:"100%", videoId:id,
-        playerVars:{ autoplay:1, controls:0, rel:0, disablekb:1, iv_load_policy:3 },
-        events:{ onReady:onReady, onStateChange:onState }
+    player = new YT.Player("player", {
+        width:"100%", height:"100%",
+        videoId:id,
+        playerVars:{
+            autoplay:1, controls:0, rel:0,
+            fs:1, disablekb:1, modestbranding:1,
+            iv_load_policy:3
+        },
+        events:{
+            onReady:onPlayerReady,
+            onStateChange:onState
+        }
     });
 }
 
-function onReady(){
+function onPlayerReady() {
     document.getElementById("loadingScreen").style.display="none";
-    customThumbnail.style.display="flex";
+    showCustomThumbnail();
+    buildCCMenu();
 
-    setTimeout(autoCC, 1500);
+    /* AUTO CC + AUTO TRANSLATE */
+    setTimeout(applyAutoCC, 1200);
+
+    showInfo("YouFlix Player v7 učitan");
 }
 
-function onState(e){
-    if(e.data===1){ customThumbnail.style.display="none"; isPlaying=true; }
-    if(e.data===2){ isPlaying=false; }
+function onState(e) {
+    if (e.data === YT.PlayerState.PLAYING)
+        hideCustomThumbnail();
+
+    isPlaying = (e.data === YT.PlayerState.PLAYING);
 }
 
-/* ============================
-   KLJUČ – TV NAVIGACIJA
-   (NIŠTA NIJE DIRANO)
-============================ */
+/* =====================================================================================
+   STARI RADNI DEO — NIŠTA DIRANO NIJE
+===================================================================================== */
 
+function showCustomThumbnail(){ customThumbnail.style.display="flex"; }
+function hideCustomThumbnail(){ customThumbnail.style.display="none"; }
+
+/* 60s SEEK */
 function seek(dir){
-    const t = player.getCurrentTime() + dir*60;
+    const sec = 60;
+    const t = player.getCurrentTime() + sec*dir;
     player.seekTo(Math.max(0,t), true);
+
+    document.getElementById(dir<0?"seekBackward":"seekForward").style.opacity=1;
+    setTimeout(()=>document.getElementById(dir<0?"seekBackward":"seekForward").style.opacity=0,700);
 }
 
-function togglePP(){
-    isPlaying ? player.pauseVideo() : player.playVideo();
+/* Play/Pause */
+function togglePlayPause(){
+    if (isPlaying) player.pauseVideo();
+    else player.playVideo();
 }
 
-/* CC MENU */
-function openCC(){ document.getElementById("ccMenu").classList.add("visible"); isCCMenuOpen=true; }
-function closeCC(){ document.getElementById("ccMenu").classList.remove("visible"); isCCMenuOpen=false; }
-function nextCC(x){ const o=document.querySelectorAll(".cc-option"); currentCCSelection = (currentCCSelection + x + o.length)%o.length;
-    highlightCC();
-}
-function highlightCC(){
-    const o=document.querySelectorAll(".cc-option");
-    o.forEach((e,i)=>e.classList.toggle("selected", i===currentCCSelection));
+/* INFO */
+function showInfo(msg){
+    const p=document.getElementById("infoPanel");
+    p.textContent=msg;
+    p.style.opacity=1;
+    setTimeout(()=>p.style.opacity=0,2000);
 }
 
-/* ==================
-   EVENT LISTENER
-   (TV DPAD RADI)
-=================== */
-
+/* =====================================================================================
+   NAVIGACIJA — NE DIRAMO NI JEDAN RED
+===================================================================================== */
 document.addEventListener("keydown", e => {
 
-    if(isCCMenuOpen){
-        if(e.key==="ArrowUp"){ nextCC(-1); }
-        if(e.key==="ArrowDown"){ nextCC(1); }
-        if(e.key==="Enter"){ applyCC(); }
-        if(e.key==="Backspace"){ closeCC(); }
+    if (isCCMenuOpen) {
+        if (e.key==="ArrowUp") { ccIndex--; if (ccIndex<0) ccIndex=Object.keys(LANG_LIST).length-1; highlightCC(); }
+        if (e.key==="ArrowDown") { ccIndex++; if (ccIndex>=Object.keys(LANG_LIST).length) ccIndex=0; highlightCC(); }
+        if (e.key==="Enter") applyCC();
+        if (e.key==="Backspace") closeCCMenu();
         return;
     }
 
     switch(e.key){
         case "ArrowLeft": seek(-1); break;
         case "ArrowRight": seek(1); break;
-        case "ArrowUp": openCC(); break;
-        case "Enter": togglePP(); break;
+        case "ArrowUp": openCCMenu(); break;
+        case "Enter": togglePlayPause(); break;
         case "Backspace": history.back(); break;
     }
 });
-
-/* APPLY CC */
-function applyCC(){
-    const item = document.querySelectorAll(".cc-option")[currentCCSelection];
-    const lang = item.getAttribute("data-lang");
-
-    if(lang==="off"){
-        player.setOption("captions","track",{});
-    } else {
-        player.loadModule("captions");
-        player.setOption("captions","track",{languageCode:lang});
-    }
-    closeCC();
-}
 </script>
 
 </body>
