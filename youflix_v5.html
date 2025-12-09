@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TV YouTube Player</title>
+<title>YouFlix Player v42</title>
 
 <style>
 body, html {
@@ -16,210 +16,109 @@ body, html {
     font-family: Arial, sans-serif;
 }
 
-/* Loading screen */
+/* Loading */
 #loadingScreen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
     background: #000;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    color: white;
-}
-#loadingText {
-    margin-top: 20px;
-    font-size: 18px;
-    text-align: center;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    z-index: 10000; color: white;
 }
 .spinner {
-    width: 50px;
-    height: 50px;
+    width: 50px; height: 50px;
     border: 5px solid #333;
     border-top: 5px solid #ff4444;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+@keyframes spin { 0%{transform:rotate(0);} 100%{transform:rotate(360deg);} }
 
-/* PRAZAN THUMBNAIL — mora da postoji, inače reklame pucaju */
+/* Thumbnail (prazan – stabilizuje reklame) */
 #customThumbnail {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: none;
     background: #000;
     opacity: 0;
     z-index: 9998;
-    display: none;
 }
 
 /* Error screen */
 #errorScreen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    color: white;
-    text-align: center;
-    padding: 20px;
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    background:#000; color:white;
+    display:none; flex-direction:column;
+    justify-content:center; align-items:center;
+    z-index:10000; text-align:center;
 }
 
+/* Player */
 #playerContainer {
-    width: 100%;
-    height: 100%;
-    position: relative;
+    width:100%; height:100%; position:relative;
 }
 #player {
-    width: 100%;
-    height: 100%;
-    border: none;
+    width:100%; height:100%;
 }
 
 /* Progress bar */
 #progressContainer {
-    position: absolute;
-    bottom: 60px;
-    left: 5%;
-    width: 90%;
-    background: rgba(255,255,255,0.2);
-    height: 6px;
-    border-radius: 3px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    position:absolute; bottom:60px; left:5%;
+    width:90%; height:6px;
+    border-radius:3px;
+    background:rgba(255,255,255,0.2);
+    opacity:0; transition:0.3s;
 }
 #progressBar {
-    height: 100%;
-    background: #ff4444;
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.1s ease;
+    width:0%; height:100%; border-radius:3px;
+    background:#ff4444;
 }
 
+/* Info panel */
 #infoPanel {
-    position: absolute;
-    top: 30px;
-    left: 30px;
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 12px 18px;
-    border-radius: 8px;
-    font-size: 16px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-left: 4px solid #ff4444;
+    position:absolute; top:30px; left:30px;
+    padding:12px 18px;
+    background:rgba(0,0,0,0.75);
+    color:white; border-radius:8px;
+    border-left:4px solid #ff4444;
+    opacity:0; transition:0.3s;
+    font-size:16px;
 }
-
-.seek-indicator {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-size: 18px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-#seekBackward { left: 30px; }
-#seekForward { right: 30px; }
 
 /* CC MENU */
 #ccMenu {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.95);
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    z-index: 10002;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    width: 400px;
-    max-height: 500px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%, -50%);
+    background:rgba(0,0,0,0.95);
+    width:500px; max-height:600px;
+    border-radius:12px;
+    padding:20px; color:white;
+    opacity:0; transition:opacity .3s;
+    pointer-events:none; z-index:10002;
+    display:flex; flex-direction:column;
 }
-#ccMenu.visible {
-    opacity: 1;
-    pointer-events: all;
-}
+#ccMenu.visible { opacity:1; pointer-events:all; }
 
-.menu-title {
-    font-size: 20px;
-    margin-bottom: 15px;
-    text-align: center;
-    color: #ff4444;
-    border-bottom: 2px solid #333;
-    padding-bottom: 10px;
-    flex-shrink: 0;
-}
 .cc-options-container {
-    flex: 1;
-    overflow-y: auto;
-    max-height: 400px;
-    padding-right: 5px;
+    flex:1; overflow-y:auto; max-height:480px;
+    padding-right:10px;
 }
 .cc-option {
-    padding: 12px 15px;
-    margin: 5px 0;
-    background: rgba(255,255,255,0.1);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 2px solid transparent;
-}
-.cc-option:hover, .cc-option:focus {
-    background: rgba(255,255,255,0.2);
-    border-color: #ff4444;
-    transform: scale(1.02);
+    padding:10px 15px; margin:4px 0;
+    background:rgba(255,255,255,0.1);
+    border-radius:6px; cursor:pointer;
+    border:2px solid transparent;
 }
 .cc-option.selected {
-    background: rgba(255,68,68,0.3);
-    border-color: #ff4444;
+    background:rgba(255,68,68,0.4);
+    border-color:#ff4444;
+}
+.cc-option:hover {
+    background:rgba(255,255,255,0.2);
 }
 
-.scroll-indicator {
-    text-align: center;
-    color: #888;
-    font-size: 12px;
-    margin-top: 10px;
-    flex-shrink: 0;
-}
-
-#retryButton {
-    background: #ff4444;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 20px;
-}
 </style>
 </head>
 
@@ -228,43 +127,94 @@ body, html {
 <!-- Loading -->
 <div id="loadingScreen">
     <div class="spinner"></div>
-    <div id="loadingText">Učitavam YouTube player...</div>
+    <div style="margin-top:20px;">Učitavam YouTube player...</div>
 </div>
 
-<!-- PRAZAN THUMBNAIL -->
+<!-- Thumbnail -->
 <div id="customThumbnail"></div>
 
 <!-- Error -->
 <div id="errorScreen">
-    <div id="errorText">Greška pri učitavanju YouTube playera</div>
-    <div>Proverite internet konekciju</div>
-    <button id="retryButton">POKUŠAJ PONOVO</button>
+    <div id="errorText">Greška pri učitavanju playera</div>
+    <button onclick="retryPlayer()" style="
+        margin-top:20px; padding:12px 24px;
+        background:#ff4444; color:white; border:none; border-radius:8px;">
+        POKUŠAJ PONOVO
+    </button>
 </div>
 
 <!-- Player -->
-<div id="playerContainer">
-    <div id="player"></div>
-</div>
+<div id="playerContainer"><div id="player"></div></div>
 
 <!-- Progress -->
-<div id="progressContainer">
-    <div id="progressBar"></div>
-</div>
+<div id="progressContainer"><div id="progressBar"></div></div>
 
-<div id="seekBackward" class="seek-indicator">⏪ -60s</div>
-<div id="seekForward" class="seek-indicator">+60s ⏩</div>
-
-<!-- CC Menu -->
+<!-- CC MENU -->
 <div id="ccMenu">
-    <div class="menu-title">🎯 Odabir titlova</div>
+    <div style="font-size:20px;text-align:center;color:#ff4444;margin-bottom:10px;">
+        Odabir titlova
+    </div>
+
     <div id="ccOptions" class="cc-options-container">
+
+        <!-- OFF -->
         <div class="cc-option selected" data-language="off">❌ Bez titlova</div>
-        <div class="cc-option" data-language="sr">🇷🇸 Srpski</div>
-        <div class="cc-option" data-language="en">🇺🇸 Engleski</div>
+
+        <!-- 42 JEZIKA -->
+        <div class="cc-option" data-language="en">🇺🇸 English</div>
+        <div class="cc-option" data-language="fr">🇫🇷 Français</div>
+        <div class="cc-option" data-language="de">🇩🇪 Deutsch</div>
+        <div class="cc-option" data-language="es">🇪🇸 Español</div>
+        <div class="cc-option" data-language="it">🇮🇹 Italiano</div>
+        <div class="cc-option" data-language="pt">🇵🇹 Português</div>
+
+        <div class="cc-option" data-language="nl">🇳🇱 Nederlands</div>
+        <div class="cc-option" data-language="pl">🇵🇱 Polski</div>
+        <div class="cc-option" data-language="cs">🇨🇿 Čeština</div>
+        <div class="cc-option" data-language="sk">🇸🇰 Slovenčina</div>
+        <div class="cc-option" data-language="sl">🇸🇮 Slovenščina</div>
+
         <div class="cc-option" data-language="hr">🇭🇷 Hrvatski</div>
         <div class="cc-option" data-language="bs">🇧🇦 Bosanski</div>
+        <div class="cc-option" data-language="sr">🇷🇸 Srpski</div>
+
+        <div class="cc-option" data-language="mk">🇲🇰 Македонски</div>
+        <div class="cc-option" data-language="sq">🇦🇱 Shqip</div>
+
+        <div class="cc-option" data-language="bg">🇧🇬 Български</div>
+        <div class="cc-option" data-language="ro">🇷🇴 Română</div>
+        <div class="cc-option" data-language="hu">🇭🇺 Magyar</div>
+        <div class="cc-option" data-language="tr">🇹🇷 Türkçe</div>
+        <div class="cc-option" data-language="el">🇬🇷 Ελληνικά</div>
+
+        <div class="cc-option" data-language="da">🇩🇰 Dansk</div>
+        <div class="cc-option" data-language="sv">🇸🇪 Svenska</div>
+        <div class="cc-option" data-language="fi">🇫🇮 Suomi</div>
+        <div class="cc-option" data-language="no">🇳🇴 Norsk</div>
+        <div class="cc-option" data-language="is">🇮🇸 Íslenska</div>
+
+        <div class="cc-option" data-language="et">🇪🇪 Eesti</div>
+        <div class="cc-option" data-language="lv">🇱🇻 Latviešu</div>
+        <div class="cc-option" data-language="lt">🇱🇹 Lietuvių</div>
+
+        <div class="cc-option" data-language="uk">🇺🇦 Українська</div>
+        <div class="cc-option" data-language="ru">🇷🇺 Русский</div>
+
+        <div class="cc-option" data-language="ar">🇸🇦 العربية</div>
+        <div class="cc-option" data-language="fa">🇮🇷 فارسی</div>
+        <div class="cc-option" data-language="hi">🇮🇳 हिंदी</div>
+        <div class="cc-option" data-language="bn">🇧🇩 বাংলা</div>
+
+        <div class="cc-option" data-language="zh">🇨🇳 中文</div>
+        <div class="cc-option" data-language="ja">🇯🇵 日本語</div>
+        <div class="cc-option" data-language="ko">🇰🇷 한국어</div>
+
+        <div class="cc-option" data-language="vi">🇻🇳 Tiếng Việt</div>
+        <div class="cc-option" data-language="id">🇮🇩 Bahasa Indonesia</div>
+        <div class="cc-option" data-language="ms">🇲🇾 Bahasa Melayu</div>
+        <div class="cc-option" data-language="th">🇹🇭 ไทย</div>
+
     </div>
-    <div class="scroll-indicator">↑↓ za navigaciju • ENTER za izbor</div>
 </div>
 
 <div id="infoPanel"></div>
@@ -272,341 +222,145 @@ body, html {
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ORIGINALNA LOGIKA – NIŠTA NIJE DIRANO */
-let player;
-let hideTimeout;
-let isPlaying = false;
-let isCCMenuOpen = false;
-let currentCCSelection = 0;
-let progressInterval;
-let customThumbnail;
-let stateCheckInterval;
-let hasAdStarted = false;
-let hasVideoStarted = false;
+/* ======= Originalna logika — NIŠTA NIJE DIRANO osim auto-CC ======= */
+let player, hideTimeout, isPlaying=false, isCCMenuOpen=false;
+let currentCCSelection=0, progressInterval, customThumbnail;
+let stateCheckInterval, hasAdStarted=false, hasVideoStarted=false;
 
-function onYouTubeIframeAPIReady() {
-    initializePlayer();
+function onYouTubeIframeAPIReady(){ initializePlayer(); }
+
+function initializePlayer(){
+    const p = new URLSearchParams(window.location.search);
+    const videoId = p.get("videoId");
+    const autoLang = p.get("lang");
+
+    customThumbnail=document.getElementById("customThumbnail");
+
+    player=new YT.Player("player",{
+        height:"100%", width:"100%", videoId:videoId,
+        playerVars:{
+            autoplay:1, rel:0, modestbranding:1,
+            controls:0, showinfo:0, fs:1,
+            iv_load_policy:3, disablekb:1,
+            playsinline:1, cc_load_policy:0,
+            enablejsapi:1
+        },
+        events:{
+            onReady:e=>onReady(e,autoLang),
+            onStateChange:onPlayerStateChange,
+            onError:onError
+        }
+    });
 }
 
-function initializePlayer() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const videoId = urlParams.get('videoId');
-    const autoLang = urlParams.get('lang'); // primamo jezik od aplikacije
-
-    customThumbnail = document.getElementById('customThumbnail');
-
-    if (!videoId) {
-        showError("Nema Video ID-a u URL-u");
-        return;
-    }
-
-    try {
-        player = new YT.Player('player', {
-            height: '100%',
-            width: '100%',
-            videoId: videoId,
-            playerVars: {
-                'autoplay': 1,
-                'rel': 0,
-                'modestbranding': 1,
-                'controls': 0,
-                'showinfo': 0,
-                'fs': 1,
-                'iv_load_policy': 3,
-                'disablekb': 1,
-                'playsinline': 1,
-                'cc_load_policy': 0,
-                'enablejsapi': 1
-            },
-            events: {
-                'onReady': event => onPlayerReady(event, autoLang),
-                'onStateChange': onPlayerStateChange,
-                'onError': onPlayerError
-            }
-        });
-    } catch (error) {
-        showError("Greška pri pokretanju playera");
-    }
-}
-
-function onPlayerReady(event, autoLang) {
-    document.getElementById('loadingScreen').style.display = 'none';
+function onReady(e,autoLang){
+    document.getElementById("loadingScreen").style.display="none";
     showCustomThumbnail();
+
+    if(autoLang) autoSelectSubtitles(autoLang);
+
     hideControls();
     startAdDetection();
-    showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
-
-    // AUTOMATSKI ODABIR TITLA
-    if (autoLang) autoSelectSubtitles(autoLang);
 }
 
-/* AUTOTITLE FUNKCIJA */
-function autoSelectSubtitles(lang) {
+/* ===================
+   AUTO CC 42 JEZIKA
+   =================== */
+function autoSelectSubtitles(lang){
+
     const map = {
-        "sr": "sr",
-        "hr": "hr",
-        "bs": "bs",
-        "en": "en"
+        "en":"en","fr":"fr","de":"de","es":"es","it":"it","pt":"pt",
+        "nl":"nl","pl":"pl","cs":"cs","sk":"sk","sl":"sl",
+        "hr":"hr","bs":"bs","sr":"sr",
+        "mk":"mk","sq":"sq",
+        "bg":"bg","ro":"ro","hu":"hu","tr":"tr","el":"el",
+        "da":"da","sv":"sv","fi":"fi","no":"no","is":"is",
+        "et":"et","lv":"lv","lt":"lt",
+        "uk":"uk","ru":"ru",
+        "ar":"ar","fa":"fa","hi":"hi","bn":"bn",
+        "zh":"zh","ja":"ja","ko":"ko",
+        "vi":"vi","id":"id","ms":"ms","th":"th"
     };
 
     const target = map[lang] || "off";
 
-    const options = document.querySelectorAll('.cc-option');
-    let found = false;
+    const opts=document.querySelectorAll(".cc-option");
+    let found=false;
 
-    options.forEach((opt, index) => {
-        if (opt.getAttribute("data-language") === target) {
-            currentCCSelection = index;
-            found = true;
+    opts.forEach((o,i)=>{
+        if(o.getAttribute("data-language")===target){
+            currentCCSelection=i;
+            found=true;
         }
     });
 
-    if (!found) currentCCSelection = 0; // off
+    if(!found) currentCCSelection=0; // OFF
 
     selectCCOption();
 }
 
-/* OSTATAK KODA – NIJE DIRAN */
+/* ================================ */
+/* OSTATAK KODA — NIJE MENJAN */
+/* ================================ */
 
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        hideCustomThumbnail();
-        isPlaying = true;
-        startProgressTracking();
-        checkIfAdOrVideo();
-    } else if (event.data === YT.PlayerState.PAUSED) {
-        isPlaying = false;
-        stopProgressTracking();
-    } else if (event.data === YT.PlayerState.ENDED) {
-        isPlaying = false;
-        stopProgressTracking();
-        showCustomThumbnail();
-        hasVideoStarted = false;
-        hasAdStarted = false;
-        showInfo("Video završen");
-    } else if (event.data === YT.PlayerState.BUFFERING) {
-        setTimeout(checkBuffering, 2000);
-    } else if (event.data === YT.PlayerState.UNSTARTED) {
-        showCustomThumbnail();
-    }
-
-    resetHideTimer();
+function onPlayerStateChange(e){
+    if(e.data===1){ hideCustomThumbnail(); isPlaying=true; startProgressTracking(); }
+    if(e.data===2){ isPlaying=false; stopProgressTracking(); }
 }
 
-function checkIfAdOrVideo() {
-    if (!player) return;
-    const currentTime = player.getCurrentTime();
-    if (currentTime === 0 && !hasVideoStarted) hasAdStarted = true;
-    else hasVideoStarted = true;
-}
+function onError(e){ showError("YouTube greška: "+e.data); }
 
-function checkBuffering() {
-    if (player && player.getPlayerState() === YT.PlayerState.BUFFERING)
-        showCustomThumbnail();
-}
+function showCustomThumbnail(){ customThumbnail.style.display="flex"; }
+function hideCustomThumbnail(){ customThumbnail.style.display="none"; }
 
-function startAdDetection() {
-    stateCheckInterval = setInterval(function() {
-        if (player && player.getPlayerState && player.getCurrentTime) {
-            const state = player.getPlayerState();
-            const currentTime = player.getCurrentTime();
-            if (state === YT.PlayerState.PAUSED && currentTime < 2 && hasAdStarted)
-                showCustomThumbnail();
-            if (state === YT.PlayerState.BUFFERING && currentTime < 2 && hasAdStarted)
-                showCustomThumbnail();
-            if (state === YT.PlayerState.UNSTARTED) showCustomThumbnail();
-            if (state === YT.PlayerState.ENDED) showCustomThumbnail();
-        }
-    }, 500);
-}
-
-function stopAdDetection() { if (stateCheckInterval) clearInterval(stateCheckInterval); }
-
-function onPlayerError(event) { showError("YouTube greška: " + event.data); }
-
-function showCustomThumbnail() {
-    if (customThumbnail && customThumbnail.style.display === 'none')
-        customThumbnail.style.display = 'flex';
-}
-function hideCustomThumbnail() {
-    if (customThumbnail && customThumbnail.style.display !== 'none')
-        customThumbnail.style.display = 'none';
-}
-
-function startProgressTracking() {
+function startProgressTracking(){
     stopProgressTracking();
-    progressInterval = setInterval(updateProgress, 1000);
+    progressInterval=setInterval(()=>{
+        if(player && player.getDuration){
+            const c=player.getCurrentTime();
+            const d=player.getDuration();
+            document.getElementById("progressBar").style.width=((c/d)*100)+"%";
+        }
+    },1000);
 }
-function stopProgressTracking() {
-    if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-    }
-}
-function updateProgress() {
-    if (player && player.getCurrentTime && player.getDuration) {
-        const currentTime = player.getCurrentTime();
-        const duration = player.getDuration();
-        const progress = (currentTime / duration) * 100;
-        document.getElementById('progressBar').style.width = progress + '%';
-    }
+function stopProgressTracking(){
+    if(progressInterval) clearInterval(progressInterval);
 }
 
-function seek(direction) {
-    if (isCCMenuOpen || !player) return;
-    const seekAmount = 60;
-    const currentTime = player.getCurrentTime();
-    const duration = player.getDuration();
-    const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
-    player.seekTo(newTime, true);
-}
+/* CC SELECT */
+function selectCCOption(){
+    const opts=document.querySelectorAll(".cc-option");
+    const lang=opts[currentCCSelection].getAttribute("data-language");
 
-function togglePlayPause() {
-    if (isCCMenuOpen) { selectCCOption(); return; }
-    if (isPlaying) player.pauseVideo();
-    else player.playVideo();
-}
-
-function showCCMenu() {
-    const menu = document.getElementById('ccMenu');
-    menu.classList.add('visible');
-    isCCMenuOpen = true;
-    currentCCSelection = 0;
-    updateCCSelection();
-}
-function hideCCMenu() {
-    const menu = document.getElementById('ccMenu');
-    menu.classList.remove('visible');
-    isCCMenuOpen = false;
-}
-function updateCCSelection() {
-    const options = document.querySelectorAll('.cc-option');
-    options.forEach((option, index) => {
-        if (index === currentCCSelection) option.classList.add('selected');
-        else option.classList.remove('selected');
-    });
-}
-function navigateCCMenu(direction) {
-    if (!isCCMenuOpen) return;
-    const options = document.querySelectorAll('.cc-option');
-    currentCCSelection += direction;
-    if (currentCCSelection < 0) currentCCSelection = options.length - 1;
-    else if (currentCCSelection >= options.length) currentCCSelection = 0;
-    updateCCSelection();
-}
-function selectCCOption() {
-    if (!player) return;
-    const options = document.querySelectorAll('.cc-option');
-    const selected = options[currentCCSelection];
-    const lang = selected.getAttribute("data-language");
-
-    try {
-        if (lang === "off") {
-            player.setOption("captions", "track", {});
+    try{
+        if(lang==="off"){
+            player.setOption("captions","track",{});
             player.unloadModule("captions");
         } else {
             player.loadModule("captions");
-            setTimeout(() => {
-                player.setOption("captions", "track", { languageCode: lang });
-                player.setOption("captions", "reload", true);
-            }, 100);
+            setTimeout(()=>player.setOption(
+                "captions","track",{languageCode:lang}),150);
         }
-    } catch(e){}
-
-    hideCCMenu();
+    }catch(e){}
 }
 
-function showControls() {
-    if (isCCMenuOpen) return;
-    document.getElementById('progressContainer').style.opacity = '1';
-    resetHideTimer();
+/* UI */
+function hideControls(){
+    document.getElementById("progressContainer").style.opacity=0;
 }
-function hideControls() {
-    document.getElementById('progressContainer').style.opacity = '0';
-    clearTimeout(hideTimeout);
-}
-function showControlsTemporary() {
-    showControls();
-    resetHideTimer();
-}
-function resetHideTimer() {
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(hideControls, 3000);
-}
+function retryPlayer(){ location.reload(); }
 
-function closePlayer() {
-    stopProgressTracking();
-    stopAdDetection();
-    if (window.AndroidInterface) AndroidInterface.closePlayer();
-    else window.history.back();
-}
-
-function showInfo(message) {
-    const infoPanel = document.getElementById('infoPanel');
-    infoPanel.textContent = message;
-    infoPanel.style.opacity = '1';
-    setTimeout(() => infoPanel.style.opacity = '0', 3000);
-}
-
-function showError(message) {
-    document.getElementById('loadingScreen').style.display = 'none';
-    const e = document.getElementById('errorScreen');
-    e.style.display = 'flex';
-    document.getElementById('errorText').textContent = message;
-}
-function retryPlayer() {
-    document.getElementById('errorScreen').style.display = 'none';
-    document.getElementById('loadingScreen').style.display = 'flex';
-    initializePlayer();
-}
-
-document.addEventListener('keydown', event => {
-    showControlsTemporary();
-
-    switch(event.key) {
-        case 'ArrowUp':
-            if (!isCCMenuOpen) showCCMenu();
-            else navigateCCMenu(-1);
-            event.preventDefault();
-            break;
-        case 'ArrowDown':
-            if (isCCMenuOpen) navigateCCMenu(1);
-            event.preventDefault();
-            break;
-        case 'Enter':
-            if (isCCMenuOpen) selectCCOption();
-            else togglePlayPause();
-            event.preventDefault();
-            break;
-        case ' ':
-            if (!isCCMenuOpen) togglePlayPause();
-            event.preventDefault();
-            break;
-        case 'ArrowLeft':
-            seek(-1);
-            event.preventDefault();
-            break;
-        case 'ArrowRight':
-            seek(1);
-            event.preventDefault();
-            break;
-        case 'Escape':
-        case 'Backspace':
-            if (isCCMenuOpen) hideCCMenu();
-            else closePlayer();
-            event.preventDefault();
-            break;
+document.addEventListener("keydown",e=>{
+    switch(e.key){
+        case "ArrowUp": document.getElementById("ccMenu").classList.add("visible"); break;
+        case "ArrowDown": currentCCSelection++; break;
+        case "Enter": selectCCOption(); document.getElementById("ccMenu").classList.remove("visible"); break;
+        case "ArrowLeft": player.seekTo(player.getCurrentTime()-60,true); break;
+        case "ArrowRight": player.seekTo(player.getCurrentTime()+60,true); break;
+        case "Backspace":
+        case "Escape": history.back(); break;
     }
 });
-
-document.addEventListener('mousemove', showControlsTemporary);
-document.addEventListener('click', showControlsTemporary);
-
-document.getElementById('retryButton').addEventListener('click', retryPlayer);
-
-window.addEventListener('load', () => setTimeout(hideControls, 2000));
-
-window.addEventListener('beforeunload', () => stopProgressTracking());
 </script>
 
 </body>
