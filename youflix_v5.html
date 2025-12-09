@@ -3,144 +3,377 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouFlix Player v9 (Ultra Stable)</title>
+<title>YouFlix Player v10 (Stable)</title>
 
 <style>
     body, html {
-        margin:0;
-        padding:0;
-        width:100%;
-        height:100%;
-        background:#000;
-        overflow:hidden;
-        font-family:Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #000;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
     }
 
+    /* Loading screen */
     #loadingScreen {
-        position:absolute;
-        top:0; left:0;
-        width:100%; height:100%;
-        background:#000;
-        color:white;
-        display:flex;
-        flex-direction:column;
-        justify-content:center;
-        align-items:center;
-        z-index:9999;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        color: white;
     }
-
+    #loadingText {
+        margin-top: 20px;
+        font-size: 18px;
+        text-align: center;
+    }
     .spinner {
-        width:50px; height:50px;
-        border:5px solid #333;
-        border-top:5px solid #ff4444;
-        border-radius:50%;
-        animation:spin 1s linear infinite;
+        width: 50px;
+        height: 50px;
+        border: 5px solid #333;
+        border-top: 5px solid #ff4444;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
     }
-    @keyframes spin { 0%{transform:rotate(0);} 100%{transform:rotate(360deg);} }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 
+    /* Error Screen */
+    #errorScreen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        color: white;
+        text-align: center;
+        padding: 20px;
+    }
+    #retryButton {
+        background: #ff4444;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+
+    /* Player */
+    #playerContainer {
+        width: 100%;
+        height: 100%;
+        position: relative;
+    }
     #player {
-        width:100%;
-        height:100%;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    /* Progress bar */
+    #progressContainer {
+        position: absolute;
+        bottom: 60px;
+        left: 5%;
+        width: 90%;
+        background: rgba(255,255,255,0.2);
+        height: 6px;
+        border-radius: 3px;
+        z-index: 10001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    #progressBar {
+        height: 100%;
+        background: #ff4444;
+        border-radius: 3px;
+        width: 0%;
+        transition: width 0.1s ease;
     }
 
     #infoPanel {
-        position:absolute;
-        top:30px; left:30px;
-        padding:10px 15px;
-        background:rgba(0,0,0,0.7);
-        border-left:4px solid #ff4444;
-        border-radius:8px;
-        color:white;
-        font-size:16px;
-        opacity:0;
-        transition:opacity .3s;
-        z-index:9000;
+        position: absolute;
+        top: 30px;
+        left: 30px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        font-size: 16px;
+        z-index: 10001;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border-left: 4px solid #ff4444;
     }
 </style>
 </head>
 
 <body>
 
+<!-- Loading Screen -->
 <div id="loadingScreen">
     <div class="spinner"></div>
-    <div style="margin-top:20px;">Učitavam YouTube player...</div>
+    <div id="loadingText">Učitavam YouTube player...</div>
 </div>
 
-<div id="player"></div>
+<!-- Error Screen -->
+<div id="errorScreen">
+    <div id="errorText">Greška pri učitavanju YouTube playera</div>
+    <div>Proverite internet konekciju</div>
+    <button id="retryButton">POKUŠAJ PONOVO</button>
+</div>
+
+<!-- Player -->
+<div id="playerContainer">
+    <div id="player"></div>
+</div>
+
+<!-- Progress -->
+<div id="progressContainer">
+    <div id="progressBar"></div>
+</div>
 
 <div id="infoPanel"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
+/* BAZA: isti princip kao stari TV YouTube Player – ali očišćen */
+
 let player;
+let hideTimeout;
 let isPlaying = false;
+let progressInterval;
 
-/* Najstabilnija verzija – bez thumbnail, bez CC menu, bez auto translate */
+/* YouTube API callback */
 function onYouTubeIframeAPIReady() {
-    const id = new URLSearchParams(window.location.search).get("videoId");
+    initializePlayer();
+}
 
-    player = new YT.Player("player", {
-        width:"100%",
-        height:"100%",
-        videoId:id,
-        playerVars:{
-            autoplay:1,
-            controls:0,
-            rel:0,
-            modestbranding:1,
-            fs:1,
-            disablekb:1,
-            iv_load_policy:3
-        },
-        events:{
-            onReady:onReady,
-            onStateChange:onState
+function initializePlayer() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId = urlParams.get('videoId');
+
+    if (!videoId) {
+        showError("Nema Video ID-a u URL-u");
+        return;
+    }
+
+    try {
+        player = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                rel: 0,
+                modestbranding: 1,
+                controls: 0,
+                showinfo: 0,
+                fs: 1,
+                iv_load_policy: 3,
+                disablekb: 1,
+                playsinline: 1,
+                cc_load_policy: 0,
+                enablejsapi: 1
+            },
+            events: {
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange,
+                onError: onPlayerError
+            }
+        });
+    } catch (error) {
+        showError("Greška pri pokretanju playera");
+    }
+}
+
+function onPlayerReady(event) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    startProgressTracking();
+    showInfo("←→ 60s | ENTER play/pause | BACK izlaz");
+    // auto start
+    try {
+        event.target.playVideo();
+    } catch(e) {}
+}
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+        isPlaying = true;
+        startProgressTracking();
+    } else if (event.data === YT.PlayerState.PAUSED) {
+        isPlaying = false;
+        stopProgressTracking();
+    } else if (event.data === YT.PlayerState.ENDED) {
+        isPlaying = false;
+        stopProgressTracking();
+        showInfo("Video završen");
+    }
+
+    resetHideTimer();
+}
+
+function onPlayerError(event) {
+    showError("YouTube greška: " + event.data);
+}
+
+/* Progress tracking */
+function startProgressTracking() {
+    stopProgressTracking();
+    progressInterval = setInterval(updateProgress, 1000);
+}
+
+function stopProgressTracking() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+}
+
+function updateProgress() {
+    if (player && player.getCurrentTime && player.getDuration) {
+        const currentTime = player.getCurrentTime();
+        const duration = player.getDuration();
+        if (duration > 0) {
+            const progress = (currentTime / duration) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
         }
-    });
+    }
 }
 
-function onReady() {
-    document.getElementById("loadingScreen").style.display="none";
-    showInfo("←→ 60s | ENTER pauza/play | BACK izlaz");
+/* Kontrole */
+function seek(direction) {
+    if (!player) return;
+    const seekAmount = 60;
+    const currentTime = player.getCurrentTime();
+    const duration = player.getDuration();
+    const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
+    player.seekTo(newTime, true);
 }
 
-function onState(e) {
-    if (e.data === YT.PlayerState.PLAYING) isPlaying = true;
-    if (e.data === YT.PlayerState.PAUSED)  isPlaying = false;
+function togglePlayPause() {
+    if (!player) return;
+    if (isPlaying) player.pauseVideo();
+    else player.playVideo();
 }
 
-/* INFO PANEL */
-function showInfo(msg){
-    const panel = document.getElementById("infoPanel");
-    panel.textContent = msg;
-    panel.style.opacity = 1;
-    setTimeout(()=>panel.style.opacity=0,2500);
+/* UI kontrole */
+function showControls() {
+    document.getElementById('progressContainer').style.opacity = '1';
+    resetHideTimer();
 }
 
-/* DPAD – stabilna logika */
-document.addEventListener("keydown", e => {
+function hideControls() {
+    document.getElementById('progressContainer').style.opacity = '0';
+    clearTimeout(hideTimeout);
+}
 
-    switch(e.key){
+function showControlsTemporary() {
+    showControls();
+    resetHideTimer();
+}
 
-        case "ArrowLeft":
-            player.seekTo(player.getCurrentTime() - 60, true);
+function resetHideTimer() {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(hideControls, 3000);
+}
+
+/* Zatvaranje playera */
+function closePlayer() {
+    stopProgressTracking();
+    if (window.AndroidInterface && AndroidInterface.closePlayer) {
+        AndroidInterface.closePlayer();
+    } else {
+        window.history.back();
+    }
+}
+
+/* Info & error */
+function showInfo(message) {
+    const infoPanel = document.getElementById('infoPanel');
+    if (infoPanel) {
+        infoPanel.textContent = message;
+        infoPanel.style.opacity = '1';
+        setTimeout(() => { infoPanel.style.opacity = '0'; }, 3000);
+    }
+}
+
+function showError(message) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('errorScreen').style.display = 'flex';
+    document.getElementById('errorText').textContent = message;
+}
+
+function retryPlayer() {
+    document.getElementById('errorScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'flex';
+    initializePlayer();
+}
+
+/* DPAD kontrole */
+document.addEventListener('keydown', function(event) {
+    showControlsTemporary();
+
+    switch(event.key) {
+        case 'ArrowLeft':
+            seek(-1);
+            event.preventDefault();
             break;
 
-        case "ArrowRight":
-            player.seekTo(player.getCurrentTime() + 60, true);
+        case 'ArrowRight':
+            seek(1);
+            event.preventDefault();
             break;
 
-        case "Enter":
-            if (isPlaying) player.pauseVideo();
-            else player.playVideo();
+        case 'Enter':
+            togglePlayPause();
+            event.preventDefault();
             break;
 
-        case "Backspace":
-        case "Escape":
-            history.back();
+        case ' ':
+            togglePlayPause();
+            event.preventDefault();
+            break;
+
+        case 'Escape':
+        case 'Backspace':
+            closePlayer();
+            event.preventDefault();
             break;
     }
+});
+
+document.addEventListener('mousemove', showControlsTemporary);
+document.addEventListener('click', showControlsTemporary);
+
+document.getElementById('retryButton').addEventListener('click', retryPlayer);
+
+window.addEventListener('load', function() {
+    setTimeout(hideControls, 2000);
+});
+
+window.addEventListener('beforeunload', function() {
+    stopProgressTracking();
 });
 </script>
 
