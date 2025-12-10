@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouFlix Legal Auto-CC v3</title>
+<style>
+body, html{margin:0;padding:0;background:#000;overflow:hidden;width:100%;height:100%;font-family:Arial,sans-serif;}
+#playerContainer{width:100%;height:100%;position:relative;}
+#ccMenu{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:420px;max-height:520px;background:rgba(0,0,0,0.95);color:#fff;border-radius:12px;padding:20px;z-index:10020;opacity:0;pointer-events:none;display:flex;flex-direction:column;}
+#ccMenu.visible{opacity:1;pointer-events:auto;}
+.menu-title{font-size:22px;margin-bottom:12px;text-align:center;color:#ff4444;}
+.cc-options-container{flex:1;overflow-y:auto;max-height:420px;padding-right:10px;scrollbar-width:thin;}
+.cc-option{padding:12px 16px;margin-bottom:6px;background:rgba(255,255,255,0.1);border-radius:6px;cursor:pointer;border:2px solid transparent;}
+.cc-option.selected{background:rgba(255,68,68,0.25);border-color:#ff4444;}
+.scroll-indicator{text-align:center;font-size:12px;margin-top:12px;color:#777;}
+</style>
+</head>
+<body>
+<div id="playerContainer"><div id="player"></div></div>
+<div id="ccMenu"><div class="menu-title">Subtitles</div><div id="ccOptions" class="cc-options-container"></div><div class="scroll-indicator">↑↓ navigate • ENTER select • BACK exit</div></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let player, availableTracks=[], currentCCSelection=0;
+function getUrlParam(k){return new URLSearchParams(window.location.search).get(k);}
+const videoId = getUrlParam("videoId"), autoLang = getUrlParam("lang") || "en";
+
+function onYouTubeIframeAPIReady(){
+    if(!videoId) return;
+    player = new YT.Player("player",{width:"100%",height:"100%",videoId:videoId,playerVars:{autoplay:1,controls:0,rel:0,modestbranding:1,fs:1,iv_load_policy:3,playsinline:1,disablekb:1,cc_load_policy:1},events:{onReady:onPlayerReady,onStateChange:onPlayerStateChange}});
+}
+
+function onPlayerReady(){
+    buildTrackList(); autoSelectOrTranslate(autoLang);
+}
+
+function onPlayerStateChange(e){}
+
+function buildTrackList(){
+    const opts=document.getElementById("ccOptions"); opts.innerHTML="";
+    availableTracks=player.getOption("captions","tracklist")||[];
+    availableTracks.forEach((t,idx)=>{
+        const div=document.createElement("div");
+        div.className="cc-option"; div.textContent=t.languageCode.toUpperCase()+(t.kind==="asr"?" (ASR)":""); div.dataset.index=idx;
+        opts.appendChild(div);
+    });
+}
+
+function autoSelectOrTranslate(lang){
+    let found = availableTracks.find(t=>t.languageCode===lang);
+    if(found) player.setOption("captions","track",{languageCode:found.languageCode});
+    else{ // auto-translate
+        const src = availableTracks.find(t=>!t.kind||t.kind==="standard");
+        if(src) player.setOption("captions","track",{languageCode:src.languageCode, autoTranslateLanguage:lang});
+    }
+}
+
+function handleRemote(action){
+    if(!player) return;
+    switch(action){
+        case"up":scrollCCMenu(-1);break;
+        case"down":scrollCCMenu(1);break;
+        case"left":seekVideo(-10);break;
+        case"right":seekVideo(10);break;
+        case"enter":selectCCOption();break;
+        case"back":closeCCMenu();break;
+    }
+}
+
+function scrollCCMenu(direction){
+    const options=document.querySelectorAll(".cc-option"); if(!options.length) return;
+    currentCCSelection=Math.max(0,Math.min(currentCCSelection+direction,options.length-1));
+    options.forEach((el,idx)=>el.classList.toggle("selected",idx===currentCCSelection));
+    options[currentCCSelection].scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+function selectCCOption(){
+    const option=document.querySelectorAll(".cc-option")[currentCCSelection];
+    if(option){const idx=option.dataset.index; player.setOption("captions","track",{languageCode:availableTracks[idx].languageCode}); closeCCMenu();}
+}
+
+function seekVideo(sec){if(player&&player.getCurrentTime){const t=Math.max(0,player.getCurrentTime()+sec);player.seekTo(t,true);}}
+function closeCCMenu(){document.getElementById("ccMenu").classList.remove("visible");}
+</script>
+</body>
+</html>
