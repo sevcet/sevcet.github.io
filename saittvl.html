@@ -23,8 +23,9 @@
 
 <script>
     const url = new URL(window.location.href);
-    const videoId = url.searchParams.get("videoId");
-    const userLang = url.searchParams.get("lang") || "sr";
+    const videoId  = url.searchParams.get("videoId");
+    const finalLang = url.searchParams.get("lang") || "en";      // već obrađen jezik
+    const userLang  = url.searchParams.get("userLang") || finalLang; // „ciljni“ jezik
 
     let player;
 
@@ -35,18 +36,21 @@
                 autoplay: 1,
                 controls: 1,
                 cc_load_policy: 1,
-                hl: userLang
+                hl: finalLang
             },
             events: {
-                "onReady": onPlayerReady,
-                "onStateChange": onPlayerStateChange
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange
             }
         });
     }
 
     function onPlayerReady() {
-        player.playVideo();
+        try {
+            player.playVideo();
+        } catch (e) {}
         enableSubs();
+        setTimeout(enableSubs, 1500);
     }
 
     function onPlayerStateChange(e) {
@@ -55,34 +59,82 @@
         }
     }
 
+    // 1) finalLang / userLang
+    // 2) engleski
+    // 3) bilo koji dostupan + auto translate
     function enableSubs() {
         try {
             const tracks = player.getOption("captions", "tracklist");
 
             if (!tracks || tracks.length === 0) {
-                player.setOption("captions", "track", {"languageCode": "auto"});
+                // nema eksplicitnih titlova → auto captions + auto translate
+                player.setOption("captions", "track", { languageCode: "auto" });
+                player.setOption("captions", "translationLanguage", {
+                    languageCode: userLang
+                });
                 return;
             }
 
-            let selected = tracks.find(t => t.languageCode === userLang);
-            if (!selected) {
-                selected = tracks.find(t => t.languageCode === "en");
-            }
-            if (!selected) {
-                selected = tracks[0];
-            }
+            // probaj finalLang (već obrađen: sistem/korisnik + srodni jezici)
+            let selected = tracks.find(t => t.languageCode === finalLang);
 
+            // ako želiš, možeš prvo probati userLang:
+            if (!selected) selected = tracks.find(t => t.languageCode === userLang);
+
+            // fallback na engleski
+            if (!selected) selected = tracks.find(t => t.languageCode === "en");
+
+            // ako nema ni engleski, uzmi prvi dostupni
+            if (!selected) selected = tracks[0];
+
+            // postavi izabrani titl
             player.setOption("captions", "track", {
                 languageCode: selected.languageCode
             });
 
-            // auto translate ako postoji mogućnost
-            if (selected.kind === "asr") {
-                player.setOption("captions", "translationLanguage", { languageCode: userLang });
-            }
+            // uključi auto-translate sa izabranog titla na userLang
+            player.setOption("captions", "translationLanguage", {
+                languageCode: userLang
+            });
 
         } catch (e) {
             console.log("Subtitle controller error:", e);
+        }
+    }
+
+    // Minimalni remote handler: left/right/enter/back
+    function handleRemote(direction) {
+        if (!player || typeof player.getPlayerState !== "function") return;
+
+        try {
+            switch (direction) {
+                case "enter": {
+                    const state = player.getPlayerState();
+                    if (state === YT.PlayerState.PLAYING) {
+                        player.pauseVideo();
+                    } else {
+                        player.playVideo();
+                    }
+                    break;
+                }
+                case "left": {
+                    const t = player.getCurrentTime() || 0;
+                    player.seekTo(Math.max(t - 10, 0), true);
+                    break;
+                }
+                case "right": {
+                    const t = player.getCurrentTime() || 0;
+                    player.seekTo(t + 10, true);
+                    break;
+                }
+                case "back": {
+                    // samo pauza – izlaz radi Android
+                    try { player.pauseVideo(); } catch (e) {}
+                    break;
+                }
+            }
+        } catch (e) {
+            console.log("handleRemote error:", e);
         }
     }
 
