@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouFlix Player v53 (Stable)</title>
+<title>YouFlix Player v52</title>
 
 <style>
 body, html {
@@ -39,7 +39,7 @@ body, html {
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes spin { 
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
@@ -212,7 +212,7 @@ function onYouTubeIframeAPIReady(){
             iv_load_policy:3,
             playsinline:1,
             disablekb:1,
-            cc_load_policy:1  /* CC modul mora biti učitan! */
+            cc_load_policy:1
         },
         events:{
             onReady:onPlayerReady,
@@ -227,7 +227,7 @@ function onPlayerReady(){
     setTimeout(() => {
         buildTrackList();
         autoSelectOrTranslate(autoLang);
-    }, 1100);
+    }, 1200);
 
     startProgress();
 }
@@ -251,8 +251,9 @@ function startProgress() {
     }, 900);
 }
 
+
 /* ================================
-   CAPTION TRACK DETECTION
+   CAPTIONS TRACK DETECTION
    ================================ */
 
 function buildTrackList() {
@@ -271,28 +272,27 @@ function buildTrackList() {
 }
 
 /* ====================================
-   AUTO SELECT + AUTO TRANSLATE ENGINE
+   AUTO SELECT + AUTO TRANSLATE SYSTEM
    ==================================== */
-
 async function autoSelectOrTranslate(lang){
     const tracks = availableTracks;
     if (!tracks || tracks.length === 0) return;
 
-    /* 1) EXACT MATCH */
+    // 1) ORIGINAL
     const exact = tracks.find(t => t.languageCode === lang && t.kind === "standard");
     if (exact){
         setTrack(exact);
         return;
     }
 
-    /* 2) ASR MATCH */
+    // 2) ASR (auto-generated)
     const asr = tracks.find(t => t.languageCode === lang && t.kind === "asr");
     if (asr){
         setTrack(asr);
         return;
     }
 
-    /* 3) FALLBACK PRIORITY */
+    // 3) FALLBACK chain
     const chain = {
         mk: ["bg","sr","en"],
         sq: ["mk","bg","en"],
@@ -303,34 +303,30 @@ async function autoSelectOrTranslate(lang){
     }[lang] || ["en"];
 
     for (let f of chain){
-        const fallbackTrack = tracks.find(t => t.languageCode === f);
-        if (fallbackTrack){
-            setTrack(fallbackTrack);
+        const tr = tracks.find(t => t.languageCode === f);
+        if (tr){
+            setTrack(tr);
             return;
         }
     }
 
-    /* 4) AUTO TRANSLATE (CORE) */
+    // 4) AUTO TRANSLATE na željeni jezik
     let base = tracks.find(t => t.languageCode === "en");
     if (!base) base = tracks[0];
 
     setTrack(base);
 
-    /* YouTube CC loader delay */
-    await new Promise(r => setTimeout(r, 450));
-
-    /* STABILNI TRANSLATE → sigurno radi */
-    setTimeout(() => {
-        try {
-            console.log("AUTO-TRANSLATE → " + lang);
-            player.setOption("captions","translate", lang);
-        } catch(e){}
-    }, 1500);
+    setTimeout(()=>{
+        try{
+            player.setOption("captions","translate",lang);
+        }catch(e){}
+    },600);
 }
 
 function setTrack(track){
-    player.setOption("captions","track", track);
+    player.setOption("captions","track",track);
 }
+
 
 /* ===========================
    CC MENU DPAD HANDLING
@@ -378,8 +374,6 @@ document.addEventListener("keydown", function(e){
         e.preventDefault();
     }
 });
-
-/* CC MENU CONTROLS */
 
 function openCCMenu(){
     isCCMenuOpen = true;
