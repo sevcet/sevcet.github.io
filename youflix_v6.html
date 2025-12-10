@@ -282,7 +282,12 @@ function initPlayer(){
 function onPlayerReady(autoLang){
     document.getElementById("loadingScreen").style.display="none";
 
-    if(autoLang) autoSelectLanguage(autoLang);
+    if (autoLang) {
+        setTimeout(() => {
+            autoSelectLanguage(autoLang);
+            selectCC();   // odmah uključi titl koji je izabrao korisnik
+        }, 500);
+    }
 
     startProgress();
 }
