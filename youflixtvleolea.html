@@ -258,18 +258,19 @@ function onPlayerReady() {
 
     try { player.playVideo(); } catch (e) {}
 
-    enableSubs();
-    setTimeout(enableSubs, 1500);
+    setTimeout(enableSubs, 2000);
+    setTimeout(enableSubs, 5000);
 }
 
 /* TITLOVI: koristi subLang kao source, userLang kao target za auto-translate */
 function enableSubs() {
     try {
+        if (!player || !player.getOption) return;
+
         const tracks = player.getOption("captions", "tracklist");
         console.log("TRACKLIST =", tracks);
         console.log("subLang (source) =", subLang, "userLang (target) =", userLang);
 
-        // Ako smo iz app-a zaključili da nema eksplicitnog titla
         if (subLang === "auto") {
             console.log("No known subtitle, using auto + translationLanguage");
             player.setOption("captions", "track", { languageCode: "auto" });
@@ -279,17 +280,13 @@ function enableSubs() {
             return;
         }
 
-        // Ako ima tracklist, pokušaj da pronađeš subLang
         if (tracks && tracks.length > 0) {
-            // exact match
             let selected = tracks.find(t => t.languageCode === subLang);
 
-            // varijante (sr-Latn, en-GB...)
             if (!selected) selected = tracks.find(t =>
                 t.languageCode && t.languageCode.toLowerCase().startsWith(subLang.toLowerCase() + "-")
             );
 
-            // fallback ako ipak ne nađe
             if (!selected) selected = tracks[0];
 
             console.log("SELECTED TRACK =", selected);
@@ -298,7 +295,6 @@ function enableSubs() {
                 languageCode: selected.languageCode
             });
 
-            // pokušaj auto-translate na userLang samo ako se razlikuju
             if (userLang && userLang !== selected.languageCode) {
                 player.setOption("captions", "translationLanguage", {
                     languageCode: userLang
@@ -306,7 +302,6 @@ function enableSubs() {
                 console.log("translationLanguage set to", userLang);
             }
         } else {
-            // nema tracklist → probaj auto captions
             console.log("No tracks from API, using auto captions");
             player.setOption("captions", "track", { languageCode: "auto" });
             player.setOption("captions", "translationLanguage", {
@@ -413,7 +408,7 @@ function updateProgress() {
 /* SEEK + PLAY/PAUSE */
 function seek(direction) {
     if (!player) return;
-    const seekAmount = 10; // 10 sekundi
+    const seekAmount = 10;
     const currentTime = player.getCurrentTime();
     const duration = player.getDuration();
     const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
