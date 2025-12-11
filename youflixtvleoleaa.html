@@ -126,7 +126,7 @@ body, html {
     border-left: 4px solid #ff4444;
 }
 
-/* Seek indikatori (opciono) */
+/* Seek indikatori */
 .seek-indicator {
     position: absolute;
     top: 50%;
@@ -152,6 +152,22 @@ body, html {
     font-size: 16px;
     cursor: pointer;
     margin-top: 20px;
+}
+
+/* Dugme za retry prevoda */
+#retryTranslateBtn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    z-index: 10002;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    border: 1px solid #ff4444;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
 }
 </style>
 </head>
@@ -189,6 +205,9 @@ body, html {
 
 <div id="infoPanel"></div>
 
+<!-- Retry prevoda titlova -->
+<button id="retryTranslateBtn">Pokušaj ponovo prijevod</button>
+
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
@@ -201,11 +220,18 @@ let stateCheckInterval;
 let hasAdStarted = false;
 let hasVideoStarted = false;
 
+/* zapamćeni jezici za retry */
+let currentSubLang;
+let currentUserLang;
+
 /* parametri iz URL-a */
 const urlParams = new URLSearchParams(window.location.search);
 const videoId   = urlParams.get("videoId");
 const subLang   = urlParams.get("subLang") || "auto";   // izvorni titl koji film ima
 const userLang  = urlParams.get("userLang") || "en";    // jezik koji korisnik želi
+
+currentSubLang = subLang;
+currentUserLang = userLang;
 
 function onYouTubeIframeAPIReady() {
     initializePlayer();
@@ -267,9 +293,15 @@ function enableSubs() {
     try {
         if (!player || !player.getOption) return;
 
+        // uvek osveži current* za slučaj da ih menjaš kasnije
+        currentSubLang = subLang;
+        currentUserLang = userLang;
+
         const tracks = player.getOption("captions", "tracklist");
         console.log("TRACKLIST =", tracks);
         console.log("subLang (source) =", subLang, "userLang (target) =", userLang);
+
+        const retryBtn = document.getElementById("retryTranslateBtn");
 
         // 1) app kaže da nema poznat source → auto + translate
         if (subLang === "auto") {
@@ -279,6 +311,7 @@ function enableSubs() {
                 languageCode: userLang
             });
 
+            if (retryBtn) retryBtn.style.display = "none";
             setTimeout(checkAutoFallback, 3000);
             return;
         }
@@ -304,6 +337,7 @@ function enableSubs() {
             });
             console.log("translationLanguage set to", userLang);
 
+            if (retryBtn) retryBtn.style.display = "none";
             setTimeout(checkTranslateFallback, 3000);
         } else {
             // 3) nema tracklist → auto + translate + fallback
@@ -313,6 +347,7 @@ function enableSubs() {
                 languageCode: userLang
             });
 
+            if (retryBtn) retryBtn.style.display = "none";
             setTimeout(checkAutoFallback, 3000);
         }
 
@@ -326,6 +361,8 @@ function checkTranslateFallback() {
         const afterTrack = player.getOption("captions", "track");
         console.log("AFTER TRANSLATION track =", afterTrack);
 
+        const retryBtn = document.getElementById("retryTranslateBtn");
+
         if (afterTrack &&
             afterTrack.languageCode &&
             afterTrack.languageCode !== userLang &&
@@ -335,6 +372,12 @@ function checkTranslateFallback() {
             player.setOption("captions", "translationLanguage", {
                 languageCode: "en"
             });
+
+            // prikaži dugme jer ciljni jezik nije dobijen
+            if (retryBtn) retryBtn.style.display = "block";
+        } else {
+            // prevod uspeo ili već target=en → sakrij dugme
+            if (retryBtn) retryBtn.style.display = "none";
         }
     } catch (e) {
         console.log("checkTranslateFallback error:", e);
@@ -346,6 +389,8 @@ function checkAutoFallback() {
         const afterTrack = player.getOption("captions", "track");
         console.log("AFTER AUTO track =", afterTrack);
 
+        const retryBtn = document.getElementById("retryTranslateBtn");
+
         if (afterTrack &&
             afterTrack.languageCode &&
             afterTrack.languageCode !== userLang &&
@@ -355,11 +400,26 @@ function checkAutoFallback() {
             player.setOption("captions", "translationLanguage", {
                 languageCode: "en"
             });
+
+            if (retryBtn) retryBtn.style.display = "block";
+        } else {
+            if (retryBtn) retryBtn.style.display = "none";
         }
     } catch (e) {
         console.log("checkAutoFallback error:", e);
     }
 }
+
+/* handler za retry prevoda */
+document.addEventListener("DOMContentLoaded", () => {
+    const retryTranslateBtn = document.getElementById("retryTranslateBtn");
+    if (retryTranslateBtn) {
+        retryTranslateBtn.addEventListener("click", () => {
+            console.log("Retry translate clicked for", currentSubLang, currentUserLang);
+            enableSubs();  // ponovo pokreće istu logiku nad istim video + jezicima
+        });
+    }
+});
 
 /* STANJE + REKLAME */
 function onPlayerStateChange(event) {
