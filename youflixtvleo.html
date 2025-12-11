@@ -48,7 +48,7 @@ body, html {
     100% { transform: rotate(360deg); }
 }
 
-/* PRAZAN THUMBNAIL — koristiš ga za oglase / buffer */
+/* Prazan thumbnail za oglase/buffer */
 #customThumbnail {
     position: absolute;
     top: 0;
@@ -111,6 +111,7 @@ body, html {
     transition: width 0.1s ease;
 }
 
+/* Info panel */
 #infoPanel {
     position: absolute;
     top: 30px;
@@ -126,7 +127,7 @@ body, html {
     border-left: 4px solid #ff4444;
 }
 
-/* Seek indikatori (ako želiš možeš ih kasnije vratiti u upotrebu) */
+/* Seek indikatori (trenutno samo vizuelno, po želji) */
 .seek-indicator {
     position: absolute;
     top: 50%;
@@ -164,7 +165,7 @@ body, html {
     <div id="loadingText">Učitavam YouTube player...</div>
 </div>
 
-<!-- PRAZAN THUMBNAIL -->
+<!-- Prazan thumbnail -->
 <div id="customThumbnail"></div>
 
 <!-- Error -->
@@ -205,7 +206,7 @@ let hasVideoStarted = false;
 const urlParams = new URLSearchParams(window.location.search);
 const videoId   = urlParams.get("videoId");
 const finalLang = urlParams.get("lang") || "en";      // sistem/srodan
-const userLang  = urlParams.get("userLang") || finalLang; // jezik koji korisnik želi
+const userLang  = urlParams.get("userLang") || finalLang; // željeni jezik korisnika
 
 function onYouTubeIframeAPIReady() {
     initializePlayer();
@@ -228,15 +229,15 @@ function initializePlayer() {
                 autoplay: 1,
                 rel: 0,
                 modestbranding: 1,
-                controls: 0,        // bez YT controls (TV stil)
+                controls: 0,
                 showinfo: 0,
                 fs: 1,
                 iv_load_policy: 3,
                 disablekb: 1,
                 playsinline: 1,
-                cc_load_policy: 1,  // uključi CC
+                cc_load_policy: 1,
                 enablejsapi: 1,
-                hl: finalLang       // jezik UI-a
+                hl: finalLang
             },
             events: {
                 onReady: event => onPlayerReady(event),
@@ -254,7 +255,7 @@ function onPlayerReady(event) {
     showCustomThumbnail();
     hideControls();
     startAdDetection();
-    showInfo("← / → = -10s / +10s • ENTER = Play/Pause • BACK = zatvori");
+    showInfo("← / → = -10s / +10s • ↑/↓ = Volume • ENTER = Play/Pause • BACK = zatvori");
 
     try { player.playVideo(); } catch (e) {}
 
@@ -262,13 +263,15 @@ function onPlayerReady(event) {
     setTimeout(enableSubs, 1500);
 }
 
-/* AUTOMATSKI ODABIR TITLA + AUTO TRANSLATE */
+/* TITLOVI: userLang -> finalLang -> en -> bilo koji + auto-translate na userLang */
 function enableSubs() {
     try {
         const tracks = player.getOption("captions", "tracklist");
+        console.log("TRACKLIST =", tracks);
+        console.log("userLang =", userLang, "finalLang =", finalLang);
 
         if (!tracks || tracks.length === 0) {
-            // nema eksplicitnih titlova → auto captions + auto translate
+            console.log("No explicit tracks, using auto + translationLanguage");
             player.setOption("captions", "track", { languageCode: "auto" });
             player.setOption("captions", "translationLanguage", {
                 languageCode: userLang
@@ -276,34 +279,28 @@ function enableSubs() {
             return;
         }
 
-        // 1) probaj userLang (jezik koji je korisnik izabrao u app)
         let selected = tracks.find(t => t.languageCode === userLang);
-
-        // 2) probaj finalLang (sistem/srodan)
         if (!selected) selected = tracks.find(t => t.languageCode === finalLang);
-
-        // 3) engleski
         if (!selected) selected = tracks.find(t => t.languageCode === "en");
-
-        // 4) bilo koji
         if (!selected) selected = tracks[0];
 
-        // postavi pronađeni titl kao izvorni
+        console.log("SELECTED TRACK =", selected);
+
         player.setOption("captions", "track", {
             languageCode: selected.languageCode
         });
 
-        // uvek pokušaj auto-translate na userLang
         player.setOption("captions", "translationLanguage", {
             languageCode: userLang
         });
+        console.log("translationLanguage set to", userLang);
 
     } catch (e) {
         console.log("Subtitle controller error:", e);
     }
 }
 
-/* STANJE PLAYERA + REKLAME */
+/* STANJE + REKLAME */
 function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.PLAYING) {
         hideCustomThumbnail();
@@ -402,14 +399,25 @@ function seek(direction) {
     const duration = player.getDuration();
     const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
     player.seekTo(newTime, true);
-
-    // kratki overlay možeš aktivirati ovde ako želiš (seekBackward/seekForward)
 }
 
 function togglePlayPause() {
     if (!player) return;
     if (isPlaying) player.pauseVideo();
     else player.playVideo();
+}
+
+/* VOLUME */
+function volumeChange(delta) {
+    if (!player || typeof player.getVolume !== "function") return;
+    try {
+        const v = player.getVolume();
+        const nv = Math.max(0, Math.min(100, v + delta));
+        player.setVolume(nv);
+        showInfo("Volume: " + nv + "%");
+    } catch (e) {
+        console.log("volumeChange error:", e);
+    }
 }
 
 /* CONTROLS overlay */
@@ -446,7 +454,7 @@ function showInfo(message) {
     const infoPanel = document.getElementById("infoPanel");
     infoPanel.textContent = message;
     infoPanel.style.opacity = "1";
-    setTimeout(() => infoPanel.style.opacity = "0", 3000);
+    setTimeout(() => { infoPanel.style.opacity = "0"; }, 3000);
 }
 
 /* ERROR HANDLING */
@@ -473,6 +481,14 @@ document.addEventListener("keydown", event => {
             break;
         case "ArrowRight":
             seek(1);
+            event.preventDefault();
+            break;
+        case "ArrowUp":
+            volumeChange(+10);
+            event.preventDefault();
+            break;
+        case "ArrowDown":
+            volumeChange(-10);
             event.preventDefault();
             break;
         case "Enter":
