@@ -54,7 +54,7 @@
         100% { transform: rotate(360deg); }
     }
 
-    /* Prazan „thumbnail“ overlay */
+    /* Prazan overlay za oglase / pre-video */
     #customThumbnail {
         position: absolute;
         top: 0; left: 0;
@@ -64,7 +64,7 @@
         z-index: 9998;
     }
 
-    /* Error */
+    /* Error ekran */
     #errorScreen {
         position: absolute;
         top: 0; left: 0;
@@ -90,7 +90,7 @@
         margin-top: 20px;
     }
 
-    /* Progress bar (donji overlay) */
+    /* Progress bar */
     #progressContainer {
         position: absolute;
         bottom: 40px;
@@ -158,8 +158,8 @@
 <script>
     const url = new URL(window.location.href);
     const videoId   = url.searchParams.get("videoId");
-    const finalLang = url.searchParams.get("lang") || "en";       // obrađen jezik (sistem/srodni)
-    const userLang  = url.searchParams.get("userLang") || finalLang; // ciljni jezik korisnika
+    const finalLang = url.searchParams.get("lang") || "en";       // sistem/srodan jezik
+    const userLang  = url.searchParams.get("userLang") || finalLang; // jezik koji korisnik želi
 
     let player;
     let isPlaying = false;
@@ -215,6 +215,7 @@
 
     function onPlayerStateChange(e) {
         if (e.data === YT.PlayerState.PLAYING) {
+            // čim nešto krene da se pušta (bilo reklama ili video), skini overlay
             hideCustomThumbnail();
             isPlaying = true;
             startProgressTracking();
@@ -227,7 +228,6 @@
             showCustomThumbnail();
             showInfo("Video završen");
         }
-
         resetHideTimer();
     }
 
@@ -235,7 +235,7 @@
         showError("YouTube greška: " + e.data);
     }
 
-    /* TITLOVI: finalLang/userLang -> engleski -> bilo koji + auto-translate */
+    // TITLOVI: userLang -> finalLang -> en -> bilo koji + auto-translate na userLang
     function enableSubs() {
         try {
             const tracks = player.getOption("captions", "tracklist");
@@ -249,10 +249,10 @@
                 return;
             }
 
-            // 1) probaj userLang
+            // 1) probaj userLang (jezik koji je korisnik izabrao)
             let selected = tracks.find(t => t.languageCode === userLang);
 
-            // 2) probaj finalLang
+            // 2) probaj finalLang (sistem/srodan)
             if (!selected) selected = tracks.find(t => t.languageCode === finalLang);
 
             // 3) engleski
@@ -261,7 +261,6 @@
             // 4) bilo koji
             if (!selected) selected = tracks[0];
 
-            // postavi izabrani titl
             player.setOption("captions", "track", {
                 languageCode: selected.languageCode
             });
@@ -276,7 +275,7 @@
         }
     }
 
-    /* PROGRESS BAR */
+    // PROGRESS BAR
     function startProgressTracking() {
         stopProgressTracking();
         progressInterval = setInterval(updateProgress, 1000);
@@ -300,7 +299,7 @@
         }
     }
 
-    /* SEEK + PLAY/PAUSE */
+    // SEEK + PLAY/PAUSE
     function seekSeconds(delta) {
         if (!player) return;
         const current = player.getCurrentTime();
@@ -319,7 +318,7 @@
         }
     }
 
-    /* OVERLAY-i */
+    // OVERLAY-i
     function showCustomThumbnail() {
         const el = document.getElementById("customThumbnail");
         if (el && el.style.display !== "block") el.style.display = "block";
@@ -355,6 +354,7 @@
         e.style.display = "flex";
         document.getElementById("errorText").textContent = msg;
     }
+
     function retryPlayer() {
         document.getElementById("errorScreen").style.display = "none";
         document.getElementById("loadingScreen").style.display = "flex";
@@ -370,7 +370,7 @@
         }
     }
 
-    /* NAVIGACIJA – direktno iz starog playera, prilagođena za osnovne komande */
+    // NAVIGACIJA – DPAD kroz keydown
     document.addEventListener("keydown", event => {
         showControls();
 
@@ -390,9 +390,7 @@
                 break;
             case "Escape":
             case "Backspace":
-                if (player) {
-                    try { player.pauseVideo(); } catch (e) {}
-                }
+                try { if (player) player.pauseVideo(); } catch (e) {}
                 closePlayer();
                 event.preventDefault();
                 break;
