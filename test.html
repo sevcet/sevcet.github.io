@@ -6,20 +6,40 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #000; }
-  #player { width: 100%; height: 100%; }
+  #player { width: 100%; height: calc(100% - 80px); }
+  #info {
+    height: 80px;
+    background: #111;
+    color: #0f0;
+    font-family: monospace;
+    font-size: 13px;
+    padding: 6px 10px;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
 </style>
 </head>
 <body>
 
 <div id="player"></div>
+<div id="info"></div>
 
 <script>
   var player;
 
+  function logInfo(msg, obj) {
+    var p = document.getElementById('info');
+    var line = document.createElement('div');
+    line.textContent = msg + (obj ? ' ' + JSON.stringify(obj) : '');
+    p.appendChild(line);
+    p.scrollTop = p.scrollHeight;
+    console.log(msg, obj || '');
+  }
+
   function onYouTubeIframeAPIReady() {
-    console.log('onYouTubeIframeAPIReady');
+    logInfo('onYouTubeIframeAPIReady');
     player = new YT.Player('player', {
-      videoId: 'dQw4w9WgXcQ', // ili neki drugi video sa engleskim titlovima
+      videoId: 'dQw4w9WgXcQ', // bilo koji video sa engleskim titlovima
       host: 'https://www.youtube.com',
       playerVars: {
         autoplay: 1,
@@ -37,16 +57,16 @@
   }
 
   function onPlayerReady() {
-    console.log('Player ready');
+    logInfo('Player ready');
 
-    try { player.playVideo(); } catch (e) { console.log('playVideo error:', e); }
+    try { player.playVideo(); } catch (e) { logInfo('playVideo error:', e); }
 
     setTimeout(function () {
       try {
         var tracks = player.getOption('captions', 'tracklist');
-        console.log('TRACKLIST =', tracks);
+        logInfo('TRACKLIST =', tracks);
 
-        // 1) nađi engleski titl (en ili en-xxxx)
+        // 1) pronađi engleski titl (en ili en-xxxx)
         var enTrack = null;
         if (tracks && tracks.length > 0) {
           enTrack = tracks.find(t => t.languageCode === 'en');
@@ -58,42 +78,42 @@
           }
         }
 
-        console.log('Selected EN track =', enTrack);
+        logInfo('Selected EN track =', enTrack);
 
         if (enTrack) {
           // uključi engleske titlove kao source
           player.setOption('captions', 'track', {
             languageCode: enTrack.languageCode
           });
+          logInfo('Set track to EN', enTrack.languageCode);
 
           // traži auto-translate na srpski
           player.setOption('captions', 'translationLanguage', {
             languageCode: 'sr'
           });
-
-          console.log('translationLanguage set to sr (serbian)');
+          logInfo('translationLanguage set to sr (serbian)');
 
           // proveri posle 5 sekundi šta je aktivno
           setTimeout(function () {
             var afterTrack = player.getOption('captions', 'track');
-            console.log('AFTER TRANSLATION track =', afterTrack);
+            logInfo('AFTER TRANSLATION track =', afterTrack);
           }, 5000);
 
         } else {
-          console.log('Nema engleskih titlova za ovaj video.');
+          logInfo('Nema engleskih titlova za ovaj video.');
         }
       } catch (e) {
-        console.log('Error setting captions:', e);
+        logInfo('Error setting captions:', e);
       }
     }, 3000);
   }
 
   function onPlayerError(e) {
-    console.log('onPlayerError:', e.data);
+    logInfo('onPlayerError: ' + e.data);
   }
 
   function onPlayerStateChange(e) {
-    console.log('onPlayerStateChange:', e.data);
+    logInfo('onPlayerStateChange: ' + e.data);
   }
 </script>
 
