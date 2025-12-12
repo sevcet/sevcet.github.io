@@ -227,8 +227,8 @@ let currentUserLang;
 /* parametri iz URL-a */
 const urlParams = new URLSearchParams(window.location.search);
 const videoId   = urlParams.get("videoId");
-const subLang   = urlParams.get("subLang") || "auto";   // izvorni titl koji film ima
-const userLang  = urlParams.get("userLang") || "en";    // jezik koji korisnik želi
+const subLang   = urlParams.get("subLang") || "auto";   // izvorni titl koji film ima (npr. "en" ili "hr")
+const userLang  = urlParams.get("userLang") || "en";    // jezik koji korisnik želi (npr. "hr", "sr")
 
 currentSubLang = subLang;
 currentUserLang = userLang;
@@ -288,12 +288,40 @@ function onPlayerReady() {
     setTimeout(enableSubs, 5000);
 }
 
-/* TITLOVI: subLang kao source, userLang kao target + fallback */
+/* Pomoćne funkcije za izbor tracka */
+function findTrackByLang(tracks, lang) {
+    if (!tracks || !lang) return null;
+
+    // 1) pun pogodak: tačan kod
+    let t = tracks.find(tr => tr.languageCode === lang);
+    if (t) return t;
+
+    // 2) kod sa sufiksom (hr-XXXX, en-XXXX, ...)
+    t = tracks.find(tr =>
+        tr.languageCode &&
+        tr.languageCode.toLowerCase().startsWith(lang.toLowerCase() + "-")
+    );
+    if (t) return t;
+
+    return null;
+}
+
+function pickBestSourceTrack(tracks) {
+    if (!tracks || tracks.length === 0) return null;
+
+    // prioritet: en, en-*
+    let t = findTrackByLang(tracks, "en");
+    if (t) return t;
+
+    // ako nema en, uzmi prvi track (bolje bilo šta nego ništa)
+    return tracks[0];
+}
+
+/* TITLOVI: prioritet userLang track -> source track -> auto + translate + fallback */
 function enableSubs() {
     try {
         if (!player || !player.getOption) return;
 
-        // uvek osveži current* za slučaj da ih menjaš kasnije
         currentSubLang = subLang;
         currentUserLang = userLang;
 
@@ -302,53 +330,70 @@ function enableSubs() {
         console.log("subLang (source) =", subLang, "userLang (target) =", userLang);
 
         const retryBtn = document.getElementById("retryTranslateBtn");
+        if (retryBtn) retryBtn.style.display = "none";
 
-        // 1) app kaže da nema poznat source → auto + translate
-        if (subLang === "auto") {
-            console.log("No known subtitle from app, using auto + translationLanguage");
-            player.setOption("captions", "track", { languageCode: "auto" });
-            player.setOption("captions", "translationLanguage", {
-                languageCode: userLang
-            });
-
-            if (retryBtn) retryBtn.style.display = "none";
-            setTimeout(checkAutoFallback, 3000);
-            return;
-        }
-
-        // 2) imamo listu titlova
-        if (tracks && tracks.length > 0) {
-            let selected = tracks.find(t => t.languageCode === subLang);
-
-            if (!selected) selected = tracks.find(t =>
-                t.languageCode && t.languageCode.toLowerCase().startsWith(subLang.toLowerCase() + "-")
-            );
-
-            if (!selected) selected = tracks[0];
-
-            console.log("SELECTED TRACK =", selected);
-
-            player.setOption("captions", "track", {
-                languageCode: selected.languageCode
-            });
-
-            player.setOption("captions", "translationLanguage", {
-                languageCode: userLang
-            });
-            console.log("translationLanguage set to", userLang);
-
-            if (retryBtn) retryBtn.style.display = "none";
-            setTimeout(checkTranslateFallback, 3000);
-        } else {
-            // 3) nema tracklist → auto + translate + fallback
+        // ako nema tracklist uopšte → auto captions + translate + fallback
+        if (!tracks || tracks.length === 0) {
             console.log("No tracks from API, using auto captions");
             player.setOption("captions", "track", { languageCode: "auto" });
             player.setOption("captions", "translationLanguage", {
                 languageCode: userLang
             });
-
-            if (retryBtn) retryBtn.style.display = "none";
             setTimeout(checkAutoFallback, 3000);
+            return;
+        }
+
+        // 1) ako postoji track za userLang (npr. hr ili hr-xxxx) → koristi njega BEZ auto translate
+        let userLangTrack = findTrackByLang(tracks, userLang);
+
+        if (userLangTrack) {
+            console.log("Using direct track for userLang:", userLangTrack);
+            player.setOption("captions", "track", {
+                languageCode: userLangTrack.languageCode
+            });
+            // nema translationLanguage, jer je već na jeziku korisnika
+            showInfo("Titlovi: " + userLang + " (original ili već prevedeni)");
+            return;
+        }
+
+        // 2) nema userLang track → bira se source za auto-translate
+        let sourceTrack = null;
+
+        if (subLang && subLang !== "auto") {
+            sourceTrack = findTrackByLang(tracks, subLang);
+        }
+
+        if (!sourceTrack) {
+            sourceTrack = pickBestSourceTrack(tracks);
+        }
+
+        console.log("Selected source track for translate =", sourceTrack);
+
+        if (sourceTrack) {
+            player.setOption("captions", "track", {
+                languageCode: sourceTrack.languageCode
+            });
+
+            if (userLang && userLang !== "en") {
+                player.setOption("captions", "translationLanguage", {
+                    languageCode: userLang
+                });
+                console.log("translationLanguage set to", userLang);
+                setTimeout(checkTranslateFallback, 3000);
+            } else {
+                // korisnik želi en ili nije definisan → nema translationLanguage
+                showInfo("Titlovi: " + (userLang || sourceTrack.languageCode));
+            }
+        } else {
+            // fallback: ništa pametno → auto
+            console.log("No suitable source track, falling back to auto captions");
+            player.setOption("captions", "track", { languageCode: "auto" });
+            if (userLang && userLang !== "en") {
+                player.setOption("captions", "translationLanguage", {
+                    languageCode: userLang
+                });
+                setTimeout(checkAutoFallback, 3000);
+            }
         }
 
     } catch (e) {
@@ -363,20 +408,26 @@ function checkTranslateFallback() {
 
         const retryBtn = document.getElementById("retryTranslateBtn");
 
-        if (afterTrack &&
-            afterTrack.languageCode &&
-            afterTrack.languageCode !== userLang &&
-            userLang !== "en") {
+        if (!afterTrack || !afterTrack.languageCode) {
+            showInfo("Titlovi nisu dostupni za ovaj video.");
+            if (retryBtn) retryBtn.style.display = "none";
+            return;
+        }
 
+        if (afterTrack.languageCode === userLang) {
+            showInfo("Titlovi: " + userLang + " (prevod)");
+            if (retryBtn) retryBtn.style.display = "none";
+            return;
+        }
+
+        if (afterTrack.languageCode !== userLang && userLang !== "en") {
             console.log("Fallback to EN translation");
             player.setOption("captions", "translationLanguage", {
                 languageCode: "en"
             });
-
-            // prikaži dugme jer ciljni jezik nije dobijen
+            showInfo("Prevod na " + userLang + " nije dostupan, prikazuju se engleski titlovi.");
             if (retryBtn) retryBtn.style.display = "block";
         } else {
-            // prevod uspeo ili već target=en → sakrij dugme
             if (retryBtn) retryBtn.style.display = "none";
         }
     } catch (e) {
@@ -391,16 +442,24 @@ function checkAutoFallback() {
 
         const retryBtn = document.getElementById("retryTranslateBtn");
 
-        if (afterTrack &&
-            afterTrack.languageCode &&
-            afterTrack.languageCode !== userLang &&
-            userLang !== "en") {
+        if (!afterTrack || !afterTrack.languageCode) {
+            showInfo("Titlovi nisu dostupni za ovaj video.");
+            if (retryBtn) retryBtn.style.display = "none";
+            return;
+        }
 
+        if (afterTrack.languageCode === userLang) {
+            showInfo("Titlovi: " + userLang + " (auto prevod)");
+            if (retryBtn) retryBtn.style.display = "none";
+            return;
+        }
+
+        if (afterTrack.languageCode !== userLang && userLang !== "en") {
             console.log("Fallback(auto) to EN translation");
             player.setOption("captions", "translationLanguage", {
                 languageCode: "en"
             });
-
+            showInfo("Prevod na " + userLang + " nije dostupan, prikazuju se engleski titlovi.");
             if (retryBtn) retryBtn.style.display = "block";
         } else {
             if (retryBtn) retryBtn.style.display = "none";
@@ -416,7 +475,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (retryTranslateBtn) {
         retryTranslateBtn.addEventListener("click", () => {
             console.log("Retry translate clicked for", currentSubLang, currentUserLang);
-            enableSubs();  // ponovo pokreće istu logiku nad istim video + jezicima
+            showInfo("Pokušavam ponovo prevod na " + currentUserLang + "…");
+            enableSubs();
         });
     }
 });
