@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>YouTube auto-translate test</title>
+<script src="https://www.youtube.com/iframe_api"></script>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #000; }
+  #player { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+
+<div id="player"></div>
+
+<script>
+  var player;
+
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+      videoId: 'P407XYl9NkU', // <-- ovde stavi ID videa za test
+      playerVars: {
+        autoplay: 1,
+        cc_load_policy: 1,
+        controls: 1,
+        rel: 0,
+        modestbranding: 1
+      },
+      events: {
+        onReady: onPlayerReady
+      }
+    });
+  }
+
+  function onPlayerReady() {
+    console.log('Player ready');
+
+    // sačekaj malo da se caption tracklist učita
+    setTimeout(function () {
+      try {
+        var tracks = player.getOption('captions', 'tracklist');
+        console.log('TRACKLIST =', tracks);
+
+        // 1) nađi engleski titl (en ili en-xxxx)
+        var enTrack = null;
+        if (tracks && tracks.length > 0) {
+          enTrack = tracks.find(t => t.languageCode === 'en');
+          if (!enTrack) {
+            enTrack = tracks.find(t =>
+              t.languageCode &&
+              t.languageCode.toLowerCase().startsWith('en-')
+            );
+          }
+        }
+
+        console.log('Selected EN track =', enTrack);
+
+        if (enTrack) {
+          // kao da si u meniju izabrao engleske titlove
+          player.setOption('captions', 'track', {
+            languageCode: enTrack.languageCode
+          });
+
+          // 2) traži auto-translate na srpski
+          player.setOption('captions', 'translationLanguage', {
+            languageCode: 'sr'
+          });
+
+          console.log('translationLanguage set to sr (serbian)');
+
+          // proveri posle par sekundi šta je stvarno aktivno
+          setTimeout(function () {
+            var afterTrack = player.getOption('captions', 'track');
+            console.log('AFTER TRANSLATION track =', afterTrack);
+          }, 4000);
+
+        } else {
+          console.log('Nema engleskih titlova za ovaj video.');
+        }
+      } catch (e) {
+        console.log('Error setting captions:', e);
+      }
+    }, 3000);
+  }
+</script>
+
+</body>
+</html>
