@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>YouTube auto-translate to Serbian</title>
+<title>YouTube auto-translate to Slovak</title>
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #000; }
@@ -39,7 +39,7 @@
   function onYouTubeIframeAPIReady() {
     logInfo('onYouTubeIframeAPIReady');
     player = new YT.Player('player', {
-      videoId: 'dQw4w9WgXcQ', // bilo koji video sa engleskim titlovima
+      videoId: 'dQw4w9WgXcQ', // ili drugi video sa engleskim titlovima
       host: 'https://www.youtube.com',
       playerVars: {
         autoplay: 1,
@@ -87,11 +87,11 @@
           });
           logInfo('Set track to EN', enTrack.languageCode);
 
-          // traži auto-translate na srpski
+          // traži auto-translate na slovački
           player.setOption('captions', 'translationLanguage', {
-            languageCode: 'sr'
+            languageCode: 'sk'
           });
-          logInfo('translationLanguage set to sr (serbian)');
+          logInfo('translationLanguage set to sk (slovak)');
 
           // proveri posle 5 sekundi šta je aktivno
           setTimeout(function () {
