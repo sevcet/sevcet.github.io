@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>YouTube auto-translate test</title>
+<title>YouTube auto-translate to Serbian</title>
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #000; }
@@ -16,11 +16,10 @@
 <script>
   var player;
 
-  // Poziva se automatski kad se učita https://www.youtube.com/iframe_api
   function onYouTubeIframeAPIReady() {
     console.log('onYouTubeIframeAPIReady');
     player = new YT.Player('player', {
-      videoId: 'dQw4w9WgXcQ', // <-- prvo testiraj sa ovim ID-jem
+      videoId: 'dQw4w9WgXcQ', // ili neki drugi video sa engleskim titlovima
       host: 'https://www.youtube.com',
       playerVars: {
         autoplay: 1,
@@ -40,10 +39,8 @@
   function onPlayerReady() {
     console.log('Player ready');
 
-    // pokušaj da pusti (neki browser traži klik da bi krenuo zvuk)
     try { player.playVideo(); } catch (e) { console.log('playVideo error:', e); }
 
-    // sačekaj malo da se caption tracklist učita
     setTimeout(function () {
       try {
         var tracks = player.getOption('captions', 'tracklist');
@@ -64,23 +61,23 @@
         console.log('Selected EN track =', enTrack);
 
         if (enTrack) {
-          // kao da si u meniju izabrao engleske titlove
+          // uključi engleske titlove kao source
           player.setOption('captions', 'track', {
             languageCode: enTrack.languageCode
           });
 
-          // 2) traži auto-translate na srpski
+          // traži auto-translate na srpski
           player.setOption('captions', 'translationLanguage', {
             languageCode: 'sr'
           });
 
           console.log('translationLanguage set to sr (serbian)');
 
-          // proveri posle par sekundi šta je stvarno aktivno
+          // proveri posle 5 sekundi šta je aktivno
           setTimeout(function () {
             var afterTrack = player.getOption('captions', 'track');
             console.log('AFTER TRANSLATION track =', afterTrack);
-          }, 4000);
+          }, 5000);
 
         } else {
           console.log('Nema engleskih titlova za ovaj video.');
