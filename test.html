@@ -16,9 +16,12 @@
 <script>
   var player;
 
+  // Poziva se automatski kad se učita https://www.youtube.com/iframe_api
   function onYouTubeIframeAPIReady() {
+    console.log('onYouTubeIframeAPIReady');
     player = new YT.Player('player', {
-      videoId: 'P407XYl9NkU', // <-- ovde stavi ID videa za test
+      videoId: 'dQw4w9WgXcQ', // <-- prvo testiraj sa ovim ID-jem
+      host: 'https://www.youtube.com',
       playerVars: {
         autoplay: 1,
         cc_load_policy: 1,
@@ -27,13 +30,18 @@
         modestbranding: 1
       },
       events: {
-        onReady: onPlayerReady
+        onReady: onPlayerReady,
+        onError: onPlayerError,
+        onStateChange: onPlayerStateChange
       }
     });
   }
 
   function onPlayerReady() {
     console.log('Player ready');
+
+    // pokušaj da pusti (neki browser traži klik da bi krenuo zvuk)
+    try { player.playVideo(); } catch (e) { console.log('playVideo error:', e); }
 
     // sačekaj malo da se caption tracklist učita
     setTimeout(function () {
@@ -81,6 +89,14 @@
         console.log('Error setting captions:', e);
       }
     }, 3000);
+  }
+
+  function onPlayerError(e) {
+    console.log('onPlayerError:', e.data);
+  }
+
+  function onPlayerStateChange(e) {
+    console.log('onPlayerStateChange:', e.data);
   }
 </script>
 
