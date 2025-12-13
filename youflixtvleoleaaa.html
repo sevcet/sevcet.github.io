@@ -111,19 +111,21 @@ body, html {
     transition: width 0.1s ease;
 }
 
+/* infoPanel – ne koristimo za dijaloge, ali ostavljen radi kompatibilnosti */
 #infoPanel {
     position: absolute;
-    top: 30px;
-    left: 30px;
+    top: 20px;
+    left: 20px;
+    max-width: 60%;
     background: rgba(0,0,0,0.8);
     color: white;
-    padding: 12px 18px;
-    border-radius: 8px;
-    font-size: 16px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
     z-index: 10001;
     opacity: 0;
     transition: opacity 0.3s ease;
-    border-left: 4px solid #ff4444;
+    border-left: 3px solid #ff4444;
 }
 
 /* Seek indikatori */
@@ -152,22 +154,6 @@ body, html {
     font-size: 16px;
     cursor: pointer;
     margin-top: 20px;
-}
-
-/* Dugme za retry prevoda */
-#retryTranslateBtn {
-    position: absolute;
-    bottom: 15px;
-    right: 15px;
-    z-index: 10002;
-    background: rgba(0,0,0,0.8);
-    color: #fff;
-    border: 1px solid #ff4444;
-    padding: 10px 18px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    display: none;
 }
 </style>
 </head>
@@ -205,9 +191,6 @@ body, html {
 
 <div id="infoPanel"></div>
 
-<!-- Retry prevoda titlova -->
-<button id="retryTranslateBtn">Pokušaj ponovo prijevod</button>
-
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
@@ -220,18 +203,15 @@ let stateCheckInterval;
 let hasAdStarted = false;
 let hasVideoStarted = false;
 
-/* zapamćeni jezici za retry */
-let currentSubLang;
-let currentUserLang;
-
 /* parametri iz URL-a */
 const urlParams = new URLSearchParams(window.location.search);
 const videoId   = urlParams.get("videoId");
-const subLang   = urlParams.get("subLang") || "auto";   // izvorni titl koji film ima (npr. "en" ili "hr")
-const userLang  = urlParams.get("userLang") || "en";    // jezik koji korisnik želi (npr. "hr", "sr")
+const subLang   = urlParams.get("subLang") || "auto";
+const userLang  = urlParams.get("userLang") || "en";
 
-currentSubLang = subLang;
-currentUserLang = userLang;
+console.log("PARAM videoId =", videoId);
+console.log("PARAM subLang =", subLang);
+console.log("PARAM userLang =", userLang);
 
 function onYouTubeIframeAPIReady() {
     initializePlayer();
@@ -255,7 +235,6 @@ function initializePlayer() {
                 rel: 0,
                 modestbranding: 1,
                 controls: 0,
-                showinfo: 0,
                 fs: 1,
                 iv_load_policy: 3,
                 disablekb: 1,
@@ -271,6 +250,7 @@ function initializePlayer() {
             }
         });
     } catch (error) {
+        console.log("initializePlayer error:", error);
         showError("Greška pri pokretanju playera");
     }
 }
@@ -280,26 +260,42 @@ function onPlayerReady() {
     showCustomThumbnail();
     hideControls();
     startAdDetection();
-    showInfo("← / → = -10s / +10s • ↑/↓ = Volume • ENTER = Play/Pause • BACK = zatvori");
 
-    try { player.playVideo(); } catch (e) {}
-
-    setTimeout(enableSubs, 2000);
-    setTimeout(enableSubs, 5000);
+    try { player.playVideo(); } catch (e) {
+        console.log("playVideo on ready error:", e);
+    }
 }
 
-/* Pomoćne funkcije za izbor tracka */
+/* pomoćne funkcije za trackove */
+function isHolatrt(code) {
+    return code && code.toLowerCase().includes("holatrt");
+}
+
 function findTrackByLang(tracks, lang) {
     if (!tracks || !lang) return null;
 
-    // 1) pun pogodak: tačan kod
-    let t = tracks.find(tr => tr.languageCode === lang);
+    const target = lang.toLowerCase();
+
+    // exact match bez holatrt
+    let t = tracks.find(tr =>
+        tr.languageCode &&
+        tr.languageCode.toLowerCase() === target &&
+        !isHolatrt(tr.languageCode)
+    );
     if (t) return t;
 
-    // 2) kod sa sufiksom (hr-XXXX, en-XXXX, ...)
+    // xx-* bez holatrt
     t = tracks.find(tr =>
         tr.languageCode &&
-        tr.languageCode.toLowerCase().startsWith(lang.toLowerCase() + "-")
+        tr.languageCode.toLowerCase().startsWith(target + "-") &&
+        !isHolatrt(tr.languageCode)
+    );
+    if (t) return t;
+
+    // kao poslednja šansa može i holatrt varijanta
+    t = tracks.find(tr =>
+        tr.languageCode &&
+        tr.languageCode.toLowerCase().startsWith(target + "-holatrt")
     );
     if (t) return t;
 
@@ -309,185 +305,266 @@ function findTrackByLang(tracks, lang) {
 function pickBestSourceTrack(tracks) {
     if (!tracks || tracks.length === 0) return null;
 
-    // prioritet: en, en-*
-    let t = findTrackByLang(tracks, "en");
+    // probaj engleski bez holatrt
+    let t = tracks.find(tr => tr.languageCode === "en" && !isHolatrt(tr.languageCode));
     if (t) return t;
 
-    // ako nema en, uzmi prvi track (bolje bilo šta nego ništa)
+    // bilo koji normalan (bez holatrt)
+    t = tracks.find(tr => tr.languageCode && !isHolatrt(tr.languageCode));
+    if (t) return t;
+
+    // baš poslednji fallback – možda samo auto-generated postoje
     return tracks[0];
 }
 
-/* TITLOVI: prioritet userLang track -> source track -> auto + translate + fallback */
+/* srodni jezici (isti koncept kao u app) */
+function mapUserLangToEffective(lang, tracks) {
+    if (!lang) return lang;
+    const L = lang.toLowerCase();
+
+    function has(code) {
+        return !!findTrackByLang(tracks, code);
+    }
+
+    // ex-YU
+    if (L === "sr" || L === "sr-latn" || L === "sr-latn-rs") {
+        if (has("sr")) return "sr";
+        if (has("hr")) return "hr";
+        if (has("bs")) return "bs";
+        if (has("mk")) return "mk";
+        return "sr";
+    }
+    if (L === "bs") {
+        if (has("bs")) return "bs";
+        if (has("hr")) return "hr";
+        if (has("sr")) return "sr";
+        if (has("mk")) return "mk";
+        return "bs";
+    }
+    if (L === "hr") {
+        if (has("hr")) return "hr";
+        if (has("bs")) return "bs";
+        if (has("sr")) return "sr";
+        if (has("mk")) return "mk";
+        return "hr";
+    }
+    if (L === "mk") {
+        if (has("mk")) return "mk";
+        if (has("hr")) return "hr";
+        if (has("sr")) return "sr";
+        if (has("bs")) return "bs";
+        return "mk";
+    }
+    if (L === "sl") {
+        if (has("sl")) return "sl";
+        if (has("hr")) return "hr";
+        if (has("sr")) return "sr";
+        return "sl";
+    }
+
+    // slovenski šire
+    if (L === "sk") {
+        if (has("sk")) return "sk";
+        if (has("cs")) return "cs";
+        if (has("pl")) return "pl";
+        if (has("sl")) return "sl";
+        return "sk";
+    }
+    if (L === "cs") {
+        if (has("cs")) return "cs";
+        if (has("sk")) return "sk";
+        if (has("pl")) return "pl";
+        if (has("sl")) return "sl";
+        return "cs";
+    }
+    if (L === "pl") {
+        if (has("pl")) return "pl";
+        if (has("cs")) return "cs";
+        if (has("sk")) return "sk";
+        return "pl";
+    }
+
+    // romanski
+    if (L === "es" || L === "es-419") {
+        if (has("es")) return "es";
+        if (has("es-419")) return "es-419";
+        if (has("pt")) return "pt";
+        if (has("it")) return "it";
+        if (has("fr")) return "fr";
+        return "es";
+    }
+    if (L === "pt" || L === "pt-br") {
+        if (has("pt-br")) return "pt-br";
+        if (has("pt")) return "pt";
+        if (has("es")) return "es";
+        if (has("it")) return "it";
+        if (has("fr")) return "fr";
+        return "pt";
+    }
+    if (L === "fr") {
+        if (has("fr")) return "fr";
+        if (has("it")) return "it";
+        if (has("es")) return "es";
+        if (has("pt")) return "pt";
+        return "fr";
+    }
+    if (L === "it") {
+        if (has("it")) return "it";
+        if (has("es")) return "es";
+        if (has("fr")) return "fr";
+        if (has("pt")) return "pt";
+        return "it";
+    }
+    if (L === "ro") {
+        if (has("ro")) return "ro";
+        if (has("it")) return "it";
+        if (has("es")) return "es";
+        if (has("fr")) return "fr";
+        if (has("pt")) return "pt";
+        return "ro";
+    }
+
+    // germanski / nordijski
+    if (L === "de") {
+        if (has("de")) return "de";
+        if (has("nl")) return "nl";
+        if (has("sv")) return "sv";
+        if (has("no")) return "no";
+        if (has("da")) return "da";
+        return "de";
+    }
+    if (L === "nl") {
+        if (has("nl")) return "nl";
+        if (has("de")) return "de";
+        if (has("sv")) return "sv";
+        if (has("no")) return "no";
+        if (has("da")) return "da";
+        return "nl";
+    }
+    if (L === "sv") {
+        if (has("sv")) return "sv";
+        if (has("no")) return "no";
+        if (has("da")) return "da";
+        if (has("de")) return "de";
+        return "sv";
+    }
+    if (L === "no") {
+        if (has("no")) return "no";
+        if (has("sv")) return "sv";
+        if (has("da")) return "da";
+        if (has("de")) return "de";
+        return "no";
+    }
+    if (L === "da") {
+        if (has("da")) return "da";
+        if (has("no")) return "no";
+        if (has("sv")) return "sv";
+        if (has("de")) return "de";
+        return "da";
+    }
+
+    // istočno-slovenski
+    if (L === "ru") {
+        if (has("ru")) return "ru";
+        if (has("uk")) return "uk";
+        if (has("bg")) return "bg";
+        return "ru";
+    }
+    if (L === "uk") {
+        if (has("uk")) return "uk";
+        if (has("ru")) return "ru";
+        if (has("bg")) return "bg";
+        return "uk";
+    }
+    if (L === "bg") {
+        if (has("bg")) return "bg";
+        if (has("ru")) return "ru";
+        if (has("uk")) return "uk";
+        return "bg";
+    }
+
+    // hi / ur
+    if (L === "hi") {
+        if (has("hi")) return "hi";
+        if (has("ur")) return "ur";
+        return "hi";
+    }
+    if (L === "ur") {
+        if (has("ur")) return "ur";
+        if (has("hi")) return "hi";
+        return "ur";
+    }
+
+    return lang;
+}
+
+/* TITLOVI: bez auto-prevoda, samo direktan/srodan track */
 function enableSubs() {
     try {
         if (!player || !player.getOption) return;
 
-        currentSubLang = subLang;
-        currentUserLang = userLang;
-
         const tracks = player.getOption("captions", "tracklist");
         console.log("TRACKLIST =", tracks);
-        console.log("subLang (source) =", subLang, "userLang (target) =", userLang);
+        console.log("subLang =", subLang, "userLang =", userLang);
 
-        const retryBtn = document.getElementById("retryTranslateBtn");
-        if (retryBtn) retryBtn.style.display = "none";
-
-        // ako nema tracklist uopšte → auto captions + translate + fallback
         if (!tracks || tracks.length === 0) {
-            console.log("No tracks from API, using auto captions");
-            player.setOption("captions", "track", { languageCode: "auto" });
-            player.setOption("captions", "translationLanguage", {
-                languageCode: userLang
-            });
-            setTimeout(checkAutoFallback, 3000);
+            console.log("No caption tracks available");
             return;
         }
 
-        // 1) ako postoji track za userLang (npr. hr ili hr-xxxx) → koristi njega BEZ auto translate
-        let userLangTrack = findTrackByLang(tracks, userLang);
+        const effectiveUserLang = mapUserLangToEffective(userLang, tracks);
+        console.log("effectiveUserLang =", effectiveUserLang);
+
+        let userLangTrack = findTrackByLang(tracks, effectiveUserLang);
+        console.log("userLangTrack =", userLangTrack);
 
         if (userLangTrack) {
-            console.log("Using direct track for userLang:", userLangTrack);
             player.setOption("captions", "track", {
                 languageCode: userLangTrack.languageCode
             });
-            // nema translationLanguage, jer je već na jeziku korisnika
-            showInfo("Titlovi: " + userLang + " (original ili već prevedeni)");
+            setTimeout(reportActiveTrack, 3000);
             return;
         }
 
-        // 2) nema userLang track → bira se source za auto-translate
         let sourceTrack = null;
-
         if (subLang && subLang !== "auto") {
             sourceTrack = findTrackByLang(tracks, subLang);
         }
-
         if (!sourceTrack) {
             sourceTrack = pickBestSourceTrack(tracks);
         }
 
-        console.log("Selected source track for translate =", sourceTrack);
+        console.log("fallback sourceTrack =", sourceTrack);
 
         if (sourceTrack) {
             player.setOption("captions", "track", {
                 languageCode: sourceTrack.languageCode
             });
-
-            if (userLang && userLang !== "en") {
-                player.setOption("captions", "translationLanguage", {
-                    languageCode: userLang
-                });
-                console.log("translationLanguage set to", userLang);
-                setTimeout(checkTranslateFallback, 3000);
-            } else {
-                // korisnik želi en ili nije definisan → nema translationLanguage
-                showInfo("Titlovi: " + (userLang || sourceTrack.languageCode));
-            }
-        } else {
-            // fallback: ništa pametno → auto
-            console.log("No suitable source track, falling back to auto captions");
-            player.setOption("captions", "track", { languageCode: "auto" });
-            if (userLang && userLang !== "en") {
-                player.setOption("captions", "translationLanguage", {
-                    languageCode: userLang
-                });
-                setTimeout(checkAutoFallback, 3000);
-            }
         }
 
+        setTimeout(reportActiveTrack, 3000);
     } catch (e) {
         console.log("Subtitle controller error:", e);
     }
 }
 
-function checkTranslateFallback() {
+function reportActiveTrack() {
     try {
-        const afterTrack = player.getOption("captions", "track");
-        console.log("AFTER TRANSLATION track =", afterTrack);
-
-        const retryBtn = document.getElementById("retryTranslateBtn");
-
-        if (!afterTrack || !afterTrack.languageCode) {
-            showInfo("Titlovi nisu dostupni za ovaj video.");
-            if (retryBtn) retryBtn.style.display = "none";
-            return;
-        }
-
-        if (afterTrack.languageCode === userLang) {
-            showInfo("Titlovi: " + userLang + " (prevod)");
-            if (retryBtn) retryBtn.style.display = "none";
-            return;
-        }
-
-        if (afterTrack.languageCode !== userLang && userLang !== "en") {
-            console.log("Fallback to EN translation");
-            player.setOption("captions", "translationLanguage", {
-                languageCode: "en"
-            });
-            showInfo("Prevod na " + userLang + " nije dostupan, prikazuju se engleski titlovi.");
-            if (retryBtn) retryBtn.style.display = "block";
-        } else {
-            if (retryBtn) retryBtn.style.display = "none";
-        }
+        const t = player.getOption("captions", "track");
+        console.log("ACTIVE CAPTION TRACK =", t);
     } catch (e) {
-        console.log("checkTranslateFallback error:", e);
+        console.log("reportActiveTrack error:", e);
     }
 }
-
-function checkAutoFallback() {
-    try {
-        const afterTrack = player.getOption("captions", "track");
-        console.log("AFTER AUTO track =", afterTrack);
-
-        const retryBtn = document.getElementById("retryTranslateBtn");
-
-        if (!afterTrack || !afterTrack.languageCode) {
-            showInfo("Titlovi nisu dostupni za ovaj video.");
-            if (retryBtn) retryBtn.style.display = "none";
-            return;
-        }
-
-        if (afterTrack.languageCode === userLang) {
-            showInfo("Titlovi: " + userLang + " (auto prevod)");
-            if (retryBtn) retryBtn.style.display = "none";
-            return;
-        }
-
-        if (afterTrack.languageCode !== userLang && userLang !== "en") {
-            console.log("Fallback(auto) to EN translation");
-            player.setOption("captions", "translationLanguage", {
-                languageCode: "en"
-            });
-            showInfo("Prevod na " + userLang + " nije dostupan, prikazuju se engleski titlovi.");
-            if (retryBtn) retryBtn.style.display = "block";
-        } else {
-            if (retryBtn) retryBtn.style.display = "none";
-        }
-    } catch (e) {
-        console.log("checkAutoFallback error:", e);
-    }
-}
-
-/* handler za retry prevoda */
-document.addEventListener("DOMContentLoaded", () => {
-    const retryTranslateBtn = document.getElementById("retryTranslateBtn");
-    if (retryTranslateBtn) {
-        retryTranslateBtn.addEventListener("click", () => {
-            console.log("Retry translate clicked for", currentSubLang, currentUserLang);
-            showInfo("Pokušavam ponovo prevod na " + currentUserLang + "…");
-            enableSubs();
-        });
-    }
-});
 
 /* STANJE + REKLAME */
 function onPlayerStateChange(event) {
+    console.log("onPlayerStateChange:", event.data);
     if (event.data === YT.PlayerState.PLAYING) {
         hideCustomThumbnail();
         isPlaying = true;
         startProgressTracking();
-        checkIfAdOrVideo();
+        detectMainVideoStart();
     } else if (event.data === YT.PlayerState.PAUSED) {
         isPlaying = false;
         stopProgressTracking();
@@ -497,7 +574,6 @@ function onPlayerStateChange(event) {
         showCustomThumbnail();
         hasVideoStarted = false;
         hasAdStarted = false;
-        showInfo("Video završen");
     } else if (event.data === YT.PlayerState.BUFFERING) {
         setTimeout(checkBuffering, 2000);
     } else if (event.data === YT.PlayerState.UNSTARTED) {
@@ -507,11 +583,21 @@ function onPlayerStateChange(event) {
     resetHideTimer();
 }
 
-function checkIfAdOrVideo() {
+/* reklame vs glavni video: titlove diramo tek kad glavni video krene */
+function detectMainVideoStart() {
     if (!player) return;
-    const currentTime = player.getCurrentTime();
-    if (currentTime === 0 && !hasVideoStarted) hasAdStarted = true;
-    else hasVideoStarted = true;
+    const t = player.getCurrentTime();
+
+    if (!hasVideoStarted && t > 2) {
+        hasVideoStarted = true;
+        console.log("Main video detected, enabling subtitles");
+        setTimeout(enableSubs, 1000);
+        setTimeout(enableSubs, 4000);
+    }
+
+    if (t === 0 && !hasVideoStarted) {
+        hasAdStarted = true;
+    }
 }
 
 function checkBuffering() {
@@ -524,10 +610,6 @@ function startAdDetection() {
         if (player && player.getPlayerState && player.getCurrentTime) {
             const state = player.getPlayerState();
             const currentTime = player.getCurrentTime();
-            if (state === YT.PlayerState.PAUSED && currentTime < 2 && hasAdStarted)
-                showCustomThumbnail();
-            if (state === YT.PlayerState.BUFFERING && currentTime < 2 && hasAdStarted)
-                showCustomThumbnail();
             if (state === YT.PlayerState.UNSTARTED) showCustomThumbnail();
             if (state === YT.PlayerState.ENDED) showCustomThumbnail();
         }
@@ -539,6 +621,7 @@ function stopAdDetection() {
 }
 
 function onPlayerError(event) {
+    console.log("onPlayerError:", event.data);
     showError("YouTube greška: " + event.data);
 }
 
@@ -595,7 +678,6 @@ function volumeChange(delta) {
         const v = player.getVolume();
         const nv = Math.max(0, Math.min(100, v + delta));
         player.setVolume(nv);
-        showInfo("Volume: " + nv + "%");
     } catch (e) {
         console.log("volumeChange error:", e);
     }
@@ -630,12 +712,10 @@ function closePlayer() {
     }
 }
 
-/* INFO PANEL */
+/* INFO PANEL – ugašen */
 function showInfo(message) {
     const infoPanel = document.getElementById("infoPanel");
-    infoPanel.textContent = message;
-    infoPanel.style.opacity = "1";
-    setTimeout(() => { infoPanel.style.opacity = "0"; }, 3000);
+    infoPanel.style.opacity = "0";
 }
 
 /* ERROR HANDLING */
