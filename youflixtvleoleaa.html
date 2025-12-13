@@ -111,7 +111,7 @@ body, html {
     transition: width 0.1s ease;
 }
 
-/* infoPanel: gornji levi ugao */
+/* infoPanel (trenutno ga ne koristimo, ali je tu ako zatreba) */
 #infoPanel {
     position: absolute;
     top: 20px;
@@ -206,8 +206,8 @@ let hasVideoStarted = false;
 /* parametri iz URL-a */
 const urlParams = new URLSearchParams(window.location.search);
 const videoId   = urlParams.get("videoId");
-const subLang   = urlParams.get("subLang") || "auto";   // izvorni titl
-const userLang  = urlParams.get("userLang") || "en";    // željeni jezik
+const subLang   = urlParams.get("subLang") || "auto";   // hint za izvorni titl
+const userLang  = urlParams.get("userLang") || "en";    // željeni jezik (bez auto-prevoda)
 
 function onYouTubeIframeAPIReady() {
     initializePlayer();
@@ -255,7 +255,6 @@ function onPlayerReady() {
     showCustomThumbnail();
     hideControls();
     startAdDetection();
-    showInfo("← / → = -10s / +10s • ↑/↓ = Volume • ENTER = Play/Pause • BACK = zatvori");
 
     try { player.playVideo(); } catch (e) {}
 }
@@ -264,7 +263,6 @@ function onPlayerReady() {
 function findTrackByLang(tracks, lang) {
     if (!tracks || !lang) return null;
 
-    // specifične holatrt varijante
     let t = tracks.find(tr =>
         tr.languageCode &&
         tr.languageCode.toLowerCase().startsWith(lang.toLowerCase() + "-holatrt")
@@ -290,60 +288,215 @@ function pickBestSourceTrack(tracks) {
     return tracks[0];
 }
 
-/* srodni jezici za target */
+/* srodni jezici (isti koncept kao u app) */
 function mapUserLangToEffective(lang, tracks) {
     if (!lang) return lang;
-    const low = lang.toLowerCase();
+    const L = lang.toLowerCase();
 
-    if (low === "sr" || low === "sr-latn" || low === "sr-latn-rs") {
-        if (findTrackByLang(tracks, "hr")) return "hr";
+    function has(langCode) {
+        return !!findTrackByLang(tracks, langCode);
     }
-    if (low === "bs") {
-        if (findTrackByLang(tracks, "hr")) return "hr";
+
+    // ex-YU
+    if (L === "sr" || L === "sr-latn" || L === "sr-latn-rs") {
+        if (has("sr")) return "sr";
+        if (has("hr")) return "hr";
+        if (has("bs")) return "bs";
+        if (has("mk")) return "mk";
+        return "sr";
     }
-    if (low === "me" || low === "cnr") {
-        if (findTrackByLang(tracks, "hr")) return "hr";
+    if (L === "bs") {
+        if (has("bs")) return "bs";
+        if (has("hr")) return "hr";
+        if (has("sr")) return "sr";
+        if (has("mk")) return "mk";
+        return "bs";
     }
+    if (L === "hr") {
+        if (has("hr")) return "hr";
+        if (has("bs")) return "bs";
+        if (has("sr")) return "sr";
+        if (has("mk")) return "mk";
+        return "hr";
+    }
+    if (L === "mk") {
+        if (has("mk")) return "mk";
+        if (has("hr")) return "hr";
+        if (has("sr")) return "sr";
+        if (has("bs")) return "bs";
+        return "mk";
+    }
+    if (L === "sl") {
+        if (has("sl")) return "sl";
+        if (has("hr")) return "hr";
+        if (has("sr")) return "sr";
+        return "sl";
+    }
+
+    // slovenski šire
+    if (L === "sk") {
+        if (has("sk")) return "sk";
+        if (has("cs")) return "cs";
+        if (has("pl")) return "pl";
+        if (has("sl")) return "sl";
+        return "sk";
+    }
+    if (L === "cs") {
+        if (has("cs")) return "cs";
+        if (has("sk")) return "sk";
+        if (has("pl")) return "pl";
+        if (has("sl")) return "sl";
+        return "cs";
+    }
+    if (L === "pl") {
+        if (has("pl")) return "pl";
+        if (has("cs")) return "cs";
+        if (has("sk")) return "sk";
+        return "pl";
+    }
+
+    // romanski
+    if (L === "es" || L === "es-419") {
+        if (has("es")) return "es";
+        if (has("es-419")) return "es-419";
+        if (has("pt")) return "pt";
+        if (has("it")) return "it";
+        if (has("fr")) return "fr";
+        return "es";
+    }
+    if (L === "pt" || L === "pt-br") {
+        if (has("pt-br")) return "pt-br";
+        if (has("pt")) return "pt";
+        if (has("es")) return "es";
+        if (has("it")) return "it";
+        if (has("fr")) return "fr";
+        return "pt";
+    }
+    if (L === "fr") {
+        if (has("fr")) return "fr";
+        if (has("it")) return "it";
+        if (has("es")) return "es";
+        if (has("pt")) return "pt";
+        return "fr";
+    }
+    if (L === "it") {
+        if (has("it")) return "it";
+        if (has("es")) return "es";
+        if (has("fr")) return "fr";
+        if (has("pt")) return "pt";
+        return "it";
+    }
+    if (L === "ro") {
+        if (has("ro")) return "ro";
+        if (has("it")) return "it";
+        if (has("es")) return "es";
+        if (has("fr")) return "fr";
+        if (has("pt")) return "pt";
+        return "ro";
+    }
+
+    // germanski / nordijski
+    if (L === "de") {
+        if (has("de")) return "de";
+        if (has("nl")) return "nl";
+        if (has("sv")) return "sv";
+        if (has("no")) return "no";
+        if (has("da")) return "da";
+        return "de";
+    }
+    if (L === "nl") {
+        if (has("nl")) return "nl";
+        if (has("de")) return "de";
+        if (has("sv")) return "sv";
+        if (has("no")) return "no";
+        if (has("da")) return "da";
+        return "nl";
+    }
+    if (L === "sv") {
+        if (has("sv")) return "sv";
+        if (has("no")) return "no";
+        if (has("da")) return "da";
+        if (has("de")) return "de";
+        return "sv";
+    }
+    if (L === "no") {
+        if (has("no")) return "no";
+        if (has("sv")) return "sv";
+        if (has("da")) return "da";
+        if (has("de")) return "de";
+        return "no";
+    }
+    if (L === "da") {
+        if (has("da")) return "da";
+        if (has("no")) return "no";
+        if (has("sv")) return "sv";
+        if (has("de")) return "de";
+        return "da";
+    }
+
+    // istočno-slovenski
+    if (L === "ru") {
+        if (has("ru")) return "ru";
+        if (has("uk")) return "uk";
+        if (has("bg")) return "bg";
+        return "ru";
+    }
+    if (L === "uk") {
+        if (has("uk")) return "uk";
+        if (has("ru")) return "ru";
+        if (has("bg")) return "bg";
+        return "uk";
+    }
+    if (L === "bg") {
+        if (has("bg")) return "bg";
+        if (has("ru")) return "ru";
+        if (has("uk")) return "uk";
+        return "bg";
+    }
+
+    // hi / ur
+    if (L === "hi") {
+        if (has("hi")) return "hi";
+        if (has("ur")) return "ur";
+        return "hi";
+    }
+    if (L === "ur") {
+        if (has("ur")) return "ur";
+        if (has("hi")) return "hi";
+        return "ur";
+    }
+
+    // default
     return lang;
 }
 
-/* TITLOVI: poziva se samo kad je sigurno da je glavni video krenuo */
+/* TITLOVI: bez auto-prevoda, samo direktan/srodan track */
 function enableSubs() {
     try {
         if (!player || !player.getOption) return;
 
         const tracks = player.getOption("captions", "tracklist");
         console.log("TRACKLIST =", tracks);
-        console.log("subLang (source) =", subLang, "userLang (target) =", userLang);
+        console.log("subLang =", subLang, "userLang =", userLang);
 
         if (!tracks || tracks.length === 0) {
-            console.log("No tracks from API, using auto captions");
-            player.setOption("captions", "track", { languageCode: "auto" });
-            if (userLang.toLowerCase() !== "en") {
-                player.setOption("captions", "translationLanguage", {
-                    languageCode: userLang
-                });
-            }
-            setTimeout(reportActiveTrack, 3000);
+            console.log("No caption tracks available");
             return;
         }
 
         const effectiveUserLang = mapUserLangToEffective(userLang, tracks);
         console.log("effectiveUserLang =", effectiveUserLang);
 
-        // 1) pokušaj direktno effectiveUserLang
         let userLangTrack = findTrackByLang(tracks, effectiveUserLang);
         if (userLangTrack) {
             console.log("Using direct track for effectiveUserLang:", userLangTrack);
             player.setOption("captions", "track", {
                 languageCode: userLangTrack.languageCode
             });
-            showInfo("Titlovi: " + effectiveUserLang + " (direktan track)");
             setTimeout(reportActiveTrack, 3000);
             return;
         }
 
-        // 2) nema direct target → biraj source + eventualni auto-translate
         let sourceTrack = null;
         if (subLang && subLang !== "auto") {
             sourceTrack = findTrackByLang(tracks, subLang);
@@ -352,31 +505,11 @@ function enableSubs() {
             sourceTrack = pickBestSourceTrack(tracks);
         }
 
-        console.log("Selected source track for translate =", sourceTrack);
-
         if (sourceTrack) {
+            console.log("Fallback subtitle track =", sourceTrack);
             player.setOption("captions", "track", {
                 languageCode: sourceTrack.languageCode
             });
-
-            if (userLang.toLowerCase() !== "en") {
-                player.setOption("captions", "translationLanguage", {
-                    languageCode: userLang
-                });
-                console.log("translationLanguage set to", userLang);
-                showInfo("Titlovi: " + sourceTrack.languageCode + " → auto prevod na " + userLang);
-            } else {
-                showInfo("Titlovi: " + sourceTrack.languageCode + " (bez prevoda)");
-            }
-        } else {
-            console.log("No suitable source track, falling back to auto captions");
-            player.setOption("captions", "track", { languageCode: "auto" });
-            if (userLang.toLowerCase() !== "en") {
-                player.setOption("captions", "translationLanguage", {
-                    languageCode: userLang
-                });
-                showInfo("Titlovi: auto → " + userLang + " (auto prevod)");
-            }
         }
 
         setTimeout(reportActiveTrack, 3000);
@@ -385,16 +518,11 @@ function enableSubs() {
     }
 }
 
-/* raportuje koji je track stvarno aktivan */
 function reportActiveTrack() {
     try {
         const t = player.getOption("captions", "track");
         console.log("ACTIVE CAPTION TRACK =", t);
-        if (t && t.languageCode) {
-            showInfo("Aktivni titl: " + t.languageCode);
-        } else {
-            showInfo("Titlovi nisu aktivni ili nisu dostupni.");
-        }
+        // infoPanel ne koristimo – nema dijaloga
     } catch (e) {
         console.log("reportActiveTrack error:", e);
     }
@@ -417,7 +545,6 @@ function onPlayerStateChange(event) {
         showCustomThumbnail();
         hasVideoStarted = false;
         hasAdStarted = false;
-        showInfo("Video završen");
     } else if (event.data === YT.PlayerState.BUFFERING) {
         setTimeout(checkBuffering, 2000);
     } else if (event.data === YT.PlayerState.UNSTARTED) {
@@ -435,13 +562,12 @@ function detectMainVideoStart() {
     if (!hasVideoStarted && t > 2) {
         hasVideoStarted = true;
         console.log("Main video detected, enabling subtitles");
-        // tek sad diramo titlove, reklame idu potpuno bez našeg mešanja
         setTimeout(enableSubs, 1000);
         setTimeout(enableSubs, 4000);
     }
 
     if (t === 0 && !hasVideoStarted) {
-        hasAdStarted = true; // preroll ad
+        hasAdStarted = true;
     }
 }
 
@@ -522,7 +648,6 @@ function volumeChange(delta) {
         const v = player.getVolume();
         const nv = Math.max(0, Math.min(100, v + delta));
         player.setVolume(nv);
-        showInfo("Volume: " + nv + "%");
     } catch (e) {
         console.log("volumeChange error:", e);
     }
@@ -557,12 +682,10 @@ function closePlayer() {
     }
 }
 
-/* INFO PANEL */
+/* INFO PANEL – sada ne prikazuje ništa */
 function showInfo(message) {
     const infoPanel = document.getElementById("infoPanel");
-    infoPanel.textContent = message;
-    infoPanel.style.opacity = "1";
-    setTimeout(() => { infoPanel.style.opacity = "0"; }, 4000);
+    infoPanel.style.opacity = "0";
 }
 
 /* ERROR HANDLING */
