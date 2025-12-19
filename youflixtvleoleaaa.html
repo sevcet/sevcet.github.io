@@ -5,165 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TV YouTube Player</title>
 
-<!-- Brže povezivanje sa YouTube serverima -->
+<!-- Brže povezivanje sa YouTube serverima ostaje -->
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://s.ytimg.com">
 <link rel="dns-prefetch" href="https://www.youtube.com">
 
 <style>
-body, html {
-    margin: 0;
-    padding: 0;
-    background: #000;
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    font-family: Arial, sans-serif;
-}
-
-/* Loading screen */
-#loadingScreen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    color: white;
-}
-#loadingText {
-    margin-top: 20px;
-    font-size: 18px;
-    text-align: center;
-}
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #333;
-    border-top: 5px solid #ff4444;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* PRAZAN THUMBNAIL */
-#customThumbnail {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    opacity: 0;
-    z-index: 9998;
-    display: none;
-}
-
-/* Error screen */
-#errorScreen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    color: white;
-    text-align: center;
-    padding: 20px;
-}
-
-#playerContainer {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-#player {
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
-/* Progress bar */
-#progressContainer {
-    position: absolute;
-    bottom: 60px;
-    left: 5%;
-    width: 90%;
-    background: rgba(255,255,255,0.2);
-    height: 6px;
-    border-radius: 3px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-#progressBar {
-    height: 100%;
-    background: #ff4444;
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.1s ease;
-}
-
-#infoPanel {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    max-width: 60%;
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-left: 3px solid #ff4444;
-}
-
-/* Seek indikatori */
-.seek-indicator {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-size: 18px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
+body, html { margin: 0; padding: 0; background: #000; overflow: hidden; width: 100%; height: 100%; font-family: Arial, sans-serif; }
+#loadingScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; color: white; }
+#loadingText { margin-top: 20px; font-size: 18px; text-align: center; }
+.spinner { width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #ff4444; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+#customThumbnail { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; opacity: 0; z-index: 9998; display: none; }
+#errorScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; color: white; text-align: center; padding: 20px; }
+#playerContainer { width: 100%; height: 100%; position: relative; }
+#player { width: 100%; height: 100%; border: none; }
+#progressContainer { position: absolute; bottom: 60px; left: 5%; width: 90%; background: rgba(255,255,255,0.2); height: 6px; border-radius: 3px; z-index: 10001; opacity: 0; transition: opacity 0.3s ease; }
+#progressBar { height: 100%; background: #ff4444; border-radius: 3px; width: 0%; transition: width 0.1s ease; }
+#infoPanel { position: absolute; top: 20px; left: 20px; max-width: 60%; background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; z-index: 10001; opacity: 0; transition: opacity 0.3s ease; border-left: 3px solid #ff4444; }
+.seek-indicator { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 15px; border-radius: 8px; font-size: 18px; z-index: 10001; opacity: 0; transition: opacity 0.3s ease; }
 #seekBackward { left: 30px; }
 #seekForward { right: 30px; }
-
-#retryButton {
-    background: #ff4444;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 20px;
-}
+#retryButton { background: #ff4444; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px; }
 </style>
-
-<!-- Asinhrono učitavanje plejera -->
-<script src="https://www.youtube.com/iframe_api" async></script>
 </head>
 
 <body>
@@ -194,6 +58,9 @@ body, html {
 
 <div id="infoPanel"></div>
 
+<!-- Skripta vraćena dole radi stabilnosti na TV boxovima -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
 let player;
 let hideTimeout;
@@ -201,50 +68,30 @@ let isPlaying = false;
 let progressInterval;
 let customThumbnail;
 let stateCheckInterval;
-let hasAdStarted = false;
 let hasVideoStarted = false;
 
-/* parametri iz URL-a */
 const urlParams = new URLSearchParams(window.location.search);
 const videoId   = urlParams.get("videoId");
 const subLang   = urlParams.get("subLang") || "auto";
 const userLang  = urlParams.get("userLang") || "en";
 
+// Standardna funkcija koju API poziva
 function onYouTubeIframeAPIReady() {
     initializePlayer();
 }
 
-// Forsirana inicijalizacija ako je skripta brža od API ready eventa
-if (window.YT && window.YT.Player) {
-    onYouTubeIframeAPIReady();
-}
-
 function initializePlayer() {
     customThumbnail = document.getElementById("customThumbnail");
-
-    if (!videoId) {
-        showError("Nema Video ID-a u URL-u");
-        return;
-    }
+    if (!videoId) { showError("Nema Video ID-a"); return; }
 
     try {
         player = new YT.Player("player", {
-            height: "100%",
-            width: "100%",
-            videoId: videoId,
+            height: "100%", width: "100%", videoId: videoId,
             playerVars: {
-                autoplay: 1,
-                rel: 0,
-                modestbranding: 1,
-                controls: 0,
-                fs: 1,
-                iv_load_policy: 3,
-                disablekb: 1,
-                playsinline: 1,
-                cc_load_policy: 1,
-                enablejsapi: 1,
-                hl: userLang,
-                cc_lang_pref: userLang // Forsira tvoj jezik odmah u startu
+                autoplay: 1, rel: 0, modestbranding: 1, controls: 0,
+                fs: 1, iv_load_policy: 3, disablekb: 1, playsinline: 1,
+                cc_load_policy: 1, enablejsapi: 1, hl: userLang,
+                cc_lang_pref: userLang // Rešava arapski titl
             },
             events: {
                 onReady: onPlayerReady,
@@ -265,7 +112,7 @@ function onPlayerReady() {
     try { player.playVideo(); } catch (e) {}
 }
 
-/* Ostatak tvoje logike (nepromenjen) */
+/* TVOJA LOGIKA TITLOVA */
 function isHolatrt(code) { return code && code.toLowerCase().includes("holatrt"); }
 
 function findTrackByLang(tracks, lang) {
@@ -334,7 +181,7 @@ function detectMainVideoStart() {
     const t = player.getCurrentTime();
     if (!hasVideoStarted && t > 1) {
         hasVideoStarted = true;
-        setTimeout(enableSubs, 500); // Brže aktiviranje titlova
+        setTimeout(enableSubs, 500);
     }
 }
 
@@ -390,6 +237,8 @@ function showError(message) {
     document.getElementById("errorScreen").style.display = "flex";
     document.getElementById("errorText").textContent = message;
 }
+
+function onPlayerError(event) { showError("Greška plejera: " + event.data); }
 
 document.addEventListener("keydown", event => {
     showControlsTemporary();
