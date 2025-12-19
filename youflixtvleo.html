@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TV YouTube Player</title>
 
 <style>
@@ -49,7 +48,7 @@ body, html {
     100% { transform: rotate(360deg); }
 }
 
-/* PRAZAN THUMBNAIL — mora da postoji, inače reklame pucaju */
+/* PRAZAN THUMBNAIL — za oglase/buffer */
 #customThumbnail {
     position: absolute;
     top: 0;
@@ -259,7 +258,7 @@ body, html {
     <div class="menu-title">🎯 Odabir titlova</div>
     <div id="ccOptions" class="cc-options-container">
         <div class="cc-option selected" data-language="off">❌ Bez titlova</div>
-<div class="cc-option" data-language="en">English 🇺🇸</div>
+        <div class="cc-option" data-language="en">English 🇺🇸</div>
         <div class="cc-option" data-language="fr">Français 🇫🇷</div>
         <div class="cc-option" data-language="de">Deutsch 🇩🇪</div>
         <div class="cc-option" data-language="es">Español 🇪🇸</div>
@@ -310,7 +309,6 @@ body, html {
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-/* ORIGINALNA LOGIKA – NIŠTA NIJE DIRANO */
 let player;
 let hideTimeout;
 let isPlaying = false;
@@ -329,7 +327,7 @@ function onYouTubeIframeAPIReady() {
 function initializePlayer() {
     const urlParams = new URLSearchParams(window.location.search);
     const videoId = urlParams.get('videoId');
-    const autoLang = urlParams.get('lang'); // primamo jezik od aplikacije
+    const autoLang = urlParams.get('lang'); // jezik iz aplikacije
 
     customThumbnail = document.getElementById('customThumbnail');
 
@@ -374,11 +372,12 @@ function onPlayerReady(event, autoLang) {
     startAdDetection();
     showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
 
-    // AUTOMATSKI ODABIR TITLA
     if (autoLang) autoSelectSubtitles(autoLang);
+
+    try { player.playVideo(); } catch (e) {}
 }
 
-/* AUTOTITLE FUNKCIJA */
+/* AUTOMATSKI IZBOR TITLA PREKO CC MENIJA */
 function autoSelectSubtitles(lang) {
     const map = {
         "en":"en","fr":"fr","de":"de","es":"es","it":"it","pt":"pt",
@@ -411,7 +410,7 @@ function autoSelectSubtitles(lang) {
     selectCCOption();
 }
 
-/* OSTATAK KODA – NIJE DIRAN */
+/* OSTATAK: reklame + DPAD + CC meni */
 
 function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.PLAYING) {
@@ -516,7 +515,6 @@ function showCCMenu() {
     const menu = document.getElementById('ccMenu');
     menu.classList.add('visible');
     isCCMenuOpen = true;
-    currentCCSelection = 0;
     updateCCSelection();
 }
 function hideCCMenu() {
@@ -605,6 +603,7 @@ function retryPlayer() {
     initializePlayer();
 }
 
+/* DPAD: radi i na tastaturi i na daljincu */
 document.addEventListener('keydown', event => {
     showControlsTemporary();
 
@@ -646,11 +645,8 @@ document.addEventListener('keydown', event => {
 
 document.addEventListener('mousemove', showControlsTemporary);
 document.addEventListener('click', showControlsTemporary);
-
 document.getElementById('retryButton').addEventListener('click', retryPlayer);
-
 window.addEventListener('load', () => setTimeout(hideControls, 2000));
-
 window.addEventListener('beforeunload', () => stopProgressTracking());
 </script>
 
