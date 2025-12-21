@@ -171,6 +171,7 @@ let stateCheckInterval;
 let hasAdStarted = false;
 let hasVideoStarted = false;
 let captionsSet = false;
+let loadTimeout;
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId  = urlParams.get("videoId");
@@ -182,6 +183,7 @@ function onYouTubeIframeAPIReady() {
 }
 
 function initializePlayer() {
+    clearTimeout(loadTimeout);
     customThumbnail = document.getElementById('customThumbnail');
 
     if (!videoId) {
@@ -191,6 +193,7 @@ function initializePlayer() {
 
     // Lazy load iframe
     const container = document.getElementById('playerContainer');
+    container.innerHTML = '';
     const iframe = document.createElement('iframe');
     iframe.id = 'player';
     iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1&controls=0&fs=1&iv_load_policy=3&disablekb=1&playsinline=1&cc_load_policy=0&enablejsapi=1&hl=' + userLang;
@@ -206,9 +209,17 @@ function initializePlayer() {
             onError: onPlayerError
         }
     });
+
+    // Timeout za učitavanje
+    loadTimeout = setTimeout(() => {
+        if (!player || player.getPlayerState() === -1) {
+            showError("Video failed to load. Please try again.");
+        }
+    }, 10000);
 }
 
 function onPlayerReady() {
+    clearTimeout(loadTimeout);
     document.getElementById('loadingScreen').style.display = 'none';
     hideControls();
     startAdDetection();
@@ -300,6 +311,7 @@ function setCaptionTrack(language) {
 }
 
 function onPlayerError(event) {
+    clearTimeout(loadTimeout);
     showError("YouTube error: " + event.data);
 }
 
@@ -402,4 +414,3 @@ window.addEventListener('beforeunload', function() {
 
 </body>
 </html>
-
