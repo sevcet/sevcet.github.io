@@ -5,181 +5,109 @@
 <title>TV YouTube Player</title>
 
 <style>
-/* (skraćeno – isti stil kao kod tvog drugog playera) */
-body, html {
+html, body {
     margin: 0;
     padding: 0;
-    background: #000;
-    overflow: hidden;
     width: 100%;
     height: 100%;
-    font-family: Arial, sans-serif;
+    background: #000;
+    overflow: hidden;
 }
-/* loading, thumbnail, error, progress, info, seek indikatori, ccMenu – možeš uzeti direktno iz svog koda */
+
+/* player fullscreen, ništa preko njega */
+#playerContainer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+}
+#player {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+}
 </style>
 </head>
 <body>
-
-<div id="loadingScreen">
-    <div class="spinner"></div>
-    <div id="loadingText">Učitavam YouTube player...</div>
-</div>
-
-<div id="customThumbnail">
-    <div class="thumbnail-content">
-        <div class="thumbnail-text">YU TU FLIX BALKAN<br>Učitavam video...</div>
-    </div>
-</div>
-
-<div id="errorScreen">
-    <div id="errorText">Greška pri učitavanju YouTube playera</div>
-    <div>Proverite internet konekciju</div>
-    <button id="retryButton">POKUŠAJ PONOVO</button>
-</div>
 
 <div id="playerContainer">
     <div id="player"></div>
 </div>
 
-<div id="progressContainer">
-    <div id="progressBar"></div>
-</div>
-
-<div id="seekBackward" class="seek-indicator">⏪ -60s</div>
-<div id="seekForward" class="seek-indicator">+60s ⏩</div>
-
-<!-- CC MENU – opciono; možeš ga izbaciti ako želiš samo auto-titlove -->
-<div id="ccMenu">
-    <div class="menu-title">🎯 Odabir titlova</div>
-    <div id="ccOptions" class="cc-options-container">
-        <div class="cc-option selected" data-language="off">❌ Bez titlova</div>
-        <div class="cc-option" data-language="sr">🇷🇸 Srpski</div>
-        <div class="cc-option" data-language="en">🇺🇸 Engleski</div>
-        <div class="cc-option" data-language="hr">🇭🇷 Hrvatski</div>
-        <div class="cc-option" data-language="bs">🇧🇦 Bosanski</div>
-    </div>
-    <div class="scroll-indicator">↑↓ za navigaciju • ENTER za izbor</div>
-</div>
-
-<div id="infoPanel"></div>
-
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 let player;
-let hideTimeout;
-let isPlaying = false;
-let isCCMenuOpen = false;
-let currentCCSelection = 0;
-let progressInterval;
-let customThumbnail;
-let stateCheckInterval;
-let hasVideoStarted = false;
 
 const urlParams = new URLSearchParams(window.location.search);
-const videoId   = urlParams.get("videoId");
-const subLang   = urlParams.get("subLang")  || "auto";
-const userLang  = urlParams.get("userLang") || "en";   // jezik iz app-a
+const videoId  = urlParams.get("videoId");
+const subLang  = urlParams.get("subLang")  || "auto";
+const userLang = urlParams.get("userLang") || "en";
 
-function onYouTubeIframeAPIReady() {
-    initializePlayer();
+/* jednostavna mapa jezika – bez tracklist-a */
+function mapLang(lang) {
+    if (!lang) return "en";
+    const L = lang.toLowerCase();
+    if (["sr","bs","hr","me"].includes(L)) return "sr";
+    return L;
 }
 
-function initializePlayer() {
-    customThumbnail = document.getElementById("customThumbnail");
+function onYouTubeIframeAPIReady() {
+    if (!videoId) return;
 
-    if (!videoId) {
-        showError("Nema Video ID-a u URL-u");
-        return;
-    }
-
-    try {
-        player = new YT.Player("player", {
-            height: "100%",
-            width: "100%",
-            videoId: videoId,
-            playerVars: {
-                autoplay: 1,
-                rel: 0,
-                modestbranding: 1,
-                controls: 0,
-                fs: 1,
-                iv_load_policy: 3,
-                disablekb: 1,
-                playsinline: 1,
-                cc_load_policy: 0,   // ne forsiramo CC dok mi ne odlučimo
-                enablejsapi: 1,
-                hl: userLang
-            },
-            events: {
-                onReady: onPlayerReady,
-                onStateChange: onPlayerStateChange,
-                onError: onPlayerError
-            }
-        });
-    } catch (error) {
-        showError("Greška pri pokretanju playera");
-    }
+    player = new YT.Player("player", {
+        height: "100%",
+        width: "100%",
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,
+            rel: 0,
+            modestbranding: 1,
+            controls: 1,         // ostavi YouTube kontrole vidljive
+            fs: 1,
+            iv_load_policy: 3,
+            disablekb: 1,        // naše DPAD komande
+            playsinline: 1,
+            cc_load_policy: 0,   // titlove palimo mi
+            enablejsapi: 1,
+            hl: userLang
+        },
+        events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
+        }
+    });
 }
 
 function onPlayerReady() {
-    document.getElementById("loadingScreen").style.display = "none";
-    showCustomThumbnail();
-    hideControls();
-    startAdDetection();
-    showInfo("←→ Seek (60s) | ↑ CC meni | ENTER Play/Pause | BACK Zatvori");
-
-    // pokreni video
-    try { player.playVideo(); } catch (e) {}
+    try { player.playVideo(); } catch(e){}
 }
 
-// --------- AUTOTITLOVI – jednostavna logika ---------
-
-function mapUserLangToEffectiveSimple(lang) {
-    if (!lang) return "en";
-    const L = lang.toLowerCase();
-
-    // ex-YU
-    if (["sr", "bs", "hr", "me"].includes(L)) return "sr";
-
-    // slovenski
-    if (["sl", "sk", "cs", "pl"].includes(L)) return L;
-
-    // romanski
-    if (["es","es-419","pt","pt-br","fr","it","ro"].includes(L)) return L;
-
-    // germanski
-    if (["de","nl","sv","no","da"].includes(L)) return L;
-
-    // istočno-slovenski
-    if (["ru","uk","bg"].includes(L)) return L;
-
-    // fallback
-    return "en";
-}
-
-function autoEnableCaptions() {
-    if (!player || !player.getOption) return;
-
-    try {
-        // tanki wrapper: prvo pokušaj subLang ako nije "auto".
-        const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
-        const effectiveUser = mapUserLangToEffectiveSimple(userLang);
-
-        // prvo probaj subLang
-        if (targetFromApp) {
-            setCaptionTrack(targetFromApp, false);
-            // ako ne uspe, UI će i dalje raditi bez blokiranja
-        } else {
-            // nema subLang → probaj userLang/effective
-            setCaptionTrack(effectiveUser, false);
-        }
-    } catch(e) {
-        console.log("autoEnableCaptions error:", e);
+/* automatski titlovi kad video krene */
+let captionsSet = false;
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING && !captionsSet) {
+        captionsSet = true;
+        setTimeout(autoEnableCaptions, 1500);
     }
 }
 
-// minimalni setCaptionTrack: ne dira tracklist, samo traži da YouTube prikaže dati jezik
-function setCaptionTrack(language, closeMenuAfter) {
+function autoEnableCaptions() {
+    if (!player) return;
+
+    const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
+    const effUser = mapLang(userLang);
+
+    if (targetFromApp) {
+        setCaptionTrack(targetFromApp);
+    } else {
+        setCaptionTrack(effUser);
+    }
+}
+
+/* minimalan pristup captions modu, bez tracklist-a i bez menija */
+function setCaptionTrack(language) {
     if (!player) return;
     try {
         if (!language || language === "off") {
@@ -192,163 +120,57 @@ function setCaptionTrack(language, closeMenuAfter) {
                 player.setOption("captions", "reload", true);
             }, 300);
         }
-    } catch (error) {
-        console.log("setCaptionTrack error:", error);
+    } catch(e) {
+        console.log("setCaptionTrack error", e);
     }
-
-    if (closeMenuAfter) hideCCMenu();
 }
 
-// --------- STANJE, PROGRESS, DPAD (kao tvoj drugi player) ---------
-
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        hideCustomThumbnail();
-        isPlaying = true;
-        startProgressTracking();
-
-        if (!hasVideoStarted) {
-            hasVideoStarted = true;
-            // auto titl posle što se video stvarno pokrene
-            setTimeout(autoEnableCaptions, 1500);
-        }
-    } else if (event.data === YT.PlayerState.PAUSED) {
-        isPlaying = false;
-        stopProgressTracking();
-    } else if (event.data === YT.PlayerState.ENDED) {
-        isPlaying = false;
-        stopProgressTracking();
-        showCustomThumbnail();
-        hasVideoStarted = false;
-        showInfo("Video završen");
-    } else if (event.data === YT.PlayerState.BUFFERING) {
-        setTimeout(checkBuffering, 2000);
-    } else if (event.data === YT.PlayerState.UNSTARTED) {
-        showCustomThumbnail();
-    }
-    resetHideTimer();
+function onPlayerError(e) {
+    console.log("YouTube error:", e.data);
 }
 
-function onPlayerError(event) {
-    showError("YouTube greška: " + event.data);
-}
-
-/* ostale funkcije: showCustomThumbnail, hideCustomThumbnail, startProgressTracking, updateProgress, startAdDetection, checkBuffering, stopAdDetection, showControls, hideControls, showInfo, showError, retryPlayer – iste kao kod tvog drugog playera, možeš ih copy/paste */
-
-function seek(direction) {
-    if (isCCMenuOpen || !player) return;
-    const seekAmount = 60;
-    const currentTime = player.getCurrentTime();
-    const duration = player.getDuration();
-    const newTime = Math.max(0, Math.min(duration, currentTime + (direction * seekAmount)));
-    player.seekTo(newTime, true);
-}
-
-function togglePlayPause() {
-    if (isCCMenuOpen) {
-        selectCCOption();
-        return;
-    }
+/* DPAD: radimo play/pause i seek, ali ne crtamo ništa preko playera */
+document.addEventListener("keydown", e => {
     if (!player) return;
-    if (isPlaying) player.pauseVideo();
-    else player.playVideo();
-}
 
-// CC meni (isti kao kod tebe, samo da koristi naš setCaptionTrack)
-function showCCMenu() {
-    const menu = document.getElementById("ccMenu");
-    menu.classList.add("visible");
-    isCCMenuOpen = true;
-    currentCCSelection = 0;
-    updateCCSelection();
-}
-
-function hideCCMenu() {
-    const menu = document.getElementById("ccMenu");
-    menu.classList.remove("visible");
-    isCCMenuOpen = false;
-}
-
-function updateCCSelection() {
-    const options = document.querySelectorAll(".cc-option");
-    options.forEach((option, index) => {
-        if (index === currentCCSelection) option.classList.add("selected");
-        else option.classList.remove("selected");
-    });
-}
-
-function navigateCCMenu(direction) {
-    if (!isCCMenuOpen) return;
-    const options = document.querySelectorAll(".cc-option");
-    currentCCSelection += direction;
-    if (currentCCSelection < 0) currentCCSelection = options.length - 1;
-    else if (currentCCSelection >= options.length) currentCCSelection = 0;
-    updateCCSelection();
-}
-
-function selectCCOption() {
-    if (!isCCMenuOpen || !player) return;
-    const options = document.querySelectorAll(".cc-option");
-    const selectedOption = options[currentCCSelection];
-    const language = selectedOption.getAttribute("data-language");
-    setCaptionTrack(language, true);
-}
-
-// DPAD
-document.addEventListener("keydown", function(event) {
-    showControlsTemporary();
-
-    switch (event.key) {
-        case "ArrowUp":
-            if (!isCCMenuOpen) showCCMenu();
-            else navigateCCMenu(-1);
-            event.preventDefault();
+    switch (e.key) {
+        case "ArrowLeft": {
+            const step = -60;
+            const t = player.getCurrentTime();
+            player.seekTo(Math.max(0, t + step), true);
+            e.preventDefault();
             break;
-        case "ArrowDown":
-            if (isCCMenuOpen) navigateCCMenu(1);
-            event.preventDefault();
+        }
+        case "ArrowRight": {
+            const step = 60;
+            const t = player.getCurrentTime();
+            const d = player.getDuration() || 0;
+            player.seekTo(Math.min(d, t + step), true);
+            e.preventDefault();
             break;
+        }
         case "Enter":
-            if (isCCMenuOpen) selectCCOption();
-            else togglePlayPause();
-            event.preventDefault();
+        case " ": {
+            const state = player.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) player.pauseVideo();
+            else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED) player.playVideo();
+            e.preventDefault();
             break;
-        case " ":
-            if (!isCCMenuOpen) togglePlayPause();
-            event.preventDefault();
-            break;
-        case "ArrowLeft":
-            seek(-1);
-            event.preventDefault();
-            break;
-        case "ArrowRight":
-            seek(1);
-            event.preventDefault();
-            break;
+        }
         case "Escape":
-        case "Backspace":
-            if (isCCMenuOpen) hideCCMenu();
-            else closePlayer();
-            event.preventDefault();
+        case "Backspace": {
+            // BACK u WebView-u – Activity već hvata hardware BACK,
+            // ovde samo za emulator / tastaturu
+            if (window.AndroidInterface &&
+                typeof AndroidInterface.closePlayer === "function") {
+                AndroidInterface.closePlayer();
+            } else {
+                window.history.back();
+            }
+            e.preventDefault();
             break;
+        }
     }
-});
-
-function closePlayer() {
-    stopProgressTracking();
-    stopAdDetection();
-    if (window.AndroidInterface && typeof AndroidInterface.closePlayer === "function") {
-        AndroidInterface.closePlayer();
-    } else {
-        window.history.back();
-    }
-}
-
-document.getElementById("retryButton").addEventListener("click", retryPlayer);
-window.addEventListener("load", () => setTimeout(hideControls, 2000));
-window.addEventListener("beforeunload", () => {
-    stopProgressTracking();
-    stopAdDetection();
 });
 </script>
 </body>
