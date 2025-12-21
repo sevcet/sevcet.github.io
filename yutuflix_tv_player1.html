@@ -16,7 +16,6 @@ body, html {
     font-family: Arial, sans-serif;
 }
 
-/* Loading screen */
 #loadingScreen {
     position: absolute;
     top: 0;
@@ -49,39 +48,17 @@ body, html {
     100% { transform: rotate(360deg); }
 }
 
-/* CUSTOM THUMBNAIL */
 #customThumbnail {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    background-color: #000;
+    width: 0px;
+    height: 0px;
+    background: #000;
     z-index: 9998;
     display: none;
-    justify-content: center;
-    align-items: center;
-    background-image: url('https://sevcet.github.io/tv_thumbnail.jpg');
-}
-.thumbnail-content {
-    text-align: center;
-    color: white;
-    background: rgba(0,0,0,0.8);
-    padding: 40px;
-    border-radius: 20px;
-    border: 2px solid rgba(255,68,68,0.5);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-.thumbnail-text {
-    font-size: 22px;
-    margin-top: 15px;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
 
-/* Error */
 #errorScreen {
     position: absolute;
     top: 0;
@@ -109,7 +86,6 @@ body, html {
     margin-top: 20px;
 }
 
-/* Player */
 #playerContainer {
     width: 100%;
     height: 100%;
@@ -121,7 +97,6 @@ body, html {
     border: none;
 }
 
-/* Progress bar */
 #progressContainer {
     position: absolute;
     bottom: 60px;
@@ -142,23 +117,6 @@ body, html {
     transition: width 0.1s ease;
 }
 
-/* Info panel */
-#infoPanel {
-    position: absolute;
-    top: 30px;
-    left: 30px;
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 12px 18px;
-    border-radius: 8px;
-    font-size: 16px;
-    z-index: 10001;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-left: 4px solid #ff4444;
-}
-
-/* Seek indicators */
 .seek-indicator {
     position: absolute;
     top: 50%;
@@ -181,33 +139,25 @@ body, html {
 
 <div id="loadingScreen">
     <div class="spinner"></div>
-    <div id="loadingText">Učitavam YouTube player...</div>
+    <div id="loadingText">Loading YouTube player...</div>
 </div>
 
-<div id="customThumbnail">
-    <div class="thumbnail-content">
-        <div class="thumbnail-text">YU TU FLIX BALKAN<br>Učitavam video...</div>
-    </div>
-</div>
+<div id="customThumbnail"></div>
 
 <div id="errorScreen">
-    <div id="errorText">Greška pri učitavanju YouTube playera</div>
-    <div>Proverite internet konekciju</div>
-    <button id="retryButton">POKUŠAJ PONOVO</button>
+    <div id="errorText">Error loading YouTube player</div>
+    <div>Check your internet connection</div>
+    <button id="retryButton">TRY AGAIN</button>
 </div>
 
-<div id="playerContainer">
-    <div id="player"></div>
-</div>
+<div id="playerContainer"></div>
 
 <div id="progressContainer">
     <div id="progressBar"></div>
 </div>
 
-<div id="seekBackward" class="seek-indicator">⏪ -60s</div>
-<div id="seekForward" class="seek-indicator">+60s ⏩</div>
-
-<div id="infoPanel"></div>
+<div id="seekBackward" class="seek-indicator">⏪ -20s</div>
+<div id="seekForward" class="seek-indicator">+20s ⏩</div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
@@ -222,11 +172,10 @@ let hasAdStarted = false;
 let hasVideoStarted = false;
 let captionsSet = false;
 
-/* parametri iz URL-a */
 const urlParams = new URLSearchParams(window.location.search);
 const videoId  = urlParams.get("videoId");
-const subLang  = urlParams.get("subLang")  || "auto"; // iz app-a
-const userLang = urlParams.get("userLang") || "en";   // iz app-a
+const subLang  = urlParams.get("subLang")  || "auto";
+const userLang = urlParams.get("userLang") || "en";
 
 function onYouTubeIframeAPIReady() {
     initializePlayer();
@@ -236,51 +185,37 @@ function initializePlayer() {
     customThumbnail = document.getElementById('customThumbnail');
 
     if (!videoId) {
-        showError("Nema Video ID-a u URL-u");
+        showError("No Video ID in URL");
         return;
     }
 
-    try {
-        player = new YT.Player('player', {
-            height: '100%',
-            width:  '100%',
-            videoId: videoId,
-            playerVars: {
-                autoplay: 1,
-                rel: 0,
-                modestbranding: 1,
-                controls: 0,
-                fs: 1,
-                iv_load_policy: 3,
-                disablekb: 1,
-                playsinline: 1,
-                cc_load_policy: 0,
-                enablejsapi: 1,
-                hl: userLang
-            },
-            events: {
-                onReady: onPlayerReady,
-                onStateChange: onPlayerStateChange,
-                onError: onPlayerError
-            }
-        });
-    } catch (error) {
-        showError("Greška pri pokretanju playera");
-    }
+    // Lazy load iframe
+    const container = document.getElementById('playerContainer');
+    const iframe = document.createElement('iframe');
+    iframe.id = 'player';
+    iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0&modestbranding=1&controls=0&fs=1&iv_load_policy=3&disablekb=1&playsinline=1&cc_load_policy=0&enablejsapi=1&hl=' + userLang;
+    iframe.width = '100%';
+    iframe.height = '100%';
+    iframe.frameBorder = '0';
+    container.appendChild(iframe);
+
+    player = new YT.Player('player', {
+        events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
+        }
+    });
 }
 
 function onPlayerReady() {
     document.getElementById('loadingScreen').style.display = 'none';
-    showCustomThumbnail();
     hideControls();
     startAdDetection();
-    showInfo("←→ Seek (60s) | ENTER Play/Pause | BACK Zatvori");
 }
 
-/* AUTO TITLOVI – koristi subLang iz app-a kad glavni video krene */
 function onPlayerStateChange(event) {
     if (event.data === YT.PlayerState.PLAYING) {
-        hideCustomThumbnail();
         isPlaying = true;
         startProgressTracking();
         checkIfAdOrVideo();
@@ -295,24 +230,18 @@ function onPlayerStateChange(event) {
     } else if (event.data === YT.PlayerState.ENDED) {
         isPlaying = false;
         stopProgressTracking();
-        showCustomThumbnail();
         hasVideoStarted = false;
         hasAdStarted = false;
         captionsSet = false;
-        showInfo("Video završen");
     } else if (event.data === YT.PlayerState.BUFFERING) {
         setTimeout(checkBuffering, 2000);
-    } else if (event.data === YT.PlayerState.UNSTARTED) {
-        showCustomThumbnail();
     }
 
     resetHideTimer();
 }
 
-/* odvajanje reklame od glavnog videa */
 function checkIfAdOrVideo() {
     if (!player) return;
-
     const currentTime = player.getCurrentTime();
     if (currentTime === 0 && !hasVideoStarted) {
         hasAdStarted = true;
@@ -323,7 +252,7 @@ function checkIfAdOrVideo() {
 
 function checkBuffering() {
     if (player && player.getPlayerState() === YT.PlayerState.BUFFERING) {
-        showCustomThumbnail();
+        // bez thumbnail-a
     }
 }
 
@@ -332,33 +261,19 @@ function startAdDetection() {
         if (player && player.getPlayerState && player.getCurrentTime) {
             const state = player.getPlayerState();
             const currentTime = player.getCurrentTime();
-
-            if (state === YT.PlayerState.PAUSED && currentTime < 2 && hasAdStarted) {
-                showCustomThumbnail();
-            }
-            if (state === YT.PlayerState.BUFFERING && currentTime < 2 && hasAdStarted) {
-                showCustomThumbnail();
-            }
-            if (state === YT.PlayerState.UNSTARTED) showCustomThumbnail();
-            if (state === YT.PlayerState.ENDED)      showCustomThumbnail();
+            if (state === YT.PlayerState.UNSTARTED) {}
+            if (state === YT.PlayerState.ENDED) {}
         }
     }, 500);
 }
 
-function stopAdDetection() {
-    if (stateCheckInterval) clearInterval(stateCheckInterval);
-}
-
-/* automatsko uključivanje titlova */
 function autoEnableCaptions() {
     if (!player) return;
-
     const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
     const lang = targetFromApp || mapLang(userLang);
     setCaptionTrack(lang);
 }
 
-/* jednostavna mapa jezika (ex-YU na sr) */
 function mapLang(lang) {
     if (!lang) return "en";
     const L = lang.toLowerCase();
@@ -384,24 +299,10 @@ function setCaptionTrack(language) {
     }
 }
 
-/* Error */
 function onPlayerError(event) {
-    showError("YouTube greška: " + event.data);
+    showError("YouTube error: " + event.data);
 }
 
-/* Thumbnail */
-function showCustomThumbnail() {
-    if (customThumbnail && customThumbnail.style.display === 'none') {
-        customThumbnail.style.display = 'flex';
-    }
-}
-function hideCustomThumbnail() {
-    if (customThumbnail && customThumbnail.style.display !== 'none') {
-        customThumbnail.style.display = 'none';
-    }
-}
-
-/* Progress */
 function startProgressTracking() {
     stopProgressTracking();
     progressInterval = setInterval(updateProgress, 1000);
@@ -421,10 +322,9 @@ function updateProgress() {
     }
 }
 
-/* SEEK + PLAY/PAUSE – DPAD */
 function seek(direction) {
     if (!player) return;
-    const seekAmount = 60;
+    const seekAmount = 20;
     const currentTime = player.getCurrentTime();
     const duration = player.getDuration();
     const newTime = Math.max(0, Math.min(duration, currentTime + direction * seekAmount));
@@ -437,7 +337,6 @@ function togglePlayPause() {
     else player.playVideo();
 }
 
-/* Controls overlay */
 function showControls() {
     document.getElementById('progressContainer').style.opacity = '1';
 }
@@ -445,56 +344,25 @@ function hideControls() {
     document.getElementById('progressContainer').style.opacity = '0';
     clearTimeout(hideTimeout);
 }
-function showControlsTemporary() {
-    showControls();
-    resetHideTimer();
-}
 function resetHideTimer() {
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(hideControls, 3000);
 }
 
-/* Zatvaranje */
-function closePlayer() {
-    stopProgressTracking();
-    stopAdDetection();
-    if (window.AndroidInterface && typeof AndroidInterface.closePlayer === "function") {
-        AndroidInterface.closePlayer();
-    } else {
-        window.history.back();
-    }
-}
-
-/* Info panel */
-function showInfo(message) {
-    const infoPanel = document.getElementById('infoPanel');
-    if (infoPanel) {
-        infoPanel.textContent = message;
-        infoPanel.style.opacity = '1';
-        setTimeout(() => { infoPanel.style.opacity = '0'; }, 3000);
-    }
-}
-
-/* Error handling */
 function showError(message) {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('errorScreen').style.display = 'flex';
     document.getElementById('errorText').textContent = message;
-    if (customThumbnail) customThumbnail.style.display = 'none';
-    stopAdDetection();
 }
 function retryPlayer() {
     document.getElementById('errorScreen').style.display = 'none';
     document.getElementById('loadingScreen').style.display = 'flex';
-    if (customThumbnail) customThumbnail.style.display = 'none';
-    stopAdDetection();
     captionsSet = false;
     initializePlayer();
 }
 
-/* DPAD handler */
 document.addEventListener('keydown', function(event) {
-    showControlsTemporary();
+    showControls();
 
     switch(event.key) {
         case 'Enter':
@@ -512,7 +380,11 @@ document.addEventListener('keydown', function(event) {
             break;
         case 'Escape':
         case 'Backspace':
-            closePlayer();
+            if (window.AndroidInterface && typeof AndroidInterface.closePlayer === "function") {
+                AndroidInterface.closePlayer();
+            } else {
+                window.history.back();
+            }
             event.preventDefault();
             break;
     }
@@ -524,10 +396,10 @@ window.addEventListener('load', function() {
     setTimeout(hideControls, 2000);
 });
 window.addEventListener('beforeunload', function() {
-    stopProgressTracking();
-    stopAdDetection();
+    if (progressInterval) clearInterval(progressInterval);
 });
 </script>
 
 </body>
 </html>
+
