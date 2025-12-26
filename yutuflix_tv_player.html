@@ -84,6 +84,14 @@
         height: 100%;
         border: 0;
     }
+
+    /* transparentni overlay preko celog playera – hvata tap */
+    #touchOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1002;
+        background: transparent;
+    }
 </style>
 </head>
 
@@ -103,6 +111,9 @@
 <div id="playerContainer">
     <div id="player"></div>
 </div>
+
+<!-- overlay za tap da probudi YouTube kontrole -->
+<div id="touchOverlay"></div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
@@ -136,7 +147,7 @@ function initializePlayer() {
             autoplay: 1,
             rel: 0,
             modestbranding: 1,
-            controls: 1,      // kompletan YouTube UI (seek bar, CC, settings...)
+            controls: 1,      // kompletan YT UI
             fs: 1,
             playsinline: 1,
             hl: userLang,
@@ -149,7 +160,6 @@ function initializePlayer() {
         }
     });
 
-    // dozvoli fullscreen i autoplay
     setTimeout(() => {
         const iframe = document.getElementById("player");
         if (iframe) {
@@ -244,6 +254,24 @@ function retryPlayer() {
 }
 
 document.getElementById("retryButton").addEventListener("click", retryPlayer);
+
+/* --- tap na ekran: probudi YT kontrole --- */
+document.getElementById("touchOverlay").addEventListener("click", function () {
+    if (!player || !player.getPlayerState) return;
+
+    try {
+        const state = player.getPlayerState();
+        // mali trik: kratko pauziraj pa opet pusti – YouTube tada prikaže kontrole
+        if (state === YT.PlayerState.PLAYING) {
+            player.pauseVideo();
+            setTimeout(() => { player.playVideo(); }, 50);
+        } else {
+            player.playVideo();
+        }
+    } catch (e) {
+        // fallback: ništa
+    }
+});
 
 window.addEventListener("beforeunload", function () {
     // nema posebnih intervala za čistiti
