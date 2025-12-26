@@ -5,7 +5,6 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Mobile YouTube Player</title>
-
 <style>
     html, body {
         margin: 0;
@@ -15,8 +14,6 @@
         background: #000;
         overflow: hidden;
         font-family: Arial, sans-serif;
-        -webkit-user-select: none;
-        -webkit-touch-callout: none;
     }
 
     #loadingScreen {
@@ -27,7 +24,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        z-index: 10000;
+        z-index: 1000;
         color: #fff;
     }
 
@@ -59,7 +56,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        z-index: 10001;
+        z-index: 1001;
         color: #fff;
         text-align: center;
         padding: 20px;
@@ -85,56 +82,6 @@
         height: 100%;
         border: 0;
     }
-
-    /* Donji progress bar – prikazuje se kratko posle dodira */
-    #progressContainer {
-        position: absolute;
-        left: 5%;
-        right: 5%;
-        bottom: 24px;
-        height: 4px;
-        background: rgba(255,255,255,0.25);
-        border-radius: 2px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        z-index: 10002;
-    }
-
-    #progressBar {
-        height: 100%;
-        width: 0%;
-        background: #ff4444;
-        border-radius: 2px;
-    }
-
-    /* Overlay za tap kontrole: levo, desno, centar */
-    .tap-zone {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 33.3333%;
-        z-index: 10003;
-    }
-    #tapLeft  { left: 0; }
-    #tapCenter{ left: 33.3333%; }
-    #tapRight { right: 0; }
-
-    .seek-indicator {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(0,0,0,0.7);
-        color: #fff;
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-size: 14px;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        z-index: 10004;
-        pointer-events: none;
-    }
-    #seekBackward { left: 18px; }
-    #seekForward { right: 18px; }
 </style>
 </head>
 
@@ -152,30 +99,14 @@
 </div>
 
 <div id="playerContainer">
-    <div id="progressContainer">
-        <div id="progressBar"></div>
-    </div>
-
-    <!-- tap zone levo: seek -20s -->
-    <div id="tapLeft" class="tap-zone"></div>
-    <!-- tap zona centar: play/pause + show progress -->
-    <div id="tapCenter" class="tap-zone"></div>
-    <!-- tap zona desno: seek +20s -->
-    <div id="tapRight" class="tap-zone"></div>
-
-    <div id="seekBackward" class="seek-indicator">⏪ -20s</div>
-    <div id="seekForward"  class="seek-indicator">+20s ⏩</div>
+    <div id="player"></div>
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 let player;
-let isPlaying = false;
-let progressInterval;
-let hideControlsTimeout;
 let loadTimeout;
-let hasVideoStarted = false;
 let captionsSet = false;
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -195,25 +126,18 @@ function initializePlayer() {
         return;
     }
 
-    const container = document.getElementById("playerContainer");
-
-    // Ukloni stari iframe ako postoji
-    const old = document.getElementById("player");
-    if (old) old.remove();
-
-    const iframe = document.createElement("iframe");
-    iframe.id = "player";
-    iframe.src =
-        "https://www.youtube.com/embed/" + encodeURIComponent(videoId) +
-        "?autoplay=1&rel=0&modestbranding=1&controls=0&fs=1" +
-        "&iv_load_policy=3&disablekb=1&playsinline=1&cc_load_policy=0" +
-        "&enablejsapi=1&hl=" + encodeURIComponent(userLang);
-    iframe.allow = "autoplay; encrypted-media; fullscreen";
-    iframe.frameBorder = "0";
-
-    container.insertBefore(iframe, container.firstChild);
-
     player = new YT.Player("player", {
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,          // app će već podići WebView, na nekim mobilnim će ipak tražiti tap
+            rel: 0,
+            modestbranding: 1,
+            controls: 1,          // PUNE YouTube kontrole (seek bar, CC, settings…)
+            fs: 1,
+            playsinline: 1,
+            hl: userLang,
+            cc_load_policy: 0
+        },
         events: {
             onReady: onPlayerReady,
             onStateChange: onPlayerStateChange,
@@ -222,7 +146,11 @@ function initializePlayer() {
     });
 
     loadTimeout = setTimeout(function () {
-        if (!player || player.getPlayerState() === -1) {
+        try {
+            if (!player || player.getPlayerState() === -1) {
+                showError("Video failed to load. Please try again.");
+            }
+        } catch (e) {
             showError("Video failed to load. Please try again.");
         }
     }, 10000);
@@ -231,28 +159,22 @@ function initializePlayer() {
 function onPlayerReady() {
     clearTimeout(loadTimeout);
     document.getElementById("loadingScreen").style.display = "none";
-    startProgressTracking();
-    scheduleHideControls();
+
+    // Pusti automatski kad je moguće
+    try {
+        player.playVideo();
+    } catch (e) {}
+
+    // Posle kratkog vremena probaj da podesiš titlove
+    setTimeout(function () {
+        autoEnableCaptions();
+    }, 1500);
 }
 
 function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        isPlaying = true;
-        hasVideoStarted = true;
-        startProgressTracking();
-
-        if (!captionsSet) {
-            captionsSet = true;
-            setTimeout(autoEnableCaptions, 1500);
-        }
-    } else if (event.data === YT.PlayerState.PAUSED) {
-        isPlaying = false;
-        stopProgressTracking();
-    } else if (event.data === YT.PlayerState.ENDED) {
-        isPlaying = false;
-        stopProgressTracking();
-        hasVideoStarted = false;
-        captionsSet = false;
+    if (event.data === YT.PlayerState.PLAYING && !captionsSet) {
+        captionsSet = true;
+        setTimeout(autoEnableCaptions, 1000);
     }
 }
 
@@ -261,7 +183,7 @@ function onPlayerError(event) {
     showError("YouTube error: " + event.data);
 }
 
-/* --- titlovi --- */
+/* --- titlovi, isto kao u TV verziji --- */
 function autoEnableCaptions() {
     if (!player) return;
     const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
@@ -294,71 +216,6 @@ function setCaptionTrack(language) {
     }
 }
 
-/* --- progress bar --- */
-function startProgressTracking() {
-    stopProgressTracking();
-    progressInterval = setInterval(updateProgress, 1000);
-}
-
-function stopProgressTracking() {
-    if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-    }
-}
-
-function updateProgress() {
-    if (!player || !player.getCurrentTime || !player.getDuration) return;
-    const current = player.getCurrentTime();
-    const duration = player.getDuration() || 1;
-    const percent = (current / duration) * 100;
-    document.getElementById("progressBar").style.width = percent + "%";
-}
-
-/* --- tap kontrole --- */
-function togglePlayPause() {
-    if (!player) return;
-    if (isPlaying) {
-        player.pauseVideo();
-    } else {
-        player.playVideo();
-    }
-    showControls();
-}
-
-function seek(direction) {
-    if (!player) return;
-    const seekAmount = 20;
-    const current = player.getCurrentTime();
-    const duration = player.getDuration() || 0;
-    const newTime = Math.max(0, Math.min(duration, current + direction * seekAmount));
-    player.seekTo(newTime, true);
-    showControls();
-    showSeekIndicator(direction);
-}
-
-function showSeekIndicator(direction) {
-    const el = direction < 0
-        ? document.getElementById("seekBackward")
-        : document.getElementById("seekForward");
-    el.style.opacity = "1";
-    setTimeout(() => { el.style.opacity = "0"; }, 400);
-}
-
-/* --- prikaz/sakrivanje progress bara --- */
-function showControls() {
-    const pc = document.getElementById("progressContainer");
-    pc.style.opacity = "1";
-    scheduleHideControls();
-}
-
-function scheduleHideControls() {
-    clearTimeout(hideControlsTimeout);
-    hideControlsTimeout = setTimeout(() => {
-        document.getElementById("progressContainer").style.opacity = "0";
-    }, 3000);
-}
-
 /* --- error i retry --- */
 function showError(message) {
     document.getElementById("loadingScreen").style.display = "none";
@@ -374,23 +231,10 @@ function retryPlayer() {
     initializePlayer();
 }
 
-/* --- eventi --- */
 document.getElementById("retryButton").addEventListener("click", retryPlayer);
 
-document.getElementById("tapCenter").addEventListener("click", function () {
-    togglePlayPause();
-});
-
-document.getElementById("tapLeft").addEventListener("click", function () {
-    seek(-1);
-});
-
-document.getElementById("tapRight").addEventListener("click", function () {
-    seek(1);
-});
-
 window.addEventListener("beforeunload", function () {
-    stopProgressTracking();
+    // nema custom intervala, pa samo defensive cleanup
 });
 </script>
 
