@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>YouTube Player</title>
     <style>
-        body, html {
+        html, body {
             margin: 0;
             padding: 0;
-            background: #000;
-            overflow: hidden;
             width: 100%;
             height: 100%;
-            touch-action: manipulation;
+            background: #000;
+            overflow: hidden;
         }
         #player {
             width: 100%;
@@ -58,57 +58,136 @@
 <script>
     let player;
     let hideTimeout;
+    let loadTimeout;
+    let captionsSet = false;
+
+    // parametri iz aplikacije – isto kao u prvom playeru
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId  = urlParams.get("videoId");
+    const subLang  = urlParams.get("subLang")  || "auto";
+    const userLang = urlParams.get("userLang") || "en";
 
     function onYouTubeIframeAPIReady() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoId = urlParams.get('videoId');
+        initializePlayer();
+    }
 
-        player = new YT.Player('player', {
-            height: '100%',
-            width: '100%',
+    function initializePlayer() {
+        clearTimeout(loadTimeout);
+
+        if (!videoId) {
+            console.log("No video ID in URL.");
+            return;
+        }
+
+        player = new YT.Player("player", {
+            width: "100%",
+            height: "100%",
             videoId: videoId,
             playerVars: {
                 autoplay: 1,
                 rel: 0,
                 modestbranding: 1,
                 controls: 1,
-                showinfo: 1,
                 fs: 1,
-                iv_load_policy: 3,
-                disablekb: 0,
                 playsinline: 1,
-
-                // >>> TITLOVI
-                cc_load_policy: 1,      // uvek uključi CC ako postoje
-                cc_lang_pref: 'en'      // ili stavi 'sr', 'de'... ili izbaci da bira po korisniku
+                hl: userLang,
+                cc_load_policy: 0      // titlove palimo ručno
             },
             events: {
                 onReady: onPlayerReady,
                 onStateChange: onPlayerStateChange,
-                onApiChange: onPlayerApiChange   // dodat event
+                onError: onPlayerError
             }
         });
-    }
 
-    // čim se API promijeni, još jednom forsiraj titlove (radi i za auto‑generated) [web:211]
-    function onPlayerApiChange() {
-        try {
-            if (player && typeof player.setOption === 'function') {
-                player.setOption('captions', 'track', { languageCode: 'en' });
+        // dozvole na iframe (kao u prvom playeru)
+        setTimeout(() => {
+            const iframe = document.getElementById("player");
+            if (iframe) {
+                iframe.setAttribute("allowfullscreen", "true");
+                iframe.setAttribute(
+                    "allow",
+                    "autoplay; encrypted-media; fullscreen; picture-in-picture"
+                );
             }
-        } catch (e) {
-            console.log('CC setOption error', e);
-        }
+        }, 0);
+
+        // timeout samo za log – nema ekrana za grešku
+        loadTimeout = setTimeout(function () {
+            try {
+                if (!player || player.getPlayerState() === -1) {
+                    console.log("Video failed to load.");
+                }
+            } catch (e) {
+                console.log("Video failed to load.");
+            }
+        }, 10000);
     }
 
     function onPlayerReady(event) {
-        event.target.playVideo();
+        clearTimeout(loadTimeout);
+        try { event.target.playVideo(); } catch (e) {}
+
+        // X dugme auto-hide logika
         hideTimeout = setTimeout(hideCloseButton, 10000);
+
+        // LOGIKA ZA TITLOVE – isto kao u prvom: malo posle starta
+        setTimeout(function () {
+            autoEnableCaptions();
+        }, 1500);
     }
 
     function onPlayerStateChange(event) {
         resetHideTimer();
+
+        // iz prvog playera: drugi pokušaj kad krene PLAY
+        if (event.data === YT.PlayerState.PLAYING && !captionsSet) {
+            captionsSet = true;
+            setTimeout(autoEnableCaptions, 1000);
+        }
     }
+
+    function onPlayerError(event) {
+        clearTimeout(loadTimeout);
+        console.log("YouTube error:", event.data);
+    }
+
+    /* ----- TITLOVI: preuzeto iz prvog playera ----- */
+
+    function autoEnableCaptions() {
+        if (!player) return;
+
+        const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
+        const lang = targetFromApp || mapLang(userLang);
+        setCaptionTrack(lang);
+    }
+
+    function mapLang(lang) {
+        if (!lang) return "en";
+        const L = lang.toLowerCase();
+        if (["sr","bs","hr","me"].includes(L)) return "sr";
+        return L;
+    }
+
+    function setCaptionTrack(language) {
+        if (!player) return;
+        try {
+            if (!language || language === "off") {
+                player.setOption("captions", "track", {});
+                player.unloadModule("captions");
+            } else {
+                player.loadModule("captions");
+                setTimeout(() => {
+                    player.setOption("captions", "track", { languageCode: language });
+                    player.setOption("captions", "reload", true);
+                }, 300);
+            }
+        } catch (e) {
+            console.log("setCaptionTrack error:", e);
+        }
+    }
+
+    /* ----- X dugme – isti kod kao pre ----- */
 
     function hideCloseButton() {
         const closeBtn = document.getElementById('closeBtn');
@@ -160,8 +239,8 @@
         }
     });
 
-    window.addEventListener('load', function() {
-        setTimeout(hideCloseButton, 10000);
+    window.addEventListener('beforeunload', function () {
+        // nema specijalnog čišćenja
     });
 </script>
 </body>
