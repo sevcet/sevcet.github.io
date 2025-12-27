@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mobile YouTube Player</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+    }
+
+    #loadingScreen {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        color: #fff;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #333;
+        border-top: 5px solid #ff4444;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    #loadingText {
+        margin-top: 16px;
+        font-size: 16px;
+        text-align: center;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    #errorScreen {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1001;
+        color: #fff;
+        text-align: center;
+        padding: 20px;
+    }
+
+    #retryButton {
+        background: #ff4444;
+        color: #fff;
+        border: none;
+        padding: 10px 22px;
+        border-radius: 8px;
+        font-size: 15px;
+        margin-top: 16px;
+    }
+
+    #playerContainer {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    #player {
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    /* transparentni overlay preko celog playera – hvata tap */
+    #touchOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1002;
+        background: transparent;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="loadingScreen">
+    <div class="spinner"></div>
+    <div id="loadingText">Loading YouTube player...</div>
+</div>
+
+<div id="errorScreen">
+    <div id="errorText">Error loading YouTube player</div>
+    <div style="margin-top:8px;">Check your internet connection.</div>
+    <button id="retryButton">TRY AGAIN</button>
+</div>
+
+<div id="playerContainer">
+    <div id="player"></div>
+</div>
+
+<!-- overlay za tap da probudi YouTube kontrole -->
+<div id="touchOverlay"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+let player;
+let loadTimeout;
+let captionsSet = false;
+
+const urlParams = new URLSearchParams(window.location.search);
+const videoId  = urlParams.get("videoId");
+const subLang  = urlParams.get("subLang")  || "auto";
+const userLang = urlParams.get("userLang") || "en";
+
+function onYouTubeIframeAPIReady() {
+    initializePlayer();
+}
+
+function initializePlayer() {
+    clearTimeout(loadTimeout);
+
+    if (!videoId) {
+        showError("No video ID in URL.");
+        return;
+    }
+
+    player = new YT.Player("player", {
+        width: "100%",
+        height: "100%",
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,
+            rel: 0,
+            modestbranding: 1,
+            controls: 1,      // kompletan YT UI
+            fs: 1,
+            playsinline: 1,
+            hl: userLang,
+            cc_load_policy: 0
+        },
+        events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
+        }
+    });
+
+    setTimeout(() => {
+        const iframe = document.getElementById("player");
+        if (iframe) {
+            iframe.setAttribute("allowfullscreen", "true");
+            iframe.setAttribute(
+                "allow",
+                "autoplay; encrypted-media; fullscreen; picture-in-picture"
+            );
+        }
+    }, 0);
+
+    loadTimeout = setTimeout(function () {
+        try {
+            if (!player || player.getPlayerState() === -1) {
+                showError("Video failed to load. Please try again.");
+            }
+        } catch (e) {
+            showError("Video failed to load. Please try again.");
+        }
+    }, 10000);
+}
+
+function onPlayerReady() {
+    clearTimeout(loadTimeout);
+    document.getElementById("loadingScreen").style.display = "none";
+
+    try { player.playVideo(); } catch (e) {}
+
+    setTimeout(function () {
+        autoEnableCaptions();
+    }, 1500);
+}
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING && !captionsSet) {
+        captionsSet = true;
+        setTimeout(autoEnableCaptions, 1000);
+    }
+}
+
+function onPlayerError(event) {
+    clearTimeout(loadTimeout);
+    showError("YouTube error: " + event.data);
+}
+
+/* --- titlovi --- */
+function autoEnableCaptions() {
+    if (!player) return;
+    const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
+    const lang = targetFromApp || mapLang(userLang);
+    setCaptionTrack(lang);
+}
+
+function mapLang(lang) {
+    if (!lang) return "en";
+    const L = lang.toLowerCase();
+    if (["sr","bs","hr","me"].includes(L)) return "sr";
+    return L;
+}
+
+function setCaptionTrack(language) {
+    if (!player) return;
+    try {
+        if (!language || language === "off") {
+            player.setOption("captions", "track", {});
+            player.unloadModule("captions");
+        } else {
+            player.loadModule("captions");
+            setTimeout(() => {
+                player.setOption("captions", "track", { languageCode: language });
+                player.setOption("captions", "reload", true);
+            }, 300);
+        }
+    } catch (e) {
+        console.log("setCaptionTrack error:", e);
+    }
+}
+
+/* --- error & retry --- */
+function showError(message) {
+    document.getElementById("loadingScreen").style.display = "none";
+    const err = document.getElementById("errorScreen");
+    document.getElementById("errorText").textContent = message;
+    err.style.display = "flex";
+}
+
+function retryPlayer() {
+    document.getElementById("errorScreen").style.display = "none";
+    document.getElementById("loadingScreen").style.display = "flex";
+    captionsSet = false;
+    initializePlayer();
+}
+
+document.getElementById("retryButton").addEventListener("click", retryPlayer);
+
+/* --- tap na ekran: probudi YT kontrole --- */
+document.getElementById("touchOverlay").addEventListener("click", function () {
+    if (!player || !player.getPlayerState) return;
+
+    try {
+        const state = player.getPlayerState();
+        // mali trik: kratko pauziraj pa opet pusti – YouTube tada prikaže kontrole
+        if (state === YT.PlayerState.PLAYING) {
+            player.pauseVideo();
+            setTimeout(() => { player.playVideo(); }, 50);
+        } else {
+            player.playVideo();
+        }
+    } catch (e) {
+        // fallback: ništa
+    }
+});
+
+window.addEventListener("beforeunload", function () {
+    // nema posebnih intervala za čistiti
+});
+</script>
+
+</body>
+</html>
