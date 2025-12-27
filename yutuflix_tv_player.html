@@ -21,8 +21,8 @@
         }
         #closeBtn {
             position: absolute;
-            top: 50%; /* CENTRIRANO VERTIKALNO */
-            transform: translateY(-50%); /* POMERI NAZAD ZA POLOVINU SVOJE VISINE */
+            top: 50%;
+            transform: translateY(-50%);
             right: 20px;
             background: rgba(0,0,0,0.8);
             color: #fff;
@@ -50,109 +50,119 @@
     </style>
 </head>
 <body>
-    <button id="closeBtn" title="Zatvori">✕</button>
-    
-    <div id="player"></div>
+<button id="closeBtn" title="Zatvori">✕</button>
 
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script>
-        let player;
-        let hideTimeout;
-        
-        function onYouTubeIframeAPIReady() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const videoId = urlParams.get('videoId');
-            
-            player = new YT.Player('player', {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: {
-                    'autoplay': 1,
-                    'rel': 0,
-                    'modestbranding': 1,
-                    'controls': 1,
-                    'showinfo': 1,
-                    'fs': 1,
-                    'iv_load_policy': 3,
-                    'disablekb': 0,
-                    'playsinline': 1
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
-                }
-            });
+<div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    let player;
+    let hideTimeout;
+
+    function onYouTubeIframeAPIReady() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('videoId');
+
+        player = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                rel: 0,
+                modestbranding: 1,
+                controls: 1,
+                showinfo: 1,
+                fs: 1,
+                iv_load_policy: 3,
+                disablekb: 0,
+                playsinline: 1,
+
+                // >>> TITLOVI
+                cc_load_policy: 1,      // uvek uključi CC ako postoje
+                cc_lang_pref: 'en'      // ili stavi 'sr', 'de'... ili izbaci da bira po korisniku
+            },
+            events: {
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange,
+                onApiChange: onPlayerApiChange   // dodat event
+            }
+        });
+    }
+
+    // čim se API promijeni, još jednom forsiraj titlove (radi i za auto‑generated) [web:211]
+    function onPlayerApiChange() {
+        try {
+            if (player && typeof player.setOption === 'function') {
+                player.setOption('captions', 'track', { languageCode: 'en' });
+            }
+        } catch (e) {
+            console.log('CC setOption error', e);
         }
+    }
 
-        function onPlayerReady(event) {
-            event.target.playVideo();
-            hideTimeout = setTimeout(hideCloseButton, 10000);
+    function onPlayerReady(event) {
+        event.target.playVideo();
+        hideTimeout = setTimeout(hideCloseButton, 10000);
+    }
+
+    function onPlayerStateChange(event) {
+        resetHideTimer();
+    }
+
+    function hideCloseButton() {
+        const closeBtn = document.getElementById('closeBtn');
+        if (closeBtn) {
+            closeBtn.style.opacity = '0';
         }
+    }
 
-        function onPlayerStateChange(event) {
+    function showCloseButton() {
+        const closeBtn = document.getElementById('closeBtn');
+        if (closeBtn) {
+            closeBtn.style.opacity = '1';
             resetHideTimer();
         }
+    }
 
-        function hideCloseButton() {
-            const closeBtn = document.getElementById('closeBtn');
-            if (closeBtn) {
-                closeBtn.style.opacity = '0';
-            }
+    function resetHideTimer() {
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(hideCloseButton, 10000);
+    }
+
+    document.addEventListener('click', function(event) {
+        if (event.target.id !== 'closeBtn') {
+            showCloseButton();
         }
+    });
 
-        function showCloseButton() {
-            const closeBtn = document.getElementById('closeBtn');
-            if (closeBtn) {
-                closeBtn.style.opacity = '1';
-                resetHideTimer();
-            }
+    document.getElementById('closeBtn').addEventListener('click', function() {
+        if (window.AndroidInterface) {
+            AndroidInterface.closePlayer();
+        } else {
+            window.history.back();
         }
+    });
 
-        function resetHideTimer() {
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(hideCloseButton, 10000);
-        }
+    document.addEventListener('mousemove', function() {
+        showCloseButton();
+    });
 
-        // Klik na bilo koji deo ekrana prikazuje X dugme
-        document.addEventListener('click', function(event) {
-            if (event.target.id !== 'closeBtn') {
-                showCloseButton();
-            }
-        });
+    document.addEventListener('touchstart', function() {
+        showCloseButton();
+    });
 
-        // X dugme zatvara player
-        document.getElementById('closeBtn').addEventListener('click', function() {
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
             if (window.AndroidInterface) {
                 AndroidInterface.closePlayer();
-            } else {
-                window.history.back();
             }
-        });
+        }
+    });
 
-        // Sakrij X dugme kada se miš pomera
-        document.addEventListener('mousemove', function() {
-            showCloseButton();
-        });
-
-        // Touch events za mobilne uređaje
-        document.addEventListener('touchstart', function() {
-            showCloseButton();
-        });
-
-        // Keyboard support
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                if (window.AndroidInterface) {
-                    AndroidInterface.closePlayer();
-                }
-            }
-        });
-
-        // Auto-hide na početku
-        window.addEventListener('load', function() {
-            setTimeout(hideCloseButton, 10000);
-        });
-    </script>
+    window.addEventListener('load', function() {
+        setTimeout(hideCloseButton, 10000);
+    });
+</script>
 </body>
 </html>
