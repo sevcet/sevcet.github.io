@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YouTube Player</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #closeBtn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            border: none;
+            font-size: 24px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            z-index: 10000;
+            transition: opacity 0.3s, background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            font-weight: bold;
+        }
+        #closeBtn:hover {
+            background: rgba(255,0,0,0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        #closeBtn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+    </style>
+</head>
+<body>
+<button id="closeBtn" title="Zatvori">✕</button>
+
+<div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    let player;
+    let hideTimeout;
+    let loadTimeout;
+    let captionsSet = false;
+
+    // parametri iz aplikacije – isto kao u prvom playeru
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId  = urlParams.get("videoId");
+    const subLang  = urlParams.get("subLang")  || "auto";
+    const userLang = urlParams.get("userLang") || "en";
+
+    function onYouTubeIframeAPIReady() {
+        initializePlayer();
+    }
+
+    function initializePlayer() {
+        clearTimeout(loadTimeout);
+
+        if (!videoId) {
+            console.log("No video ID in URL.");
+            return;
+        }
+
+        player = new YT.Player("player", {
+            width: "100%",
+            height: "100%",
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                rel: 0,
+                modestbranding: 1,
+                controls: 1,
+                fs: 1,
+                playsinline: 1,
+                hl: userLang,
+                cc_load_policy: 0      // titlove palimo ručno
+            },
+            events: {
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange,
+                onError: onPlayerError
+            }
+        });
+
+        // dozvole na iframe (kao u prvom playeru)
+        setTimeout(() => {
+            const iframe = document.getElementById("player");
+            if (iframe) {
+                iframe.setAttribute("allowfullscreen", "true");
+                iframe.setAttribute(
+                    "allow",
+                    "autoplay; encrypted-media; fullscreen; picture-in-picture"
+                );
+            }
+        }, 0);
+
+        // timeout samo za log – nema ekrana za grešku
+        loadTimeout = setTimeout(function () {
+            try {
+                if (!player || player.getPlayerState() === -1) {
+                    console.log("Video failed to load.");
+                }
+            } catch (e) {
+                console.log("Video failed to load.");
+            }
+        }, 10000);
+    }
+
+    function onPlayerReady(event) {
+        clearTimeout(loadTimeout);
+        try { event.target.playVideo(); } catch (e) {}
+
+        // X dugme auto-hide logika
+        hideTimeout = setTimeout(hideCloseButton, 10000);
+
+        // LOGIKA ZA TITLOVE – isto kao u prvom: malo posle starta
+        setTimeout(function () {
+            autoEnableCaptions();
+        }, 1500);
+    }
+
+    function onPlayerStateChange(event) {
+        resetHideTimer();
+
+        // iz prvog playera: drugi pokušaj kad krene PLAY
+        if (event.data === YT.PlayerState.PLAYING && !captionsSet) {
+            captionsSet = true;
+            setTimeout(autoEnableCaptions, 1000);
+        }
+    }
+
+    function onPlayerError(event) {
+        clearTimeout(loadTimeout);
+        console.log("YouTube error:", event.data);
+    }
+
+    /* ----- TITLOVI: preuzeto iz prvog playera ----- */
+
+    function autoEnableCaptions() {
+        if (!player) return;
+
+        const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
+        const lang = targetFromApp || mapLang(userLang);
+        setCaptionTrack(lang);
+    }
+
+    function mapLang(lang) {
+        if (!lang) return "en";
+        const L = lang.toLowerCase();
+        if (["sr","bs","hr","me"].includes(L)) return "sr";
+        return L;
+    }
+
+    function setCaptionTrack(language) {
+        if (!player) return;
+        try {
+            if (!language || language === "off") {
+                player.setOption("captions", "track", {});
+                player.unloadModule("captions");
+            } else {
+                player.loadModule("captions");
+                setTimeout(() => {
+                    player.setOption("captions", "track", { languageCode: language });
+                    player.setOption("captions", "reload", true);
+                }, 300);
+            }
+        } catch (e) {
+            console.log("setCaptionTrack error:", e);
+        }
+    }
+
+    /* ----- X dugme – isti kod kao pre ----- */
+
+    function hideCloseButton() {
+        const closeBtn = document.getElementById('closeBtn');
+        if (closeBtn) {
+            closeBtn.style.opacity = '0';
+        }
+    }
+
+    function showCloseButton() {
+        const closeBtn = document.getElementById('closeBtn');
+        if (closeBtn) {
+            closeBtn.style.opacity = '1';
+            resetHideTimer();
+        }
+    }
+
+    function resetHideTimer() {
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(hideCloseButton, 10000);
+    }
+
+    document.addEventListener('click', function(event) {
+        if (event.target.id !== 'closeBtn') {
+            showCloseButton();
+        }
+    });
+
+    document.getElementById('closeBtn').addEventListener('click', function() {
+        if (window.AndroidInterface) {
+            AndroidInterface.closePlayer();
+        } else {
+            window.history.back();
+        }
+    });
+
+    document.addEventListener('mousemove', function() {
+        showCloseButton();
+    });
+
+    document.addEventListener('touchstart', function() {
+        showCloseButton();
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            if (window.AndroidInterface) {
+                AndroidInterface.closePlayer();
+            }
+        }
+    });
+
+    window.addEventListener('beforeunload', function () {
+        // nema specijalnog čišćenja
+    });
+</script>
+</body>
+</html>
