@@ -1,3 +1,4 @@
+#EXTM3U url-tvg="https://tvprofil.com/epg/rs.xml"
 #EXTINF:0,EX-YU: 24 KITCHEN
 #EXTVLCOPT:network-caching=1000
 http://box3.theworkpc.xyz:2095/iptvfreeeseever/qsD6mPZBtktw/231318
