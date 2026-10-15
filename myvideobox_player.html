@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MyVideoBox Player</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="player"></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    let player;
+    let loadTimeout;
+    let captionsSet = false;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId  = urlParams.get("videoId");
+    const subLang  = urlParams.get("subLang")  || "auto";
+    const userLang = urlParams.get("userLang") || "en";
+
+    function onYouTubeIframeAPIReady() {
+        initializePlayer();
+    }
+
+    function initializePlayer() {
+        clearTimeout(loadTimeout);
+
+        if (!videoId) {
+            console.log("No video ID in URL.");
+            return;
+        }
+
+        player = new YT.Player("player", {
+            width: "100%",
+            height: "100%",
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                rel: 0,
+                modestbranding: 1,
+                controls: 1,
+                fs: 1,
+                playsinline: 1,
+                hl: userLang,
+                cc_load_policy: 0
+            },
+            events: {
+                onReady: onPlayerReady,
+                onStateChange: onPlayerStateChange,
+                onError: onPlayerError
+            }
+        });
+
+        setTimeout(() => {
+            const iframe = document.getElementById("player");
+            if (iframe) {
+                iframe.setAttribute("allowfullscreen", "true");
+                iframe.setAttribute(
+                    "allow",
+                    "autoplay; encrypted-media; fullscreen; picture-in-picture"
+                );
+            }
+        }, 0);
+
+        loadTimeout = setTimeout(function () {
+            try {
+                if (!player || player.getPlayerState() === -1) {
+                    console.log("Video failed to load.");
+                }
+            } catch (e) {
+                console.log("Video failed to load.");
+            }
+        }, 10000);
+    }
+
+    function onPlayerReady(event) {
+        clearTimeout(loadTimeout);
+        try { event.target.playVideo(); } catch (e) {}
+
+        setTimeout(autoEnableCaptions, 1500);
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data === YT.PlayerState.PLAYING && !captionsSet) {
+            captionsSet = true;
+            setTimeout(autoEnableCaptions, 1000);
+        }
+    }
+
+    function onPlayerError(event) {
+        clearTimeout(loadTimeout);
+        console.log("YouTube error:", event.data);
+    }
+
+    // ---------- TITLOVI sa punom fallback logikom ----------
+
+    function autoEnableCaptions() {
+        if (!player) return;
+
+        const targetFromApp = (subLang && subLang !== "auto") ? subLang : null;
+        const lang = targetFromApp || mapLang(userLang);
+        setCaptionTrack(lang);
+    }
+
+    function mapLang(lang) {
+        if (!lang) return "en";
+        const L = lang.toLowerCase();
+        if (["sr","bs","hr","me"].includes(L)) return "sr";
+        return L;
+    }
+
+    // Mapa srodnih jezika za fallback
+    const RELATED_LANGUAGES = {
+        // Balkanski
+        sr: ["hr", "bs", "sh", "sl", "mk", "me"],
+        hr: ["sr", "bs", "sh", "sl", "me"],
+        bs: ["sr", "hr", "sh", "me"],
+        me: ["sr", "hr", "bs", "sh"],
+        sl: ["hr", "sr", "bs"],
+        mk: ["bg", "sr", "hr"],
+        bg: ["mk", "sr", "ru"],
+        sh: ["sr", "hr", "bs"],
+
+        // Nordijski
+        sv: ["no", "da", "is"],
+        no: ["sv", "da", "is"],
+        da: ["sv", "no", "is"],
+        is: ["sv", "no", "da"],
+
+        // Romanski
+        es: ["pt", "it", "fr", "ro", "ca"],
+        pt: ["es", "it", "fr", "ro", "ca"],
+        it: ["es", "pt", "fr", "ro", "ca"],
+        fr: ["it", "es", "pt", "ro", "ca"],
+        ro: ["it", "es", "pt", "fr", "ca"],
+        ca: ["es", "pt", "it", "fr"],
+
+        // Germanski
+        de: ["nl", "en"],
+        nl: ["de", "en"],
+
+        // Zapadnoslovenski
+        pl: ["cs", "sk", "sl"],
+        cs: ["sk", "pl", "sl"],
+        sk: ["cs", "pl", "sl"],
+
+        // Istočnoslovenski
+        ru: ["uk", "bg", "sr"],
+        uk: ["ru", "bg", "pl"],
+
+        // Ostali (fallback na engleski)
+        el: ["en"],
+        tr: ["en"],
+        ar: ["en"],
+        hi: ["en"],
+        ja: ["en"],
+        ko: ["en"],
+        zh: ["en"],
+        fi: ["sv", "no", "en"],
+        hu: ["en"]
+    };
+
+    function chooseBestLanguage(tracks, preferred) {
+        if (!tracks || !tracks.length) return null;
+
+        // 1. Tačan match
+        let track = tracks.find(t => t.languageCode === preferred);
+        if (track) return track.languageCode;
+
+        // 2. Srodni jezici (grupa)
+        const related = RELATED_LANGUAGES[preferred];
+        if (related) {
+            for (const langCode of related) {
+                const t = tracks.find(t =>
+                    t.languageCode === langCode ||
+                    t.languageCode.startsWith(langCode + "-")
+                );
+                if (t) return t.languageCode;
+            }
+        }
+
+        // 3. Prefiks match (npr. "sr" matchuje "sr-Latn")
+        const prefixMatch = tracks.find(t => t.languageCode.startsWith(preferred + "-"));
+        if (prefixMatch) return prefixMatch.languageCode;
+
+        // 4. Engleski
+        const en = tracks.find(t =>
+            t.languageCode === "en" ||
+            t.languageCode.startsWith("en-")
+        );
+        if (en) return en.languageCode;
+
+        // 5. Prvi dostupan
+        return tracks[0].languageCode;
+    }
+
+    function setCaptionTrack(language) {
+        if (!player) return;
+        try {
+            const tracks = player.getOption("captions", "tracklist") || [];
+            if (!tracks.length) {
+                console.log("No caption tracks for this video");
+                return;
+            }
+
+            const langToUse = chooseBestLanguage(tracks, language);
+            if (!langToUse) {
+                console.log("No suitable caption language found");
+                return;
+            }
+
+            console.log("Using caption language:", langToUse, "requested:", language);
+            player.loadModule("captions");
+            setTimeout(() => {
+                player.setOption("captions", "track", { languageCode: langToUse });
+                player.setOption("captions", "reload", true);
+            }, 300);
+        } catch (e) {
+            console.log("setCaptionTrack error:", e);
+        }
+    }
+
+    window.addEventListener("beforeunload", function () {
+        // nema specijalnog čišćenja
+    });
+</script>
+</body>
+</html>
