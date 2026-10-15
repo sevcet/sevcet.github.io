@@ -14,7 +14,7 @@
     <h1>Uslovi korišćenja</h1>
     <pre>USLOVI KORIŠĆENJA (EULA)
 MyVideoBox
-Poslednja izmena: 10.10.2026.
+Poslednja izmena: 15.10.2026.
 
 Ovi Uslovi korišćenja ("Uslovi") regulišu vašu upotrebu aplikacije MyVideoBox ("Aplikacija"), uključujući sve usluge, funkcionalnosti i sadržaj koji pruža Aplikacija. Molimo vas da pažljivo pročitate ove Uslove pre nego što počnete da koristite Aplikaciju.
 
@@ -22,7 +22,14 @@ Ovi Uslovi korišćenja ("Uslovi") regulišu vašu upotrebu aplikacije MyVideoBo
 Korišćenjem Aplikacije, slažete se sa ovim Uslovima. Ako se ne slažete sa ovim Uslovima, nemojte koristiti Aplikaciju.
 
 2. OPIS APLIKACIJE
-MyVideoBox je tehnički alat (player) za reprodukciju video sadržaja koji korisnik samostalno dodaje. Aplikacija ne hostuje, ne skladišti, ne distribuira niti promoviše bilo kakav sadržaj. Aplikacija funkcioniše isključivo kao reproduktor koji prikazuje ono što korisnik unese (URL adrese, M3U liste, JSON kataloge, lokalne fajlove).
+2.1. MyVideoBox je tehnički alat (player) za reprodukciju video sadržaja koji korisnik samostalno dodaje. Aplikacija ne hostuje, ne skladišti, ne distribuira niti promoviše bilo kakav sadržaj. Aplikacija funkcioniše isključivo kao reproduktor koji prikazuje ono što korisnik unese (URL adrese, M3U liste, JSON kataloge, lokalne fajlove).
+
+2.2. Aplikacija podržava više tipova reprodukcije:
+     - YouTube video — reprodukuje se preko zvaničnog YouTube embed plejera
+       unutar WebView komponente. YouTube zadržava punu kontrolu nad
+       reprodukcijom, uključujući reklame koje samostalno prikazuje.
+     - MP4 i HLS streamovi — reprodukuju se preko ExoPlayer komponente.
+     - IPTV liste (M3U format) — reprodukuju se preko VLC plejera.
 
 3. KORISNIČKI SADRŽAJ I ODGOVORNOST
 3.1. Korisnik je isključivo odgovoran za sav sadržaj koji dodaje u Aplikaciju (URL adrese, kataloge, M3U liste, video zapise, slike, tekst).
@@ -31,62 +38,81 @@ MyVideoBox je tehnički alat (player) za reprodukciju video sadržaja koji koris
 3.4. Aplikacija neće biti odgovorna za bilo kakvu štetu nastalu usled sadržaja koji korisnik doda.
 3.5. Korisnik se obavezuje da će obeštetiti i držati bezopasnim razvijaoca Aplikacije od svih zahteva, tužbi, gubitaka i troškova (uključujući advokatske troškove) koji proizilaze iz sadržaja koji je korisnik dodao.
 
-4. PRETPLATE I PLAĆANJE
-4.1. Aplikacija nudi pretplate koje omogućavaju pristup dodatnim funkcijama i uklanjanje reklama.
-4.2. Pretplate su dostupne u sledećim opcijama:
+4. REKLAME
+4.1. U besplatnoj (Free) verziji aplikacije prikazuju se dve vrste reklama:
+
+     a) Reklame mreže Google AdMob — prikazuju se u obliku kratkih video oglasa
+        (rewarded ads). Nakon što korisnik pogleda oglas, aplikacija mu odobrava
+        4 (četiri) sata rada bez prikaza dodatnih AdMob oglasa. Ove reklame moguće
+        je trajno ukloniti kupovinom Premium pretplate.
+
+     b) Reklame platforme YouTube — prikazuju se isključivo tokom reprodukcije
+        YouTube video sadržaja i potiču od YouTube platforme i kreatora videa.
+        MyVideoBox ne ubacuje, ne kontroliše niti uklanja te reklame — čak i u
+        Premium verziji aplikacije.
+
+4.2. Korišćenjem aplikacije prihvatate prikazivanje reklama iz tačke (a)
+     u besplatnoj verziji. Prikazivanje reklama iz tačke (b) je nezavisno od
+     statusa pretplate.
+
+5. PRETPLATE I PLAĆANJE
+5.1. Aplikacija nudi pretplate koje omogućavaju pristup dodatnim funkcijama i uklanjanje AdMob reklama.
+5.2. Pretplate su dostupne u sledećim opcijama:
      - Mesečna pretplata
      - Godišnja pretplata
-4.3. Plaćanja za pretplate obavljaju se putem Google Play-a, a sve transakcije podležu Google Play uslovima korišćenja.
-4.4. Cene su prikazane u aplikaciji u valuti koju odredi Google Play, u zavisnosti od zemlje korisnika.
+5.3. Plaćanja za pretplate obavljaju se putem Google Play-a, a sve transakcije podležu Google Play uslovima korišćenja.
+5.4. Cene su prikazane u aplikaciji u valuti koju odredi Google Play, u zavisnosti od zemlje korisnika.
+5.5. Premium pretplata NE uklanja reklame koje prikazuje YouTube platforma tokom reprodukcije YouTube video sadržaja.
 
-5. PROBNI PERIOD
-5.1. Aplikacija nudi besplatan probni period od 7 dana za nove pretplatnike.
-5.2. Probni period počinje od trenutka kada prvi put aktivirate pretplatu.
-5.3. Tokom probnog perioda, korisnici imaju pravo da koriste sve premium funkcionalnosti Aplikacije bez naplate.
-5.4. Ako ne otkažete pretplatu najmanje 24 sata pre kraja probnog perioda, bićete automatski naplaćeni za sledeći period pretplate (mesečno ili godišnje).
-5.5. Otkazivanje probnog perioda vrši se putem Google Play naloga.
+6. PROBNI PERIOD
+6.1. Aplikacija nudi besplatan probni period od 7 dana za nove pretplatnike.
+6.2. Probni period počinje od trenutka kada prvi put aktivirate pretplatu.
+6.3. Tokom probnog perioda, korisnici imaju pravo da koriste sve premium funkcionalnosti Aplikacije bez naplate.
+6.4. Ako ne otkažete pretplatu najmanje 24 sata pre kraja probnog perioda, bićete automatski naplaćeni za sledeći period pretplate (mesečno ili godišnje).
+6.5. Otkazivanje probnog perioda vrši se putem Google Play naloga.
 
-6. OBNOVA PRETPLATE I OTKAZIVANJE
-6.1. Pretplate se automatski obnavljaju nakon isteka svakog perioda, osim ako ih otkažete najmanje 24 sata pre isteka trenutnog perioda.
-6.2. Pretplatu možete otkazati u bilo kom trenutku preko podešavanja Google Play naloga.
-6.3. Otkazivanje važi za naredni period pretplate; nećete dobiti povrat novca za preostali deo tekuće pretplate.
-6.4. Povraćaj novca je regulisan Google Play politikom povraćaja.
+7. OBNOVA PRETPLATE I OTKAZIVANJE
+7.1. Pretplate se automatski obnavljaju nakon isteka svakog perioda, osim ako ih otkažete najmanje 24 sata pre isteka trenutnog perioda.
+7.2. Pretplatu možete otkazati u bilo kom trenutku preko podešavanja Google Play naloga.
+7.3. Otkazivanje važi za naredni period pretplate; nećete dobiti povrat novca za preostali deo tekuće pretplate.
+7.4. Povraćaj novca je regulisan Google Play politikom povraćaja.
 
-7. UPOTREBA APLIKACIJE
-7.1. Korišćenje Aplikacije je dozvoljeno samo u skladu sa važećim zakonima i pravilima Google Play-a.
-7.2. Ne smete koristiti Aplikaciju za nelegalne ili neovlašćene aktivnosti, uključujući, ali ne ograničavajući se na, hakovanje, distribuciju zlonamernog softvera ili kršenje prava trećih strana.
-7.3. Aplikacija je namenjena korisnicima starijim od 13 godina (ili 16 u pojedinim zemljama EU).
+8. USLOVI KORIŠĆENJA I STAROSNA GRANICA
+8.1. Korišćenje Aplikacije je dozvoljeno samo u skladu sa važećim zakonima i pravilima Google Play-a.
+8.2. Ne smete koristiti Aplikaciju za nelegalne ili neovlašćene aktivnosti, uključujući, ali ne ograničavajući se na, hakovanje, distribuciju zlonamernog softvera ili kršenje prava trećih strana.
+8.3. Aplikacija je namenjena isključivo korisnicima starijim od 18 godina. Aplikacija sadrži mogućnost plaćanja (pretplate), što zahteva punu poslovnu sposobnost korisnika. Ako ste mlađi od 18 godina, ne smete koristiti ovu Aplikaciju niti vršiti bilo kakva plaćanja putem nje.
+8.4. Ako ste roditelj ili staratelj i saznate da je vaše dete mlađe od 18 godina koristilo Aplikaciju ili izvršilo plaćanje, dužni ste da nas o tome obavestite radi preduzimanja odgovarajućih mera.
 
-8. PRIVATNOST
-8.1. Vaša privatnost je važna. Za detalje o tome kako prikupljamo, koristimo i delimo vaše podatke, pogledajte našu Politiku privatnosti.
-8.2. Prikupljanje podataka za personalizovane reklame vrši se uz vašu izričitu saglasnost (GDPR/UMP).
+9. PRIVATNOST
+9.1. Vaša privatnost je važna. Za detalje o tome kako prikupljamo, koristimo i delimo vaše podatke, pogledajte našu Politiku privatnosti.
+9.2. Prikupljanje podataka za personalizovane reklame vrši se uz vašu izričitu saglasnost (GDPR/UMP).
 
-9. INTELEKTUALNA SVOJINA
-9.1. Aplikacija, njen dizajn, kod i žig su vlasništvo razvijaoca.
-9.2. Korisnik ne stiče nikakva prava na Aplikaciju osim prava korišćenja u skladu sa ovim Uslovima.
+10. INTELEKTUALNA SVOJINA
+10.1. Aplikacija, njen dizajn, kod i žig su vlasništvo razvijaoca.
+10.2. Korisnik ne stiče nikakva prava na Aplikaciju osim prava korišćenja u skladu sa ovim Uslovima.
 
-10. IZMENE USLOVA
-10.1. Zadržavamo pravo da u bilo kom trenutku izmenimo ove Uslove.
-10.2. Obavestićemo vas o značajnim promenama putem Aplikacije ili e-pošte.
-10.3. Nastavak korišćenja Aplikacije nakon izmena predstavlja prihvatanje novih Uslova.
+11. IZMENE USLOVA
+11.1. Zadržavamo pravo da u bilo kom trenutku izmenimo ove Uslove.
+11.2. Obavestićemo vas o značajnim promenama putem Aplikacije ili e-pošte.
+11.3. Nastavak korišćenja Aplikacije nakon izmena predstavlja prihvatanje novih Uslova.
 
-11. OGRANIČENJE ODGOVORNOSTI
-11.1. Aplikacija je dostupna "kakva jeste". Ne dajemo nikakve garancije u vezi sa funkcionisanjem Aplikacije ili tačnošću sadržaja.
-11.2. Nismo odgovorni za bilo kakvu štetu koja može nastati usled korišćenja Aplikacije, uključujući direktnu, indirektnu, slučajnu ili posledičnu štetu.
-11.3. Naša ukupna odgovornost ne može premašiti iznos koji ste platili za korišćenje Aplikacije u poslednjih 12 meseci.
+12. OGRANIČENJE ODGOVORNOSTI
+12.1. Aplikacija je dostupna "kakva jeste". Ne dajemo nikakve garancije u vezi sa funkcionisanjem Aplikacije ili tačnošću sadržaja.
+12.2. Nismo odgovorni za bilo kakvu štetu koja može nastati usled korišćenja Aplikacije, uključujući direktnu, indirektnu, slučajnu ili posledičnu štetu.
+12.3. Naša ukupna odgovornost ne može premašiti iznos koji ste platili za korišćenje Aplikacije u poslednjih 12 meseci.
 
-12. PREKID
-12.1. Zadržavamo pravo da ukinemo ili obustavimo pristup Aplikaciji bez prethodne najave, u slučaju kršenja ovih Uslova.
+13. PREKID
+13.1. Zadržavamo pravo da ukinemo ili obustavimo pristup Aplikaciji bez prethodne najave, u slučaju kršenja ovih Uslova.
 
-13. MERODAVNO PRAVO I REŠAVANJE SPOROVA
-13.1. Ovi Uslovi podležu zakonima Republike Srbije.
-13.2. Sporovi će se rešavati pred nadležnim sudom u Beogradu.
+14. MERODAVNO PRAVO I REŠAVANJE SPOROVA
+14.1. Ovi Uslovi podležu zakonima Republike Srbije.
+14.2. Sporovi će se rešavati pred nadležnim sudom u Beogradu.
 
-14. KONTAKT
+15. KONTAKT
 Za sva pitanja u vezi sa ovim Uslovima, kontaktirajte nas na:
-Email: [tvoj-email@domen.com]
+Email: saitsali973@gmail.com
 
-15. PRIHVATANJE
+16. PRIHVATANJE
 Klikom na "Prihvatam" ili korišćenjem Aplikacije potvrđujete da ste pročitali, razumeli i prihvatili ove Uslove korišćenja.</pre>
 </body>
 </html>
